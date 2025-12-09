@@ -1,0 +1,121 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Cahier des charges pour agents d’idéation
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+# Cahier des charges — Document d’idéation projet
+
+Ce document sert à décrire un projet de manière claire, complète et exploitable par un agent chargé d’analyser, clarifier ou développer l’idée avant transmission au système multi agents.
+
+L’objectif est de fournir une vision structurée permettant de:
+- comprendre la finalité du projet  
+- cerner les besoins  
+- définir les utilisateurs  
+- identifier les contraintes  
+- préparer les éléments nécessaires à la création des documents référents  
+- poser les bases avant l’intégration dans le système agentique
+
+---
+
+# 1. Présentation du projet
+- Nom du projet  
+- Description générale  
+- Contexte d’apparition  
+- Problème que le projet résout  
+- Valeur ajoutée recherchée  
+
+---
+
+# 2. Public cible
+- Segments d’utilisateurs  
+- Besoins principaux  
+- Motivations  
+- Frustrations  
+- Utilisations possibles du projet  
+
+---
+
+# 3. Objectifs du projet
+- Objectifs principaux  
+- Objectifs secondaires  
+- Indicateurs de réussite envisagés  
+
+---
+
+# 4. Fonctionnalités clés
+Lister ici les fonctionnalités importantes du projet, sans entrer dans une logique technique.  
+Pour chaque fonctionnalité:
+- nom  
+- description  
+- utilité pour l’utilisateur  
+- interactions prévues  
+
+---
+
+# 5. Parcours utilisateur
+Décrire les parcours essentiels:
+- entrée dans l’expérience  
+- actions possibles  
+- objectifs atteignables  
+- étapes à forte valeur  
+
+---
+
+# 6. Positionnement et stratégie
+- Proposition de valeur  
+- Différenciateurs  
+- Concurrence éventuelle  
+- Vision long terme du projet  
+
+---
+
+# 7. Architecture conceptuelle (non technique)
+Description macro de la structure du projet:
+- parties principales  
+- flux d’information  
+- relations entre modules  
+- dépendances conceptuelles  
+
+---
+
+# 8. Contraintes
+- contraintes fonctionnelles  
+- contraintes d’usage  
+- contraintes liées au domaine du projet  
+- risques identifiés  
+
+---
+
+# 9. Inspirations et références
+- projets similaires  
+- pratiques à reprendre  
+- éléments à éviter  
+- influences conceptuelles  
+
+---
+
+# 10. État actuel de la réflexion
+Notes permettant à l’agent d’idéation de comprendre:
+- ton niveau d’avancement  
+- les zones d’ombre  
+- les intuitions  
+- les questions ouvertes  
+
+---
+
+# 11. Attentes vis-à-vis de l’agent d’idéation
+Indiquer ce que tu veux obtenir:
+- clarification  
+- analyse critique  
+- exploration  
+- structuration  
+- proposition d’amélioration  
+- synthèse  
+
+---
+
+Fin du Cahier des charges.
