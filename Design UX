@@ -1,0 +1,47 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Initialisation du module spécialisé UX
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+UXSpecializedSchema:
+  description: "Module spécialisé décrivant l’expérience utilisateur"
+
+  specialized:
+    screens:
+      description: "Écrans principaux de l’application"
+      type: array
+      itemStructure:
+        id: string
+        name: string
+        purpose: string
+        keyElements: array of strings
+        interactions: array of strings
+
+    flows:
+      description: "Parcours utilisateur"
+      type: array
+      itemStructure:
+        id: string
+        name: string
+        steps: array of strings
+        conditions: array of strings
+
+    personas:
+      description: "Profils types d’utilisateur"
+      type: array
+      itemStructure:
+        id: string
+        name: string
+        goals: array of strings
+        frustrations: array of strings
+        motivations: array of strings
+
+    painPoints:
+      description: "Points de friction identifiés"
+      type: array
+      itemStructure:
+        issue: string
+        description: string
