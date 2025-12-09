@@ -1,0 +1,20 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Initialisation du module spécialisé Notes/Knowledge
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+NotesSpecializedSchema:
+  description: "Module spécialisé dédié aux notes, réflexions et connaissances transverses"
+
+  specialized:
+    entries:
+      description: "Entrées de connaissance"
+      type: array
+      itemStructure:
+        id: string
+        title: string
+        content: string
+        tags: array of strings
