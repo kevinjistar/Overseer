@@ -1,0 +1,158 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Pipeline de mise à jour des documents
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification de la séquence ou de la logique de mise à jour documentaire
+  • Minor (1.X.0): Ajout de contrôles supplémentaires ou d’étapes non disruptives
+  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+---
+
+# Pipeline de mise à jour des documents
+
+Ce pipeline décrit la procédure systémique permettant de mettre à jour un document référent via un agent, sous supervision d’Overseer et contrôle technique de l’orchestrateur.  
+Aucune mise à jour documentaire ne peut avoir lieu en dehors de ce pipeline.
+
+---
+
+# 1. Réception de la requête
+
+Une mise à jour documentaire commence lorsque:
+- Overseer transmet une instruction formelle à un agent
+- l’agent renvoie un JSON de mise à jour via agentCallback
+
+Le pipeline démarre seulement si:
+- un currentProject est actif  
+- l’agent est autorisé pour ce type de document  
+- la requête respecte les schémas attendus
+
+---
+
+# 2. Validation initiale de l’agentCallback
+
+L’orchestrateur vérifie:
+- l’identité de l’agent émetteur
+- la présence du champ targetDocument
+- la validité du JSON brut (syntaxe minimale)
+- la présence des champs obligatoires du Schéma universel
+
+Si échec:
+- l’orchestrateur renvoie une erreur à Overseer  
+- aucune modification n’est appliquée
+
+---
+
+# 3. Validation structurelle
+
+L’orchestrateur exécute `validateDocument`:
+
+Contrôles effectués:
+- conformité au Schéma universel du Document Référent
+- conformité au module spécialisé correspondant
+- cohérence interne (meta, content, specialized, narrative)
+- présence des champs de versioning requis
+- respect des schémas imbriqués
+- absence de champs non reconnus
+- références internes valides
+- format date conforme
+
+Sorties possibles:
+- `valid`
+- `error` + détails des anomalies
+
+Aucune écriture Firestore n’a lieu avant cette validation.
+
+---
+
+# 4. Application du versioning
+
+Si la validation est `valid`, l’orchestrateur applique:
+- meta.ownerAgent = agent émetteur
+- meta.updatedAt = date du jour
+- incrémentation de la version selon le type imposé par Overseer:
+  - Major
+  - Minor
+  - Patch
+
+Le document doit contenir une nouvelle entrée dans `meta.changelog`:
+
+“{version} ({date du jour}): {raison de la modification}”
+
+---
+
+# 5. Écriture contrôlée dans Firestore
+
+L’orchestrateur remplace l’ancien document par la nouvelle version dans:
+
+projects/{projectId}/documents/{documentType}.json
+
+Critères d’écriture:
+- transaction atomique  
+- refus si une version plus récente est détectée  
+- refus si currentProject a changé entre temps  
+- refus si le document est en état “locked”
+
+En cas de conflit, l’opération est annulée.
+
+---
+
+# 6. Génération du snapshot versionné
+
+Après écriture réussie, le système crée un snapshot:
+
+projects/{projectId}/snapshots/versions/{snapshotId}/
+document.json
+timestamp
+version
+agent
+reason
+
+Le snapshot représente l’état complet du document après mise à jour.
+
+---
+
+# 7. Évaluation des conséquences sur le Workflow Engine
+
+L’orchestrateur vérifie si la mise à jour documentaire:
+- déclenche une transition du workflow
+- modifie l’état du projet
+- nécessite l’exécution d’actions du Workflow Engine
+
+Si oui, `runWorkflowTransition` est exécuté immédiatement.
+
+---
+
+# 8. Journalisation
+
+L’orchestrateur écrit un log dans:
+
+projects/{projectId}/logs/updates/{logId}.json
+
+Contenu:
+- document modifié  
+- version appliquée  
+- agent responsable  
+- date  
+- validation effectuée  
+- transition effectuée (si applicable)
+
+---
+
+# 9. Retour à Overseer
+
+L’orchestrateur renvoie à Overseer:
+- statut final (`success` ou `error`)
+- version finale du document
+- transition éventuelle réalisée
+- snapshotId associé
+- message synthétique pour coordination agentique
+
+Overseer utilise ces informations pour poursuivre un éventuel workflow, déléguer à un autre agent, ou clore la tâche.
+
+---
+
+Fin du Pipeline de mise à jour des documents.
