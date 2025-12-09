@@ -1,0 +1,183 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création de la Structure Cloud Functions / Orchestrateur
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Changement structurel des fonctions ou de l’architecture d’orchestration
+  • Minor (1.X.0): Ajout de fonctions non disruptives ou élargissement de comportements
+  • Patch (1.2.X): Ajustements rédactionnels ou améliorations mineures
+---
+
+# Structure Cloud Functions / Orchestrateur
+
+L’orchestrateur est l’unité de gouvernance technique. Il exécute les règles système, valide les documents, applique le versioning, déclenche les transitions de workflow, gère les snapshots et relaie les instructions des agents.
+
+---
+
+# 1. Points d’entrée Cloud Functions
+
+/functions/
+createProject
+updateDocument
+runWorkflowTransition
+setCurrentProject
+createSnapshot
+validateDocument
+agentCallback
+systemRecovery
+
+---
+
+# 2. createProject
+
+Déclenchement:  
+- Appel direct lors de la création d’un projet.
+
+Fonctions:
+- générer l’arborescence Firestore du projet
+- créer les documents référents initiaux
+- initialiser le Workflow Engine
+- créer le snapshot initial
+- générer les logs de création
+- renvoyer un statut de création à Overseer
+
+---
+
+# 3. updateDocument
+
+Déclenchement:  
+- Requête d’Overseer pour appliquer une modification d’agent.
+
+Fonctions:
+- valider le JSON via validateDocument  
+- incrémenter le versioning  
+- mettre à jour meta.updatedAt et meta.ownerAgent  
+- enregistrer le changelog  
+- écrire le document dans Firestore  
+- générer un snapshot versionné  
+- produire un log d’update  
+
+---
+
+# 4. runWorkflowTransition
+
+Déclenchement:  
+- Demande explicite d’Overseer  
+- Résultat d’une mise à jour documentaire nécessitant une transition
+
+Fonctions:
+- lire le Workflow Engine du projet  
+- vérifier les conditions de transition  
+- appliquer la transition si valide  
+- exécuter les actions associées  
+- enregistrer un log de transition  
+- mettre à jour l’état du workflow dans Firestore  
+
+---
+
+# 5. setCurrentProject
+
+Déclenchement:  
+- Appel d’Overseer lorsqu’un nouveau projet est sélectionné.
+
+Fonctions:
+- vérifier l’existence du projectId  
+- écrire userContext/{userId}/currentProject.json  
+- logguer le changement  
+- retourner l’état mis à jour  
+
+---
+
+# 6. createSnapshot
+
+Déclenchement:  
+- Lors de la création d’un projet  
+- Lors d’une mise à jour documentaire  
+- Lors d’une transition de workflow  
+- Sur demande explicite d’Overseer
+
+Fonctions:
+- capturer l’état actuel du projet  
+- stocker un snapshot horodaté  
+- enregistrer le motif et l’agent responsable  
+
+---
+
+# 7. validateDocument
+
+Déclenchement:  
+- Interne à updateDocument  
+- Interne lors d’un snapshot  
+- Sur demande d’Overseer
+
+Fonctions:
+- valider conformité au Schéma universel  
+- valider conformité au module spécialisé  
+- vérifier cohérence interne  
+- vérifier versioning  
+- vérifier liens et références  
+- renvoyer un statut: valid ou error  
+
+---
+
+# 8. agentCallback
+
+Déclenchement:  
+- Réponse d’un agent externe via GAS.
+
+Fonctions:
+- réceptionner le JSON produit par l’agent  
+- vérifier l’agent émetteur  
+- transmettre à updateDocument ou runWorkflowTransition  
+- journaliser l’activité de l’agent  
+
+---
+
+# 9. systemRecovery
+
+Déclenchement:  
+- Erreur critique détectée  
+- Boucle potentielle identifiée  
+- Incohérence structurelle  
+- Demande explicite d’Overseer
+
+Fonctions:
+- suspendre toute exécution en cours  
+- restaurer le dernier snapshot stable  
+- enregistrer un log d’erreur  
+- renvoyer un rapport d’état  
+
+---
+
+# 10. Règles transversales de l’orchestrateur
+
+- assurer la validation stricte avant toute écriture  
+- refuser tout document hors contexte du currentProject  
+- empêcher les agents d’effectuer des actions automatisées répétées  
+- journaliser systématiquement chaque opération  
+- garantir des snapshots continus et cohérents  
+- appliquer rigoureusement la logique du Workflow Engine  
+
+---
+
+# 11. Interactions Overseer ↔ Orchestrateur
+
+Overseer:
+- décide, contrôle, supervise
+
+Orchestrateur:
+- exécute, valide, applique
+
+Flux typique:
+
+Overseer → orchestrateur: demande validate/update/transition
+Orchestrateur → Firestore: écriture + snapshot
+Orchestrateur → Overseer: rapport d’exécution
+
+---
+
+Fin du document Structure Cloud Functions / Orchestrateur.
