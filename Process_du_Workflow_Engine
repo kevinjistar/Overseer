@@ -1,0 +1,216 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Process du Workflow Engine
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification de la logique du moteur de workflow ou de la manière dont les transitions fonctionnent
+  • Minor (1.X.0): Ajout de nouveaux types d’actions, conditions ou comportements
+  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+---
+
+# Process du Workflow Engine
+
+Le Workflow Engine définit et contrôle les états d’un projet, les transitions autorisées, les conditions requises et les actions déclenchées automatiquement.  
+Ce processus décrit la manière dont l’orchestrateur interprète et applique le moteur de workflow.
+
+---
+
+# 1. Composants du Workflow Engine
+
+Chaque moteur de workflow est défini dans:
+
+projects/{projectId}/workflowEngine/engine.json
+
+Il doit contenir au minimum:
+
+{
+“initialState”: “string”,
+“states”: [
+{ “id”: “…”, “label”: “…”, “description”: “…” }
+],
+“transitions”: [
+{
+“from”: “stateId”,
+“to”: “stateId”,
+“conditions”: [ … ],
+“actions”: [ … ],
+“description”: “…”
+}
+]
+}
+
+---
+
+# 2. Fonction générale du Workflow Engine
+
+Le moteur de workflow sert à:
+
+- définir la progression logique d’un projet  
+- empêcher les transitions non autorisées  
+- déclencher automatiquement des actions système  
+- synchroniser l’état du projet et celui de ses documents  
+- structurer les interactions entre Overseer, les agents et l’orchestrateur  
+
+---
+
+# 3. Déclencheurs d’exécution du Workflow Engine
+
+Le processus workflow peut être activé par:
+
+1. une demande explicite d’Overseer  
+2. une mise à jour documentaire validée  
+3. une action d’un agent  
+4. une condition atteinte (automatique)  
+5. une initiative système (ex: résolution d’erreur)
+
+Chaque déclencheur mène à `runWorkflowTransition`.
+
+---
+
+# 4. Processus détaillé d’exécution
+
+## 4.1 Identification de l’état courant
+
+L’orchestrateur lit dans Firestore:
+
+projects/{projectId}/workflowEngine/engine.json
+
+Il identifie:
+- `initialState` si le projet n’a encore subi aucune transition  
+- sinon, l’état courant dérivé du dernier log de transition  
+
+---
+
+## 4.2 Sélection des transitions possibles
+
+L’orchestrateur filtre les transitions définies dans:
+
+engine.transitions
+
+Critères:
+- `from` doit correspondre à l’état courant  
+- la transition doit être unique ou déterminée selon les conditions  
+
+Si aucune transition valide n’existe → arrêt workflow.
+
+---
+
+## 4.3 Évaluation des conditions
+
+Chaque transition peut inclure une liste de conditions:
+
+{
+“type”: “documentUpdated” | “validationPassed” | “agentOutput” | “timeElapsed” | “custom”,
+“target”: “…”,
+“expected”: “…”
+}
+
+L’orchestrateur les évalue:
+
+- toutes les conditions doivent être true  
+- si une condition échoue → transition refusée  
+
+Si toutes sont validées → passage à l’étape suivante.
+
+---
+
+## 4.4 Exécution des actions associées
+
+Chaque transition peut déclencher des actions:
+
+Exemples d’actions:
+- appeler un agent spécifique  
+- valider un document  
+- mettre à jour meta state  
+- créer un snapshot  
+- assigner une tâche à Overseer  
+- exécuter un nettoyage de contexte  
+
+Les actions sont exécutées dans l’ordre où elles apparaissent.
+
+Si une action échoue:
+- le workflow entre en état `halted`  
+- systemRecovery peut être appelé  
+
+---
+
+## 4.5 Changement d’état
+
+Si conditions et actions réussissent:
+
+L’orchestrateur applique:
+
+workflowState = transition.to
+
+Écriture Firestore:
+
+projects/{projectId}/workflowEngine/engine.json
+
+Ajout d’un log:
+
+projects/{projectId}/logs/updates/{logId}.json
+
+Contenu:
+- ancienne et nouvelle state  
+- transition appliquée  
+- conditions validées  
+- actions exécutées  
+
+---
+
+## 4.6 Mise à jour contextuelle globale
+
+Après un changement d’état:
+- le contexte projet est mis à jour  
+- les agents appelés sont enregistrés  
+- un snapshot workflow est créé  
+- Overseer reçoit un rapport complet  
+
+Selon l’état atteint, Overseer peut:
+- demander une action supplémentaire  
+- déléguer à un autre agent  
+- clore une phase du projet  
+
+---
+
+# 5. Modèle de cycle workflow
+
+Le cycle complet est:
+
+événement → identification de l’état → filtrage transitions → évaluation conditions
+→ exécution actions → changement d’état → log + snapshot → retour Overseer
+
+Ce cycle peut se répéter tant que:
+- le projet n’est pas en état final  
+- aucune règle d’arrêt n’est déclenchée
+
+---
+
+# 6. États finaux
+
+Un état peut être marqué comme final:
+
+{ “id”: “completed”, “final”: true }
+
+Conséquences:
+- aucune transition sortante n’est autorisée  
+- Overseer supprime la possibilité d'action agentique sur ce projet  
+- seules les fonctions de lecture restent possibles  
+
+---
+
+# 7. Contraintes strictes
+
+- Aucune transition non définie ne peut être exécutée.  
+- Un seul workflow peut être actif à la fois par projet.  
+- L’orchestrateur est l’unique entité autorisée à appliquer les transitions.  
+- Overseer n’a pas le droit de forcer une transition interdite.  
+- Toute incohérence mène à l’état `halted`.  
+
+---
+
+Fin du Process du Workflow Engine.
