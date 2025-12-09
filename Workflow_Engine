@@ -1,0 +1,171 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Initialisation du Schéma Workflow Engine
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Révision fondamentale de la logique d’exécution ou de la représentation des états
+  • Minor (1.X.0): Ajout de nouvelles capacités dans les workflows (ex: nouveaux types de triggers ou d’actions)
+  • Patch (1.2.X): Correction de cohérence ou amélioration interne sans changement de structure
+---
+
+
+⸻
+
+1. Description conceptuelle
+
+Le Workflow Engine est un système de gestion d’états évolutif.
+Chaque workflow suit la logique:
+	1.	Le workflow possède un état courant.
+	2.	Une demande ou un événement propose une transition.
+	3.	Les conditions sont vérifiées.
+	4.	Si valide, l’état change.
+	5.	Des actions sont potentiellement déclenchées.
+	6.	Des agents peuvent être appelés pour générer ou transformer des documents.
+	7.	L’orchestrateur garantit la cohérence, la validation et le versioning.
+
+L’objectif est:
+un système robuste, sans boucle infinie, sans ambiguïté et entièrement traçable.
+
+⸻
+
+2. Schéma JSON complet du Workflow Engine
+
+Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
+
+{
+  "title": "WorkflowEngineSchema",
+  "type": "object",
+  "required": ["meta", "states", "transitions", "initialState"],
+  "properties": {
+
+    "meta": {
+      "type": "object",
+      "required": ["id", "name", "projectId", "createdAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "projectId": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+
+    "initialState": {
+      "type": "string",
+      "description": "État à partir duquel le workflow démarre"
+    },
+
+    "states": {
+      "type": "array",
+      "description": "Liste des états possibles du workflow",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "onEnter": {
+            "type": "array",
+            "description": "Actions exécutées quand l'état est atteint",
+            "items": { "$ref": "#/definitions/Action" }
+          },
+          "onExit": {
+            "type": "array",
+            "description": "Actions exécutées avant de quitter l'état",
+            "items": { "$ref": "#/definitions/Action" }
+          }
+        }
+      }
+    },
+
+    "transitions": {
+      "type": "array",
+      "description": "Décrit comment on passe d’un état à un autre",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+
+          "conditions": {
+            "type": "array",
+            "description": "Conditions qui doivent être vraies pour permettre la transition",
+            "items": { "$ref": "#/definitions/Condition" }
+          },
+
+          "actions": {
+            "type": "array",
+            "description": "Actions automatiquement déclenchées par cette transition",
+            "items": { "$ref": "#/definitions/Action" }
+          },
+
+          "agentsInvolved": {
+            "type": "array",
+            "description": "Agents autorisés ou requis pour valider ou exécuter cette transition",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "errorHandling": {
+      "type": "object",
+      "description": "Gestion des erreurs pour assurer la stabilité du workflow",
+      "properties": {
+        "onInvalidTransition": { "type": "string" },
+        "onFailedCondition": { "type": "string" },
+        "onAgentError": { "type": "string" }
+      }
+    }
+  },
+
+  "definitions": {
+    "Condition": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { 
+          "type": "string",
+          "enum": ["fieldEquals", "fieldNotEquals", "flagSet", "documentExists", "custom"]
+        },
+        "value": {
+          "type": "string",
+          "description": "Valeur ou clé de comparaison"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Paramètres optionnels pour des conditions avancées"
+        }
+      }
+    },
+
+    "Action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["callAgent", "updateDocument", "setFlag", "logEvent", "custom"]
+        },
+        "agent": {
+          "type": "string",
+          "description": "Agent à appeler si type = callAgent"
+        },
+        "task": {
+          "type": "string",
+          "description": "Tâche individuelle à exécuter par l'agent"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Arguments optionnels fournis à l'action"
+        }
+      }
+    }
+  }
+}
