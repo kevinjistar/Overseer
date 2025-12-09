@@ -1,0 +1,160 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Processus standard de création d’un projet
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification structurelle du processus ou des responsabilités système
+  • Minor (1.X.0): Ajout ou amélioration d’une étape sans briser la logique
+  • Patch (1.2.X): Ajustements rédactionnels, clarifications
+---
+
+# Processus standard de création d’un projet
+
+Ce processus décrit la séquence complète permettant d’introduire un nouveau projet dans le système.
+
+---
+
+# 1. Définition initiale du projet
+Le système reçoit:
+- un nom de projet
+- une description courte
+- un cahier des charges ou un résumé du concept
+- l’identité de l’utilisateur créateur
+
+Le système attribue:
+- un projectId unique
+- une date de création
+
+---
+
+# 2. Création de la structure Firestore
+
+Le système initialise l’arborescence suivante:
+
+projects/{projectId}/
+meta/
+project.json
+documents/
+architecture.json
+ux.json
+strategy.json
+workflowDocument.json
+notes.json
+workflowEngine/
+engine.json
+logs/
+creation.json
+snapshots/
+initial/
+
+Les fichiers créés respectent les schémas correspondants:
+- Schéma universel du Document Référent
+- Modules spécialisés
+- Workflow Engine Schema
+
+---
+
+# 3. Initialisation des documents référents
+
+Chaque document initial contient:
+- le schéma universel complet
+- son module spécialisé
+- les métadonnées système
+- version: "1.0.0"
+- status: "active"
+- ownerAgent: "SystemInit"
+- createdAt: date du jour
+- updatedAt: date du jour
+- changelog:
+  - "1.0.0 (date du jour): Initialisation du document"
+
+---
+
+# 4. Initialisation du Workflow Engine
+
+Le système crée un moteur minimal conforme au Workflow Engine Schema:
+
+initialState: “draft”
+states:
+	•	id: “draft”
+label: “Brouillon”
+	•	id: “active”
+label: “Actif”
+transitions:
+	•	from: “draft”
+to: “active”
+conditions: []
+actions: []
+
+---
+
+# 5. Enregistrement du contexte projet
+
+Le système enregistre:
+- le projectId
+- la date de création
+- l’état initial
+- les documents associés
+
+Le projet devient éligible comme `currentProject`.
+
+---
+
+# 6. Création des snapshots initiaux
+
+Le système génère un snapshot complet:
+
+projects/{projectId}/snapshots/initial/
+
+Contenu:
+- meta initial
+- documents référents initiaux
+- workflow engine initial
+- log de création
+
+---
+
+# 7. Vérification système
+
+Le système valide:
+- conformité des schémas
+- cohérence interne
+- présence des attributs obligatoires
+- versioning correct
+- absence de données manquantes
+- validité des liens
+
+En cas d’échec, le projet n’est pas activé.
+
+---
+
+# 8. Log de création
+
+Création du fichier:
+
+projects/{projectId}/logs/creation.json
+
+Contenu:
+- projectId
+- date
+- utilisateur créateur
+- statut de création
+- schémas utilisés
+- versions des modules
+
+---
+
+# 9. Activation du projet (optionnelle)
+
+Si demandé, le système active le projet:
+
+userContext/{userId}/currentProject
+
+Les agents utilisent alors ce projet comme contexte standard.
+
+---
+
+Fin du Processus standard de création d’un projet.
