@@ -1,0 +1,191 @@
+
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Initialisation du Schéma universel du Document Référent
+Breaking Changes: Aucun depuis 1.0.0
+---
+SCHÉMA UNIVERSEL DU DOCUMENT RÉFÉRENT
+
+Ce schéma définit la structure minimale et stable que tout document référent doit respecter.
+Les modules spécialisés (Architecture, UX, Stratégie, Workflow, Notes) viennent s’ajouter dans une section dédiée, mais ne modifient jamais ce noyau universel.
+
+Il garantit:
+	•	cohérence inter-agents
+	•	validation automatique
+	•	versioning robuste
+	•	lisibilité humaine et machine
+	•	stabilité dans la durée
+
+⸻
+
+1. Description conceptuelle
+
+Cette section est humaine, lisible, et explique l’intention du schéma. GAS n’en aura pas besoin, mais toi oui.
+
+Document Référent
+
+Un Document Référent est un artefact structuré, versionné, qui représente un aspect essentiel d’un projet.
+Il contient quatre grands blocs:
+
+A. meta
+
+Toutes les données de gestion:
+	•	id
+	•	type
+	•	projectId
+	•	status
+	•	version
+	•	createdAt
+	•	updatedAt
+	•	ownerAgent
+
+Objectif: traçabilité totale, versioning propre, gouvernance.
+
+B. structured
+
+Le cœur structuré du document.
+Il contient des sections, chacune elle même structurée.
+
+Chaque section peut représenter une partie:
+	•	d’un design
+	•	d’une architecture
+	•	d’un besoin stratégique
+	•	d’un workflow
+	•	d’un concept métier
+
+C. specialized
+
+La zone modulable.
+Chaque type de document aura son propre contenu dans cette zone, mais la forme reste identique.
+
+D. narrativeMarkdown
+
+Une zone narrative optionnelle qui permet aux agents d’ajouter une explication en langage naturel.
+Elle n’est jamais prise en compte dans la logique interne, mais elle aide pour la compréhension humaine.
+
+E. links
+
+Une liste d’identifiants ou d’URL permettant:
+	•	de lier des documents ensemble
+	•	de pointer vers une ressource externe
+	•	de relier une décision à un justificatif
+
+⸻
+
+2. Version JSON SCHEMA complète (prête pour GAS)
+
+Ce JSON Schema est destiné:
+	•	à la validation dans Cloud Functions
+	•	aux agents via responseSchema
+	•	à Firestore pour maintenir la forme des documents
+
+Tu peux transmettre ce bloc tel quel.
+
+{
+  "title": "UniversalDocumentSchema",
+  "type": "object",
+  "required": ["meta", "structured", "specialized"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["id", "type", "projectId", "version", "status", "createdAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "projectId": { "type": "string" },
+        "version": { "type": "string" },
+        "status": { 
+          "type": "string",
+          "enum": ["draft", "active", "archived"]
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "ownerAgent": { "type": "string" }
+      }
+    },
+
+    "structured": {
+      "type": "object",
+      "required": ["sections"],
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["title", "content"],
+            "properties": {
+              "title": { "type": "string" },
+              "content": {
+                "type": "object",
+                "description": "Contenu structuré libre, mais sous forme d'objet pour être exploitable par les agents"
+              },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "specialized": {
+      "type": "object",
+      "description": "Zone dédiée aux modules spécifiques (architecture, UX, stratégie, workflow, notes)"
+    },
+
+    "narrativeMarkdown": { 
+      "type": "string",
+      "description": "Zone narrative optionnelle"
+    },
+
+    "links": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
+
+
+⸻
+
+3. Pourquoi ce schéma fonctionne parfaitement
+
+Voici les bénéfices directs pour ton système multi agents.
+
+1. Les agents peuvent manipuler n’importe quel type de document
+
+Parce que la base est la même.
+
+2. Le backend peut tout valider automatiquement
+
+Cloud Functions rejette tout JSON non conforme.
+
+3. Le versioning automatique est facile
+
+Il suffit d’incrémenter version et updatedAt.
+
+4. Modularité maximale
+
+Seule la section “specialized” change selon le type.
+
+5. Cohérence garantie dans Firestore
+
+Tous les documents d’un projet ont exactement la même forme.
+
+6. Overseer peut superviser sans ambiguïté
+
+Il sait toujours comment lire un document.
+
+⸻
+
+4. État du système
+
+Le premier bloc est terminé.
+Nous avons:
+	•	un schéma universel clair
+	•	un JSON Schema complet
+	•	une logique stable et adaptée au système multi projets
+	•	un format directement exploitable par GAS
+
+Aucune autre version n’est nécessaire.
