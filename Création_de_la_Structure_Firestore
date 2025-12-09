@@ -1,0 +1,178 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création de la Structure Firestore
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification de l’architecture globale de stockage
+  • Minor (1.X.0): Ajout de nouvelles collections ou champs non disruptifs
+  • Patch (1.2.X): Ajustements rédactionnels, clarifications
+---
+
+# Structure Firestore
+
+La structure Firestore définie ici constitue la base de stockage du système multi projets, des documents référents, des workflows, des logs, des snapshots et du contexte utilisateur.  
+Elle doit être strictement respectée par l’orchestrateur et les agents.
+
+---
+
+# 1. Racine principale
+
+projects/
+userContext/
+systemLogs/
+systemSettings/
+
+---
+
+# 2. Collection: projects/{projectId}
+
+Chaque projet possède sa propre arborescence interne.
+
+projects/{projectId}/
+meta/
+project.json
+documents/
+architecture.json
+ux.json
+strategy.json
+workflowDocument.json
+notes.json
+workflowEngine/
+engine.json
+logs/
+creation.json
+updates/{logId}.json
+snapshots/
+initial/
+project.json
+documents/
+workflowEngine.json
+versions/
+{snapshotId}/
+
+---
+
+# 3. Détail des sous-structures
+
+## 3.1 meta/
+Contient les métadonnées générales du projet.
+
+projects/{projectId}/meta/project.json
+
+Champs typiques:
+- projectId  
+- name  
+- createdAt  
+- createdBy  
+- status  
+- description courte  
+
+---
+
+## 3.2 documents/
+
+Contient les documents référents selon le Schéma universel + module spécialisé.
+
+projects/{projectId}/documents/
+architecture.json
+ux.json
+strategy.json
+workflowDocument.json
+notes.json
+
+Chaque document respecte:
+- meta  
+- content  
+- specialized  
+- narrative  
+
+---
+
+## 3.3 workflowEngine/
+
+projects/{projectId}/workflowEngine/engine.json
+
+Contient:
+- états  
+- transitions  
+- conditions  
+- actions  
+- état initial  
+
+---
+
+## 3.4 logs/
+
+projects/{projectId}/logs/
+creation.json
+updates/{logId}.json
+
+Contient l’historique de toutes les opérations effectuées sur le projet.
+
+---
+
+## 3.5 snapshots/
+
+Structure permettant le rollback à n’importe quel état.
+
+projects/{projectId}/snapshots/
+initial/
+project.json
+documents/
+workflowEngine.json
+versions/
+{snapshotId}/
+project.json
+documents/
+workflowEngine.json
+timestamp
+reason
+agent
+
+---
+
+# 4. Collection: userContext/
+
+Stocke l’état utilisateur, notamment le projet actif.
+
+userContext/{userId}/
+currentProject.json
+
+Champs:
+- projectId
+- selectedAt
+- selectedBy
+- status
+
+---
+
+# 5. Collection: systemLogs/
+
+Journalisation globale du système.
+
+systemLogs/
+currentProjectSwitch/{logId}.json
+agentActivity/{logId}.json
+errors/{logId}.json
+
+---
+
+# 6. Collection: systemSettings/
+
+Configuration interne du système.
+
+systemSettings/
+pipelines/
+projectEntry.json
+documentUpdate.json
+constraints/
+versioning.json
+agentRules.json
+workflowRules.json
+
+---
+
+Fin du document Structure Firestore.
