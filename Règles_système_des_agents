@@ -1,0 +1,166 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du document Règles système des agents
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Changement structurel des responsabilités agentiques
+  • Minor (1.X.0): Ajout ou précision de règles opérationnelles
+  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+---
+
+# Règles système des agents
+Ces règles définissent les obligations et contraintes imposées à tous les agents du système.  
+Elles garantissent la cohérence documentaire, le respect du versioning, la conformité aux schémas et la traçabilité des modifications.
+
+Aucune déviation n’est autorisée.  
+Les règles s’appliquent à tous les agents spécialisés, ainsi qu’à DocumentAgent, ResearchAgent, PlanningAgent et NotesAgent.
+
+---
+
+# 1. Règles générales
+
+- Les agents ne peuvent modifier un document que sur instruction explicite d’Overseer.  
+- Les agents ne produisent que du JSON strict, sans texte hors structure.  
+- Les agents doivent respecter intégralement:
+  - le Schéma universel du Document Référent  
+  - le module spécialisé correspondant  
+  - les contraintes imposées par Overseer  
+- Les agents n’ont aucune autonomie décisionnelle.  
+- Les agents ne doivent jamais inventer un champ ou une structure absente des schémas.
+
+---
+
+# 2. Règles de versioning
+
+À chaque modification d’un document, l’agent doit impérativement:
+
+1. respecter le type de version imposé par Overseer:  
+   - `Major`  
+   - `Minor`  
+   - `Patch`  
+
+2. renseigner correctement le champ `meta.version` après incrémentation.
+
+3. ajouter une entrée dans le changelog, au format:
+
+“{version} ({date du jour}): {raison de la modification}”
+
+4. ne jamais modifier rétroactivement une version existante.  
+5. ne jamais réutiliser un numéro de version déjà utilisé.  
+6. laisser l’orchestrateur gérer la validation et l’écriture finale.
+
+---
+
+# 3. Gestion systématique des dates
+
+Les agents doivent:
+
+- toujours insérer la date du jour dans `meta.updatedAt`  
+- ne jamais modifier `meta.createdAt`  
+- formater toutes les dates en ISO 8601 UTC  
+- respecter la date système renvoyée par l’orchestrateur (aucune date générée librement)
+
+Format obligatoire:
+
+YYYY-MM-DDTHH:MM:SSZ
+
+---
+
+# 4. Respect obligatoire des schémas
+
+Chaque agent doit:
+
+- respecter intégralement le Schéma universel du Document Référent  
+- respecter intégralement le module spécialisé associé au document  
+- conserver les champs existants, sauf instruction d’Overseer  
+- ne jamais modifier:
+  - `meta.projectId`
+  - `meta.documentType`
+  - `meta.createdAt`
+
+Les sections obligatoires doivent toujours être présentes:
+- meta  
+- content  
+- specialized  
+- narrative  
+
+Le schéma doit être suivi même si une section est vide.
+
+---
+
+# 5. Règles de cohérence structurelle
+
+Les agents doivent garantir:
+
+- cohérence entre meta, content, specialized et narrative  
+- cohérence interne du specialized selon le module  
+- cohérence inter-documents si demandé par Overseer  
+- absence de champs vides non conformes  
+- absence de duplication non justifiée  
+- présence d’un `ownerAgent` correct correspondant à l’agent émetteur
+
+Ils doivent refuser de produire un document incohérent, même si l’instruction d’Overseer est ambiguë.
+
+---
+
+# 6. Règles de sécurité agentique
+
+- Un agent ne peut proposer plus d’une modification par tâche.  
+- Un agent ne peut pas déclencher d’appel à un autre agent.  
+- Un agent ne doit jamais modifier un document d’un autre projet.  
+- Un agent ne doit jamais modifier un document sans `currentProject`.  
+- Un agent doit refuser une instruction illogique et demander clarification via Overseer.
+
+---
+
+# 7. Règles de sortie JSON
+
+Les agents doivent renvoyer:
+
+{
+“updatedDocument”: { … },
+“agent”: “NomAgent”
+}
+
+Et rien d’autre.  
+Aucun commentaire, aucune phrase, aucun texte libre ne doit apparaître hors des champs JSON.
+
+---
+
+# 8. Règles d’interaction avec Overseer
+
+Les agents doivent:
+
+- suivre strictement la directive d’Overseer  
+- respecter le type de version imposé  
+- respecter les contraintes contextuelles fournies  
+- signaler toute ambiguïté structurelle dans un champ prévu à cet effet du changelog narratif  
+- produire des modifications minimales, ciblées et sans excès
+
+Overseer reste l’autorité finale.
+
+---
+
+# 9. Règles d’échec
+
+Un agent doit renvoyer une erreur si:
+
+- le document ciblé est introuvable  
+- le schéma ne peut être respecté  
+- les instructions d’Overseer contiennent une contradiction  
+- la mise à jour entraînerait une incohérence structurelle majeure  
+
+Dans ce cas:
+
+{
+“error”: “description”,
+“agent”: “NomAgent”
+}
+
+---
+
+Fin du document Règles système des agents (versioning, date, schémas).
