@@ -1,0 +1,213 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Process de chargement du contexte et des documents
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification de la logique de chargement ou des responsabilités système
+  • Minor (1.X.0): Ajout d’étapes ou optimisations non disruptives
+  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+---
+
+# Process de chargement du contexte et des documents
+
+Ce processus décrit la procédure systémique permettant de charger le contexte projet, les documents référents et les données nécessaires avant toute exécution agentique.  
+Le chargement du contexte est obligatoire pour garantir la cohérence, éviter les dérives et permettre aux agents d’opérer sur un état exact du projet.
+
+---
+
+# 1. Conditions préalables
+
+Le chargement du contexte ne peut commencer que si:
+
+- un `currentProject` est défini
+- la sélection du projet est valide et non périmée
+- aucune opération critique n’est en cours sur ce projet
+- les documents référents attendus existent en base
+
+Si l’une de ces conditions échoue, Overseer doit interrompre l’opération et demander une correction.
+
+---
+
+# 2. Rôle des entités système
+
+## 2.1 Overseer
+- demande explicitement le chargement du contexte  
+- vérifie l’intégrité du currentProject  
+- transmet à l’orchestrateur la nécessité de charger le contexte
+
+## 2.2 Orchestrateur
+- effectue les lectures Firestore  
+- assemble le contexte complet  
+- vérifie la cohérence entre les éléments chargés  
+- renvoie un contexte prêt à être utilisé
+
+## 2.3 ContextAgent
+- nettoie, clarifie ou synthétise le contexte si nécessaire  
+- prépare les données pour l’usage agentique  
+- détecte les incohérences narratives ou structurelles légères
+
+---
+
+# 3. Étapes du processus
+
+## 3.1 Lecture du currentProject
+
+L’orchestrateur lit:
+
+userContext/{userId}/currentProject.json
+
+Champs attendus:
+- projectId  
+- selectedAt  
+- selectedBy  
+- status = "active"
+
+Si `status != active`, l’opération est arrêtée.
+
+---
+
+## 3.2 Chargement du meta projet
+
+Lecture de:
+
+projects/{projectId}/meta/project.json
+
+Champs attendus:
+- projectId  
+- name  
+- description  
+- createdAt  
+- status  
+- autres métadonnées système
+
+---
+
+## 3.3 Chargement des documents référents
+
+L’orchestrateur charge:
+
+projects/{projectId}/documents/
+architecture.json
+ux.json
+strategy.json
+workflowDocument.json
+notes.json
+
+Chaque document doit respecter:
+- Schéma universel du Document Référent  
+- module spécialisé correspondant  
+- versioning valide  
+- meta.ownerAgent correctement défini  
+- dates conformes  
+
+En cas d’incohérence structurelle → arrêt immédiat.
+
+---
+
+## 3.4 Chargement du Workflow Engine
+
+Lecture de:
+
+projects/{projectId}/workflowEngine/engine.json
+
+Champs attendus:
+- initialState  
+- liste des états  
+- transitions  
+- actions éventuelles  
+
+L’état actuel doit être cohérent avec les logs récents.  
+En cas d’écart manifeste → état `warning`.
+
+---
+
+## 3.5 Chargement des informations de contexte étendu
+
+Le système peut charger les éléments complémentaires:
+
+projects/{projectId}/logs/
+projects/{projectId}/snapshots/
+systemSettings/
+
+Ces éléments servent:
+- à contextualiser le travail des agents  
+- à offrir une mémoire limitée mais utile du passé du projet  
+- à anticiper des dérives  
+- à préparer les transitions futures  
+
+---
+
+## 3.6 Assemblage du contexte complet
+
+L’orchestrateur assemble un objet interne:
+
+{
+“project”: { … meta … },
+“documents”: {
+“architecture”: { … },
+“ux”: { … },
+“strategy”: { … },
+“workflowDocument”: { … },
+“notes”: { … }
+},
+“workflowEngine”: { … },
+“logs”: { … },
+“snapshots”: { … }
+}
+
+Ce contexte est destiné exclusivement:
+- à Overseer  
+- à ContextAgent  
+- aux agents via l’orchestrateur  
+
+Il n’est jamais exposé directement à l’utilisateur.
+
+---
+
+## 3.7 Intervention de ContextAgent (optionnelle)
+
+ContextAgent peut:
+- synthétiser le contexte  
+- détecter des incohérences douces  
+- signaler des risques à Overseer  
+- préparer un résumé ciblé pour l’agent qui recevra la tâche  
+
+Le contexte final renvoyé à Overseer doit être propre, cohérent, et immédiatement exploitable.
+
+---
+
+## 3.8 Retour à Overseer
+
+L’orchestrateur renvoie:
+
+{
+“status”: “contextLoaded”,
+“projectId”: “…”,
+“documents”: { … },
+“workflowEngine”: { … },
+“contextQuality”: “ok|warning”
+}
+
+Overseer peut alors:
+- poursuivre la tâche  
+- refuser une opération en cas d’anomalie  
+- demander validation par ValidationAgent  
+- renvoyer une synthèse à l’utilisateur  
+
+---
+
+# 4. Contraintes strictes
+
+- Aucun agent ne peut être appelé sans contexte chargé.  
+- Toute incohérence grave met le système en état `halted`.  
+- Le contexte doit être rechargé à chaque nouvelle tâche.  
+- Aucune mise en cache durable n’est autorisée.  
+- Tout changement du currentProject invalide les données précédemment chargées.  
+
+---
+
+Fin du Process de chargement du contexte et des documents.
