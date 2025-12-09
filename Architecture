@@ -1,0 +1,47 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Initialisation du module spécialisé Architecture
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+ArchitectureSpecializedSchema:
+  description: "Module spécialisé décrivant l'architecture technique d'un projet"
+
+  specialized:
+    layers:
+      description: "Couches structurelles du projet"
+      type: array
+      itemStructure:
+        name: string
+        purpose: string
+        technologies: array of strings
+        constraints: array of strings
+
+    components:
+      description: "Composants principaux, leur rôle et leurs relations"
+      type: array
+      itemStructure:
+        name: string
+        responsibility: string
+        inputs: array of strings
+        outputs: array of strings
+        dependencies: array of strings
+        risks: array of strings
+
+    integrations:
+      description: "Services externes ou modules connectés"
+      type: array
+      itemStructure:
+        provider: string
+        purpose: string
+        apiUsed: string
+        constraints: array of strings
+
+    constraints:
+      description: "Contraintes fortes imposées par l’architecture"
+      type: array
+      itemStructure:
+        type: string
+        description: string
