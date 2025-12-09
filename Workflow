@@ -1,0 +1,34 @@
+
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Initialisation du module spécialisé Workflow Document
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+WorkflowDocumentSpecializedSchema:
+  description: "Module spécialisé représentant un workflow métier ou opérationnel"
+
+  specialized:
+    states:
+      description: "États du workflow"
+      type: array
+      itemStructure:
+        id: string
+        label: string
+        description: string
+
+    transitions:
+      description: "Passages possibles entre états"
+      type: array
+      itemStructure:
+        from: string
+        to: string
+        conditions: array of strings
+
+    rules:
+      description: "Contraintes du workflow"
+      type: array
+      itemStructure:
+        rule: string
+        enforcement: string
