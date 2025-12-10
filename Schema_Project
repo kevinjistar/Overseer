@@ -1,0 +1,160 @@
+
+---
+Version: 1.1.0
+Date: 2025-12-09
+Changelog:
+  - 1.1.0 (2025-12-09): Mise à jour complète du Schéma Projet, ajout versioning, logs système, états workflows, compatibilité Sync
+  - 1.0.0 (2025-12-09): Création du schéma initial
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+# Schéma Projet (Concept)
+
+Projet {
+  meta {
+    id
+    name
+    description
+    createdAt
+    updatedAt
+    version
+    status
+  }
+
+  documents {
+    architecture: Document[]
+    ux: Document[]
+    strategy: Document[]
+    workflow: Document[]
+    notes: Document[]
+  }
+
+  workflows {
+    systemWorkflows: Workflow[]
+    projectWorkflows: Workflow[]
+    activeWorkflow
+  }
+
+  settings {
+    agentsAllowed[]
+    versioning
+    constraints[]
+  }
+
+  sync {
+    lastExternalSyncAt
+    lastExternalSource
+    lastSyncPayload
+  }
+
+  logs {
+    events: LogEntry[]
+    syncHistory: SyncEntry[]
+  }
+}
+
+Un Projet est un conteneur complet regroupant documents référents, workflows, paramètres système, historique et état de synchronisation.
+
+---
+
+# JSON Schema — ProjectSchema (Version 1.1.0)
+
+{
+  "title": "ProjectSchema",
+  "type": "object",
+  "required": ["meta", "documents", "workflows", "settings", "sync", "logs"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["id", "name", "createdAt", "version", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "version": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "archived"] }
+      }
+    },
+
+    "documents": {
+      "type": "object",
+      "properties": {
+        "architecture": { "type": "array", "items": { "$ref": "DocumentSchema" } },
+        "ux": { "type": "array", "items": { "$ref": "DocumentSchema" } },
+        "strategy": { "type": "array", "items": { "$ref": "DocumentSchema" } },
+        "workflow": { "type": "array", "items": { "$ref": "DocumentSchema" } },
+        "notes": { "type": "array", "items": { "$ref": "DocumentSchema" } }
+      }
+    },
+
+    "workflows": {
+      "type": "object",
+      "required": ["systemWorkflows", "projectWorkflows"],
+      "properties": {
+        "systemWorkflows": {
+          "type": "array",
+          "items": { "$ref": "WorkflowSchema" }
+        },
+        "projectWorkflows": {
+          "type": "array",
+          "items": { "$ref": "WorkflowSchema" }
+        },
+        "activeWorkflow": {
+          "type": "string"
+        }
+      }
+    },
+
+    "settings": {
+      "type": "object",
+      "required": ["agentsAllowed", "versioning"],
+      "properties": {
+        "agentsAllowed": { "type": "array", "items": { "type": "string" } },
+        "versioning": { "type": "string", "enum": ["auto"] },
+        "constraints": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "sync": {
+      "type": "object",
+      "required": ["lastExternalSyncAt", "lastExternalSource", "lastSyncPayload"],
+      "properties": {
+        "lastExternalSyncAt": { "type": "string" },
+        "lastExternalSource": { "type": "string" },
+        "lastSyncPayload": { "type": "string" }
+      }
+    },
+
+    "logs": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": { "type": "string" },
+              "agent": { "type": "string" },
+              "action": { "type": "string" },
+              "details": { "type": "string" }
+            }
+          }
+        },
+        "syncHistory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": { "type": "string" },
+              "source": { "type": "string" },
+              "payload": { "type": "string" },
+              "result": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
