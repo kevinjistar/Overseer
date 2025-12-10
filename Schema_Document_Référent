@@ -1,89 +1,51 @@
 
-
-
 ---
-Version: 1.0.0
-Date: 2025-12-09
+Version: 1.1.0
+Date: 2025-12-10
 Changelog:
-  - 1.0.0 (2025-12-09): Initialisation du Schéma universel du Document Référent
+  - 1.1.0 (2025-12-10): Mise à jour du schéma universel, ajout compatibilité Sync, ProjectSchema 1.1.0, règles strictes pour versioning, cohérence avec Overseer et workflows
+  - 1.0.0 (2025-12-10): Initialisation du Schéma universel du Document Référent
 Breaking Changes: Aucun depuis 1.0.0
 ---
-SCHÉMA UNIVERSEL DU DOCUMENT RÉFÉRENT
 
-Ce schéma définit la structure minimale et stable que tout document référent doit respecter.
-Les modules spécialisés (Architecture, UX, Stratégie, Workflow, Notes) viennent s’ajouter dans une section dédiée, mais ne modifient jamais ce noyau universel.
+# SCHÉMA UNIVERSEL DU DOCUMENT RÉFÉRENT
 
-Il garantit:
-	•	cohérence inter-agents
-	•	validation automatique
-	•	versioning robuste
-	•	lisibilité humaine et machine
-	•	stabilité dans la durée
+Ce schéma définit la structure stable que tout Document Référent doit respecter.  
+La zone specialized est la seule partie variable selon le type de document.  
+Le schéma garantit cohérence multi-agents, validation automatique, robustesse du versioning, compatibilité Firestore et compatibilité Cloud Functions.
 
-⸻
+---
 
-1. Description conceptuelle
+# 1. Description conceptuelle
 
-Cette section est humaine, lisible, et explique l’intention du schéma. GAS n’en aura pas besoin, mais toi oui.
+Un Document Référent contient cinq blocs fondamentaux.
 
-Document Référent
+A. meta  
+Informations de gouvernance:  
+- id  
+- type  
+- projectId  
+- version  
+- status  
+- createdAt  
+- updatedAt  
+- ownerAgent  
 
-Un Document Référent est un artefact structuré, versionné, qui représente un aspect essentiel d’un projet.
-Il contient quatre grands blocs:
+B. structured  
+Sections structurées exploitables par les agents.
 
-A. meta
+C. specialized  
+Zone modulaire dépendant du type de document.
 
-Toutes les données de gestion:
-	•	id
-	•	type
-	•	projectId
-	•	status
-	•	version
-	•	createdAt
-	•	updatedAt
-	•	ownerAgent
+D. narrativeMarkdown  
+Zone optionnelle en langage naturel, hors logique interne.
 
-Objectif: traçabilité totale, versioning propre, gouvernance.
+E. links  
+Références internes ou externes.
 
-B. structured
+---
 
-Le cœur structuré du document.
-Il contient des sections, chacune elle même structurée.
-
-Chaque section peut représenter une partie:
-	•	d’un design
-	•	d’une architecture
-	•	d’un besoin stratégique
-	•	d’un workflow
-	•	d’un concept métier
-
-C. specialized
-
-La zone modulable.
-Chaque type de document aura son propre contenu dans cette zone, mais la forme reste identique.
-
-D. narrativeMarkdown
-
-Une zone narrative optionnelle qui permet aux agents d’ajouter une explication en langage naturel.
-Elle n’est jamais prise en compte dans la logique interne, mais elle aide pour la compréhension humaine.
-
-E. links
-
-Une liste d’identifiants ou d’URL permettant:
-	•	de lier des documents ensemble
-	•	de pointer vers une ressource externe
-	•	de relier une décision à un justificatif
-
-⸻
-
-2. Version JSON SCHEMA complète (prête pour GAS)
-
-Ce JSON Schema est destiné:
-	•	à la validation dans Cloud Functions
-	•	aux agents via responseSchema
-	•	à Firestore pour maintenir la forme des documents
-
-Tu peux transmettre ce bloc tel quel.
+# 2. JSON SCHEMA — UniversalDocumentSchema (Version 1.1.0)
 
 {
   "title": "UniversalDocumentSchema",
@@ -121,7 +83,7 @@ Tu peux transmettre ce bloc tel quel.
               "title": { "type": "string" },
               "content": {
                 "type": "object",
-                "description": "Contenu structuré libre, mais sous forme d'objet pour être exploitable par les agents"
+                "description": "Contenu structuré libre, sous forme d'objet pour exploitation par les agents"
               },
               "notes": { "type": "string" }
             }
@@ -147,46 +109,19 @@ Tu peux transmettre ce bloc tel quel.
   }
 }
 
+---
 
-⸻
+# 3. Cohérence du système
 
-3. Pourquoi ce schéma fonctionne parfaitement
+Ce schéma:
 
-Voici les bénéfices directs pour ton système multi agents.
+- est compatible avec ProjectSchema 1.1.0  
+- permet validation stricte par Cloud Functions  
+- garantit que tous les documents ont une forme stable  
+- rend le versioning automatique trivial  
+- permet à Overseer de vérifier la conformité documentaire  
+- permet aux agents spécialisés de modifier uniquement specialized + structured  
+- s’intègre entièrement au Worklow Engine  
+- est compatible avec le pipeline de synchronisation externe  
 
-1. Les agents peuvent manipuler n’importe quel type de document
-
-Parce que la base est la même.
-
-2. Le backend peut tout valider automatiquement
-
-Cloud Functions rejette tout JSON non conforme.
-
-3. Le versioning automatique est facile
-
-Il suffit d’incrémenter version et updatedAt.
-
-4. Modularité maximale
-
-Seule la section “specialized” change selon le type.
-
-5. Cohérence garantie dans Firestore
-
-Tous les documents d’un projet ont exactement la même forme.
-
-6. Overseer peut superviser sans ambiguïté
-
-Il sait toujours comment lire un document.
-
-⸻
-
-4. État du système
-
-Le premier bloc est terminé.
-Nous avons:
-	•	un schéma universel clair
-	•	un JSON Schema complet
-	•	une logique stable et adaptée au système multi projets
-	•	un format directement exploitable par GAS
-
-Aucune autre version n’est nécessaire.
+Fin du Schéma universel du Document Référent (Version 1.1.0).
