@@ -1,0 +1,121 @@
+
+---
+Document: CorrectionMode_Policy
+Version: 1.0.0
+Date: 2025-12-11
+PolicyType: CorrectionPolicy
+
+PolicyVersions:
+  ValidationPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+
+Changelog:
+  - 1.0.0 (2025-12-11): Création de la policy correctionMode, définissant les règles, contraintes et restrictions du mode correction dans Overseer.
+
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+1. Objet de la CorrectionMode_Policy
+
+Cette policy définit le mode "correction", un état opérationnel spécial activé par Overseer lorsque:
+- une incohérence sémantique majeure est détectée,
+- un verdict "block" est rendu par SuperiorValidationAgent,
+- une écriture précédente a introduit un état instable,
+- une restauration corrective doit être effectuée avant reprise normale.
+
+Le mode correction sert exclusivement à restaurer la cohérence, jamais à introduire de nouvelles évolutions métier.
+
+
+2. Activation du mode correction
+
+2.1 Déclencheurs autorisés
+Overseer active le mode correction uniquement lorsque:
+- verdict = block (local ou global),  
+- incohérence inter-documents détectée après écriture,  
+- workflow invalide ou contradictoire,  
+- état projet partiellement corrompu,  
+- erreur utilisateur ou agent provoquant incohérence majeure.
+
+2.2 Déclencheur interdit
+L’utilisateur ne peut pas activer directement le mode correction.  
+Seul Overseer peut le faire, selon les conditions métier et structurelles.
+
+
+3. Garanties du mode correction
+
+Lorsque correctionMode = true, le système garantit:
+
+• aucune transition workflow permise,  
+• aucun appel agentique non supervisé,  
+• aucune évolution structurelle,  
+• aucune mise à jour majeure ou mineure,  
+• corrections minimales uniquement,  
+• un seul agent autorisé: SuperiorValidationAgent ou un CorrectiveAgent dédié,  
+• validation globale obligatoire après chaque proposition de correction,  
+• impossibilité d’override des verdicts "block".  
+
+
+4. Règles opérationnelles du mode correction
+
+4.1 Restrictions pour Overseer
+En mode correction, Overseer:
+- ne peut pas initier de transitions workflow,
+- ne peut pas imposer de version Major ou Minor,
+- ne peut autoriser que des patches correctifs,
+- doit demander validation globale après chaque correction candidate.
+
+4.2 Restrictions pour les agents
+• Seul un agent correctif peut agir (SuperiorValidationAgent ou CorrectiveAgent).  
+• Les modifications doivent être minimales, ciblées et justifiées.  
+• Aucune refonte documentaire n’est permise.  
+• Aucun changement conceptuel, stratégique ou architectural.
+
+4.3 Restrictions structurelles
+L’orchestrateur doit:
+- refuser toute transition workflow,
+- exécuter uniquement: log, patch, snapshot,
+- refuser les actions structurelles complexes (actions callAgent non définies pour correction).
+
+4.4 Conditions de sortie
+Overseer peut désactiver le mode correction uniquement si:
+- validation locale = allow ou warn,  
+- validation globale = allow ou warn,  
+- cohérence inter-documents restaurée,  
+- workflow de nouveau compatible,  
+- aucun risque "high" détecté.
+
+Un log dédié doit être créé, marquant la clôture du cycle de correction.
+
+
+5. Pipeline correctionMode
+
+1. Overseer détecte incohérence → active correctionMode  
+2. Appel agent dédié avec instruction de correction  
+3. Orchestrateur reçoit candidateDocument et valide structure  
+4. SuperiorValidationAgent effectue validation locale  
+5. Validation globale obligatoire  
+6. verdict:
+   - allow → Overseer applique la correction  
+   - warn → Overseer peut appliquer mais log obligatoire  
+   - block → Overseer doit demander nouvelle correction (override interdit)  
+7. Orchestrateur applique patch structurel (pas de transitions)  
+8. Overseer vérifie cohérence globale  
+9. Overseer désactive correctionMode si stabilité retrouvée  
+
+
+6. Invariants du mode correction
+
+Le système doit toujours respecter:
+
+• stabilité > évolutivité,  
+• patch > refonte,  
+• cohérence globale > cohérence locale,  
+• validation globale obligatoire,  
+• aucun override d’un block,  
+• aucune transition workflow,  
+• aucun changement stratégique,  
+• une seule correction par cycle,  
+• sortie du mode correction uniquement par Overseer.
+
+Fin du document.
