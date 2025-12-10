@@ -1,0 +1,212 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du document Instructions globales de constitution du système
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification structurelle de l’architecture générale ou du processus d’installation
+  • Minor (1.X.0): Ajout ou adaptation non disruptive à l’architecture
+  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+---
+
+# Instructions globales de constitution du système
+
+Ce document décrit la procédure complète pour assembler, installer et initialiser le système multi-agents Overseer dans Google AI Studio, Firebase (Firestore) et Cloud Functions.  
+Il sert de guide d’intégration principal et doit être suivi dans l’ordre strict.
+
+---
+
+# 1. Préparation de l’environnement
+
+## 1.1 Création du projet Firebase
+- Le projet Firebase doit être créé (Firestore + Cloud Functions activés).
+- La configuration client n’a pas besoin d’être incluse dans les documents système.
+- Seules les fonctionnalités backend sont utilisées par GAS pour installer les modules.
+
+## 1.2 Activation des composants nécessaires
+- Firestore en mode production  
+- Cloud Functions en environnement Node  
+- IAM configuré pour permettre à GAS d’écrire dans:
+  - Firestore
+  - Cloud Functions
+  - systemLogs
+  - userContext
+
+## 1.3 Vérification initiale
+- Le projet doit être vide avant déploiement.  
+- Aucun schéma ou collection n’est créé manuellement.
+
+---
+
+# 2. Importation des documents système dans GAS
+
+Tous les documents établis doivent être fournis à GAS sous forme de fichiers texte.  
+L’ordre d’importation est structurel.
+
+## 2.1 Ordre d’envoi recommandé
+1. Schéma universel du Document Référent  
+2. Modules spécialisés (5 fichiers)  
+3. Schéma Workflow Engine  
+4. Structure Firestore  
+5. Structure Cloud Functions / Orchestrateur  
+6. Pipeline d’entrée des projets  
+7. Pipeline de mise à jour des documents  
+8. Process interne d’appel d’agents  
+9. Process de chargement du contexte et des documents  
+10. Process du Workflow Engine  
+11. Contrôle anti dérive / Règles d’arrêt  
+12. Règles système des agents  
+13. Document Overseer  
+14. Protocole d’erreur complet  
+15. Instructions globales (ce document)
+
+Chaque fichier doit être envoyé individuellement à GAS accompagné d’une instruction simple:
+
+Voici un document système. Analyse-le et intègre-le dans la configuration interne.
+Aucune action de création Firestore ou Cloud Functions pour l’instant.
+
+---
+
+# 3. Construction des agents dans Google AI Studio
+
+Une fois les documents système intégrés, GAS doit créer les agents Gemini correspondants.
+
+## 3.1 Agents à créer
+- ArchitectureAgent  
+- UXAgent  
+- StrategyAgent  
+- WorkflowAgent  
+- NotesAgent  
+- ValidationAgent  
+- DocumentAgent  
+- PlanningAgent  
+- ResearchAgent  
+- ContextAgent  
+- Overseer (en tant que modèle central)
+
+## 3.2 Configuration des agents
+Chaque agent doit être configuré avec:
+- son rôle  
+- ses règles opérationnelles  
+- ses contraintes  
+- son format de sortie JSON  
+- les schémas associés  
+- les règles système des agents  
+
+Overseer doit être le seul modèle autorisé à recevoir des requêtes utilisateur.
+
+---
+
+# 4. Installation de l’Orchestrateur dans Cloud Functions
+
+GAS doit générer automatiquement les Cloud Functions suivantes:
+
+- createProject  
+- updateDocument  
+- validateDocument  
+- createSnapshot  
+- runWorkflowTransition  
+- setCurrentProject  
+- agentCallback  
+- systemRecovery  
+
+## 4.1 Règle absolue
+Aucune fonction ne doit contenir de logique improvisée, uniquement ce qui est spécifié dans les documents système.
+
+## 4.2 Format d'installation
+Pour chaque fonction GAS doit:
+- créer le fichier  
+- injecter la logique  
+- lier Firestore  
+- valider la compatibilité des types  
+
+---
+
+# 5. Déploiement de la structure Firestore
+
+GAS doit créer les arborescences Firestore décrites dans:
+
+- Structure Firestore  
+- Schéma universel du Document Référent  
+- Workflow Engine Schema  
+
+## 5.1 Aucune donnée initiale
+Hormis:
+- les projets créés par createProject  
+- userContext initial  
+- systemSettings  
+
+Aucune autre donnée Firestore ne doit être générée.
+
+---
+
+# 6. Vérification de la cohérence système
+
+Avant activation, GAS doit vérifier:
+
+1. conformité de tous les documents importés  
+2. correspondance entre les agents et leurs responsabilités  
+3. cohérence de l’arborescence Firestore  
+4. intégrité des Cloud Functions  
+5. mécanismes anti dérive opérationnels  
+6. capacité du Workflow Engine à être exécuté  
+7. capacité de Overseer à:  
+   - charger un contexte  
+   - appeler un agent  
+   - gérer un versioning  
+   - produire un compte rendu  
+
+Si un point échoue, GAS doit stopper le déploiement.
+
+---
+
+# 7. Première activation
+
+Une fois validé, GAS peut activer le système.
+
+## 7.1 Opérations à effectuer
+- initialiser systemSettings  
+- activer Overseer  
+- valider le Pipeline d’entrée des projets  
+- créer un projet test  
+- sélectionner ce projet comme currentProject  
+- exécuter une mise à jour documentaire simple  
+- vérifier les logs et snapshots  
+- tester une transition workflow  
+
+## 7.2 Critère de réussite
+Si les opérations s’enchaînent sans error/halted, le système est considéré fonctionnel.
+
+---
+
+# 8. Engagement du protocole utilisateur
+
+Une fois le système en place:
+
+- Overseer devient l’interface unique utilisateur  
+- les projets sont créés via lui  
+- les documents ne sont jamais manipulés manuellement  
+- toute action passe par le Process interne d’appel d’agents  
+
+---
+
+# 9. Maintenance et mises à jour
+
+Toute modification du système doit suivre le protocole de versioning:
+
+- Major pour changements structurels  
+- Minor pour ajouts non disruptifs  
+- Patch pour corrections légères  
+
+Chaque changement implique:
+- mise à jour du document  
+- mise à jour du fichier correspondant  
+- mise à jour du systemSettings si nécessaire  
+- redéploiement contrôlé
+
+---
+
+Fin du document Instructions globales de constitution du système.
