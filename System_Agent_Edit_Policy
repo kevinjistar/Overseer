@@ -1,0 +1,205 @@
+
+---
+Document: System_Agent_Edit_Policy
+Version: 1.0.0
+Date: 2025-12-10
+
+PolicyVersions:
+  ValidationPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+
+Changelog:
+  - 1.0.0 (2025-12-10): Création de la policy globale encadrant toutes les modifications de documents par les agents.
+
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+1. Objet de la policy
+
+La System_Agent_Edit_Policy définit les règles globales que tout AgentProducteur doit respecter lorsqu’il propose une modification de document dans un projet Overseer.
+
+Elle s’applique à:
+- tous les types d’agents producteurs (Architecture, Stratégie, UX, etc.),
+- tous les documents référents,
+- tous les projets,
+- tous les modes (normal, correction).
+
+Les agents ne lisent pas directement cette policy; elle est appliquée par Overseer qui en injecte les règles pertinentes dans chaque systemInstruction.
+
+
+2. Principes généraux
+
+2.1 Autorité
+
+- Overseer est souverain pour:
+  - décider de modifier un document,
+  - choisir l’agent,
+  - définir le type de versioning,
+  - accepter ou rejeter la proposition de l’agent.
+
+- L’orchestrateur est souverain pour:
+  - valider la structure,
+  - appliquer les écritures,
+  - gérer les snapshots.
+
+- SuperiorValidationAgent est souverain pour:
+  - émettre un verdict sémantique structuré (allow / warn / block),
+  - signaler les incohérences métier.
+
+2.2 Rôle de l’agent
+
+L’AgentProducteur:
+- reçoit un contexte formel préparé par Overseer,
+- produit un document candidat complet et conforme,
+- respecte strictement les règles de cette policy,
+- ne décide jamais de la version, des workflows ou des snapshots.
+
+
+3. Règles de modification structurelle
+
+3.1 Identité du document
+
+L’AgentProducteur ne doit jamais:
+- modifier `meta.id`,
+- modifier `meta.projectId`,
+- modifier la structure fondamentale du schéma universel,
+- ajouter des clés arbitraires hors zones autorisées:
+  - meta
+  - structured
+  - specialized
+  - narrative
+  - links.
+
+3.2 Champs meta
+
+L’AgentProducteur:
+- ne modifie jamais `meta.createdAt`,
+- ne modifie jamais `meta.createdBy` (ou équivalent),
+- met à jour `meta.updatedAt` uniquement si Overseer l’a explicitement demandé dans la systemInstruction,
+- ne modifie pas `meta.version` directement (elle est appliquée par l’orchestrateur selon la VersioningPolicy),
+- peut renseigner `meta.ownerAgent` si Overseer l’indique.
+
+3.3 Schémas et modules
+
+L’AgentProducteur:
+- respecte le `Schema_Document_Référent` fourni,
+- respecte le module spécialisé fourni (Architecture, Strategy, UX, etc.),
+- ne supprime pas de sections obligatoires,
+- n’ajoute pas de sections structurelles non prévues par le schéma.
+
+Si une évolution de schéma est nécessaire, Overseer doit le demander explicitement via un autre processus (migration, Major).
+
+
+4. Règles de modification sémantique
+
+4.1 Cohérence locale
+
+L’AgentProducteur doit:
+- préserver l’intention du document telle que décrite par Overseer,
+- éviter les changements radicaux de sens non demandés,
+- maintenir une narration cohérente dans la zone narrative,
+- ne pas introduire de contradictions internes (ex: deux sections incompatibles dans le même document).
+
+4.2 Cohérence globale
+
+L’AgentProducteur doit éviter:
+- de contredire la stratégie globale du projet,
+- de contredire l’architecture déclarée,
+- de contredire les décisions déjà fixées dans d’autres documents référents.
+
+Si une contradiction est nécessaire (pivot, refonte), Overseer doit le signaler explicitement dans la systemInstruction comme changement majeur.
+
+
+5. Règles de versioning côté agent
+
+5.1 Décision du type de version
+
+- L’AgentProducteur ne décide jamais directement du type de version (Major / Minor / Patch).
+- Overseer fournit le niveau de versioning attendu dans la systemInstruction.
+- L’agent doit produire un document conforme à ce niveau (ex:
+  - Patch: corrections locales, précisions,
+  - Minor / Major: changements plus profonds lorsqu’ils sont ordonnés).
+
+5.2 Indicateurs pour Overseer
+
+Lorsque Overseer demande à l’agent de proposer une intensité de changement, l’AgentProducteur peut:
+
+- taguer dans la zone narrative ou dans un champ prévu:
+  - l’ampleur perçue de ses modifications,
+  - les sections profondément modifiées.
+
+Ces informations sont utilisées par Overseer et SuperiorValidationAgent, pas par l’orchestrateur.
+
+
+6. Règles en mode correction
+
+Lorsque `operationMode = "correction"` est indiqué dans le contexte:
+
+L’AgentProducteur doit:
+- viser la stabilité du système, pas l’innovation,
+- appliquer des modifications minimales ciblées,
+- éviter tout changement structurel non demandé,
+- respecter les recommandations de SuperiorValidationAgent (si elles sont fournies dans le contexte),
+- ne pas introduire de nouvelles orientations stratégiques.
+
+En mode correction:
+- priorité absolue à la cohérence et à la restauration,
+- pas de refonte complète d’un document,
+- pas de création de nouveaux modules structurels sans instruction explicite d’Overseer.
+
+
+7. Format de sortie
+
+7.1 Output strict
+
+L’AgentProducteur doit toujours:
+- retourner un document complet, conforme au schéma fourni,
+- encapsuler la proposition dans un JSON strict sans texte hors structure,
+- éviter tout commentaire non structuré.
+
+Exemple simplifié:
+
+{
+  "meta": { … },
+  "structured": { … },
+  "specialized": { … },
+  "narrative": "…",
+  "links": { … }
+}
+
+7.2 Interdictions
+
+L’AgentProducteur ne doit jamais:
+- renvoyer des diffs textuels partiels,
+- renvoyer seulement un bout du document,
+- renvoyer du texte brut en dehors du JSON,
+- renvoyer des instructions en langage naturel.
+
+
+8. Intégration dans le pipeline Overseer
+
+Avant tout appel à un AgentProducteur:
+
+- Overseer charge System_Agent_Edit_Policy (version active),
+- sélectionne les règles pertinentes,
+- injecte un résumé opérationnel de ces règles dans la systemInstruction de l’agent.
+
+L’agent ne “lit” pas la policy directement; il reçoit des consignes déjà extraites et contextualisées par Overseer.
+
+
+9. Invariants
+
+Cette policy impose aux agents les invariants suivants:
+
+- Ne jamais modifier l’identité structurelle d’un document.
+- Ne jamais décider seul du type de versioning.
+- Ne jamais altérer createdAt ou les champs d’origine protégés.
+- Toujours produire un document complet, structuré et valide.
+- Toujours respecter l’intention d’Overseer.
+- Toujours éviter les contradictions globales évidentes.
+- Appliquer une prudence maximale en mode correction.
+- Accepter que la décision finale appartient à Overseer, validée par l’orchestrateur et SuperiorValidationAgent.
+
+Fin du document.
