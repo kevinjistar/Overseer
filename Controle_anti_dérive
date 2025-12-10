@@ -1,10 +1,10 @@
 
 ---
 Version: 1.0.1
-Date: 2025-12-09
+Date: 2025-12-10
 Changelog:
-  - 1.0.1 (2025-12-09): Alignement complet avec la logique de l’orchestrateur, ajout de contraintes Firestore réalistes, clarification des mécanismes de suspension/reprise.
-  - 1.0.0 (2025-12-09): Création du document Contrôle anti dérive / Règles d’arrêt
+  - 1.0.1 (2025-12-10): Alignement complet avec la logique de l’orchestrateur, ajout de contraintes Firestore réalistes, clarification des mécanismes de suspension/reprise.
+  - 1.0.0 (2025-12-10): Création du document Contrôle anti dérive / Règles d’arrêt
 Breaking Changes: Aucun depuis 1.0.0
 
 Règle de versioning:
