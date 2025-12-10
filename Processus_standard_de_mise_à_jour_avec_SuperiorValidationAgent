@@ -1,0 +1,249 @@
+
+---
+Document: Processus_standard_de_mise_à_jour_avec_SuperiorValidationAgent
+Version: 1.0.0
+Date: 2025-12-10
+
+PolicyVersions:
+  ValidationPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+
+Changelog:
+  - 1.0.0 (2025-12-10): Création du processus standard intégrant SuperiorValidationAgent, double validation sémantique, mode correction, pipeline complet stabilisé.
+
+Breaking Changes: Aucun depuis 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le pipeline standard de mise à jour d’un document référent dans le système Overseer, intégrant:
+
+• l’appel agentique,  
+• la validation structurelle (orchestrateur),  
+• la validation sémantique locale et globale (SuperiorValidationAgent),  
+• la décision d’Overseer,  
+• l’écriture Firestore,  
+• la gestion du mode correction,  
+• la journalisation complète.
+
+Ce processus est obligatoire pour toute mise à jour documentaire, sans exception.
+
+
+2. Acteurs impliqués
+
+• Utilisateur: initie une intention.  
+• Overseer: interprète, gouverne, coordonne, décide.  
+• AgentProducteur: produit un document candidat.  
+• Orchestrateur: valide structure et exécute mécaniquement.  
+• SuperiorValidationAgent: vérifie la cohérence métier locale/globale.  
+• Firestore: stocke et versionne.
+
+
+3. Flux global du processus
+
+Le processus complet se déroule en neuf étapes strictement séquentielles:
+
+1. Intention utilisateur  
+2. Analyse d’Overseer  
+3. Instruction formelle  
+4. Production agentique  
+5. Validation structurelle  
+6. Validation sémantique (locale + globale selon Policy)  
+7. Décision Overseer  
+8. Écriture + snapshot + transitions structurelles  
+9. Synthèse utilisateur et clôture
+
+
+4. Description détaillée des étapes
+
+4.1 Étape 1 — Intention utilisateur
+
+L’utilisateur adresse une demande naturelle à Overseer.  
+Cette intention ne doit jamais être transmise telle quelle au système technique.
+
+Overseer reçoit:
+• la demande,  
+• le contexte utilisateur,  
+• le currentProject.
+
+
+4.2 Étape 2 — Analyse d’Overseer
+
+Overseer analyse:
+
+• les documents concernés,  
+• le workflow courant,  
+• les Policies actives,  
+• la cohérence globale préalable,  
+• le type de versioning à appliquer (Major/Minor/Patch),  
+• l’agent producteur approprié.
+
+Sortie:
+• décision d’engager une opération,  
+• instruction métier structurée.
+
+
+4.3 Étape 3 — Génération de l’instruction formelle
+
+Overseer génère une systemInstruction strictement structurée comprenant:
+
+• document(s) concernés,  
+• schémas requis,  
+• contraintes de versioning,  
+• Policies actives,  
+• date et meta opérationnelles,  
+• opérationMode = “normal” ou “correction”,  
+• operationId, projectId.
+
+Cette instruction est transmise à l’orchestrateur pour appel agentique.
+
+
+4.4 Étape 4 — Appel de l’AgentProducteur
+
+L’orchestrateur:
+• reçoit l’instruction,  
+• la valide structurellement,  
+• appelle l’agent producteur via agentCallback.
+
+L’AgentProducteur retourne un JSON strict:
+• candidateDocument.
+
+
+4.5 Étape 5 — Validation structurelle (orchestrateur)
+
+L’orchestrateur valide:
+• conformité au schéma universel,  
+• conformité au module spécialisé,  
+• validité JSON,  
+• absence de clés inattendues,  
+• versioning mécanique (format, séquence),  
+• meta structurelles,  
+• cohérence structurelle minimale.
+
+Si échec → erreur structurelle → retour Overseer → fin du processus.
+
+
+4.6 Étape 6 — Validation sémantique (Overseer + SuperiorValidationAgent)
+
+SuperiorValidationAgent reçoit:
+• candidateDocument,  
+• originalDocument,  
+• projectContext,  
+• diff,  
+• operationMeta.
+
+Il retourne un verdict:
+
+{
+  "verdict": "allow | warn | block",
+  "reasons": [...],
+  "impactedDocuments": [...],
+  "workflowImpact": "none | minor | major",
+  "riskLevel": "...",
+  "recommendedFixes": [...]
+}
+
+Ensuite:
+
+• Overseer analyse le verdict.  
+• Si operationMode = “correction”, la sensibilité est plus élevée.  
+• Si block → Overseer peut soit:
+  - corriger via agent dédié,  
+  - demander une nouvelle proposition,  
+  - annuler l’opération.  
+• Si warn → Overseer arbitre.  
+• Si allow → Overseer poursuit.
+
+Une validation globale sémantique peut être déclenchée selon ValidationPolicy:
+• transitions majeures,  
+• versions Major,  
+• documents racine,  
+• corrections.
+
+
+4.7 Étape 7 — Décision finale d’Overseer
+
+Overseer prend la décision souveraine:
+
+• apply: l’écriture peut avoir lieu,  
+• correct: passage en mode correction,  
+• abort: arrêt propre de l’opération.
+
+Si Overseer override un block, il doit:
+• logguer la décision comme “exception”,  
+• justifier le contexte,  
+• invalider la transition workflow associée si applicable.
+
+
+4.8 Étape 8 — Écriture Firestore + snapshot + transitions structurelles
+
+L’orchestrateur applique:
+
+• écriture atomique,  
+• mise à jour meta.updatedAt,  
+• incrément version mécanique,  
+• création snapshot selon Policy,  
+• journalisation dans logs/{projectId}/events,  
+• exécution des transitions structurelles du Workflow Engine.
+
+Aucune condition métier n’est évaluée ici.
+
+En cas d’erreur structurelle:
+• rollback snapshot,  
+• état halted si nécessaire,  
+• rapport d’erreur → Overseer.
+
+
+4.9 Étape 9 — Clôture par Overseer
+
+Overseer:
+• valide optionalement la cohérence globale post-écriture,  
+• met à jour son contexte interne,  
+• prépare un résumé clair pour l’utilisateur,  
+• sort du mode correction le cas échéant.
+
+
+5. Mode Correction
+
+Déclenchement:
+• erreur sémantique grave,  
+• verdict block,  
+• incohérence globale détectée après écriture.
+
+Règles du mode correction:
+• operationMode = “correction”,  
+• un seul agent autorisé,  
+• aucune transition workflow,  
+• validation globale obligatoire,  
+• sortie explicite par Overseer uniquement.
+
+
+6. Invariants du Processus Standard
+
+Ce processus doit toujours garantir:
+
+• aucune écriture sans double validation structurelle et sémantique,  
+• Overseer souverain pour toutes décisions métier,  
+• orchestrateur strictement mécanique,  
+• SuperiorValidationAgent strictement vérificateur,  
+• aucun agent ne modifie jamais sans instruction d’Overseer,  
+• traçabilité totale,  
+• reproductibilité déterministe du pipeline,  
+• absence de logique métier côté orchestrateur,  
+• contrôle anti-boucle par Policies et Overseer.
+
+
+7. Conditions de rupture du processus
+
+Le processus s’interrompt immédiatement si:
+
+• validation structurelle échoue,  
+• verdict block non overridé,  
+• erreur Firestore,  
+• incohérence critique détectée,  
+• état halted actif.
+
+
+8. Fin du document
