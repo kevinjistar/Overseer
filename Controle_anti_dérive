@@ -1,0 +1,153 @@
+
+---
+Version: 1.0.1
+Date: 2025-12-09
+Changelog:
+  - 1.0.1 (2025-12-09): Alignement complet avec la logique de l’orchestrateur, ajout de contraintes Firestore réalistes, clarification des mécanismes de suspension/reprise.
+  - 1.0.0 (2025-12-09): Création du document Contrôle anti dérive / Règles d’arrêt
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification structurelle des règles d’arrêt ou du protocole de sécurité
+  • Minor (1.X.0): Ajout de conditions ou renforcement non disruptif
+  • Patch (1.2.X): Ajustements rédactionnels, précisions
+---
+
+# Contrôle anti dérive / Règles d’arrêt
+
+Ces règles définissent les mécanismes empêchant l’emballement, la corruption structurelle, les boucles indésirables et les comportements inattendus.  
+Elles sont exécutées conjointement par l’orchestrateur, Overseer et ValidationAgent.
+
+---
+
+# 1. Principes de sécurité fondamentaux
+
+- aucune action ne doit se poursuivre en cas d’incohérence confirmée  
+- aucune écriture ne doit avoir lieu hors pipeline officiel  
+- un agent ne peut émettre qu’une seule proposition par cycle  
+- aucune opération n’est valide sans currentProject défini  
+- toute anomalie détectée doit entraîner un arrêt immédiat  
+
+Le système préfère bloquer plutôt que risquer une dérive.
+
+---
+
+# 2. Conditions d’arrêt immédiat
+
+L’état `halted` est déclenché si l’une des conditions suivantes survient.
+
+## 2.1 Validation documentaire échouée
+- schéma universel violé  
+- module spécialisé invalide  
+- méta-données incohérentes  
+- versioning non conforme  
+- contenu non JSON strict  
+- références brisées  
+
+## 2.2 Boucles d’agents détectées
+- deux agents se répondent plus d’une fois sans progression logique  
+- même agent produisant plusieurs modifications successives sans changement de contexte  
+- même document modifié plus de deux fois consécutivement dans une fenêtre courte  
+
+## 2.3 Conflit de versioning
+- version reçue inférieure à la version actuelle  
+- version incompatible avec le type imposé par Overseer  
+- absence d’entrée de changelog justifiant la modification  
+- ownerAgent incohérent  
+
+## 2.4 Conflit de projet actif
+- currentProject modifié durant une opération  
+- agent renvoyant un résultat pour un projet différent  
+- référence à un projet non valide  
+
+## 2.5 Illégalité du Workflow Engine
+- transition non définie  
+- état cible inexistant  
+- action interdite  
+- conditions non satisfaites  
+
+## 2.6 Dépassement de quotas internes
+- génération excessive de snapshots  
+- trop de logs simultanés  
+- surcharge d’appels agents similaire à un emballement  
+
+---
+
+# 3. Actions immédiates en cas d’arrêt
+
+Lorsque `halted` est activé, l’orchestrateur exécute:
+
+1. suspension immédiate de toutes les opérations  
+2. restauration du dernier snapshot stable  
+3. création d’un log d’erreur dans systemLogs/errors/{logId}.json  
+4. transmission d’un rapport structuré à Overseer  
+5. purge des états intermédiaires liés à l’opération  
+6. verrouillage temporaire des écritures  
+7. entrée du flag système runtime.halted = true  
+
+---
+
+# 4. Détection proactive des dérives
+
+Le système surveille en continu:
+
+- fréquence des mises à jour par agent  
+- cohérence globale du graphe documentaire  
+- croissance anormale des fichiers  
+- répétitions de transitions dans le même workflow  
+- schémas internes détectant l’absence de progression logique  
+- empreintes (hash) d’états permettant d’identifier des cycles  
+
+En cas de dérive potentielle:
+- système passe en état `warning`  
+- un log de pré-alerte est créé  
+- Overseer doit valider manuellement avant nouvelle délégation  
+
+---
+
+# 5. Règles opérées par Overseer
+
+Overseer doit:
+
+- empêcher toute délégation si le système est en `warning` ou `halted`  
+- analyser les logs d’erreur pour déterminer la cause  
+- prescrire soit: validation, restauration, ou reprise contrôlée  
+- imposer un type de versioning stricte lorsque nécessaire  
+- empêcher un agent de proposer plusieurs corrections non justifiées  
+
+Overseer reste la barrière logique anti-chaos.
+
+---
+
+# 6. Règles opérées par ValidationAgent
+
+ValidationAgent doit:
+
+- vérifier structure, cohérence, versioning, meta, specialized  
+- confirmer que la modification représente une progression réelle  
+- détecter toute redondance ou boucle logique  
+- vérifier l’intégrité de l’historique documentaire  
+- renvoyer un verdict strict: `valid` ou `error`  
+
+Aucune nuance, aucune tolérance.
+
+---
+
+# 7. Reprise après arrêt
+
+Pour sortir de l’état `halted`:
+
+1. Overseer analyse le rapport d’arrêt  
+2. Overseer demande validation du dernier snapshot stable  
+3. ValidationAgent évalue et renvoie valid ou error  
+4. en cas de valid:  
+     - orchestrateur lève runtime.halted  
+     - le système passe en mode `safe`:  
+       une seule action agentique autorisée par cycle  
+5. après deux opérations successives sans anomalie:  
+     - retour au mode normal  
+     - réactivation complète du Workflow Engine  
+
+---
+
+Fin du document Contrôle anti dérive / Règles d’arrêt.
