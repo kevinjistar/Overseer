@@ -1,39 +1,42 @@
 
-Version: 1.0.0
+---
+Version: 1.1.0
 Date: 2025-12-09
 Changelog:
+  - 1.1.0 (2025-12-09): Mise à jour du Schéma Workflow Engine, ajout compatibilité ProjectSchema 1.1.0, Sync, Overseer, règles anti-boucle, validation renforcée
   - 1.0.0 (2025-12-09): Initialisation du Schéma Workflow Engine
 Breaking Changes: Aucun depuis 1.0.0
 
 Règle de versioning:
   • Major (X.0.0): Révision fondamentale de la logique d’exécution ou de la représentation des états
   • Minor (1.X.0): Ajout de nouvelles capacités dans les workflows (ex: nouveaux types de triggers ou d’actions)
-  • Patch (1.2.X): Correction de cohérence ou amélioration interne sans changement de structure
+  • Patch (1.2.X): Corrections internes sans changement structurel
 ---
 
+# 1. Description conceptuelle
 
-⸻
+Le Workflow Engine est un système déterministe de gestion d’états.  
+Un workflow évolue selon une logique stricte:
 
-1. Description conceptuelle
+1. Un état initial est défini.  
+2. Un événement, une demande ou un changement documentaire propose une transition.  
+3. Les conditions sont vérifiées par l’orchestrateur.  
+4. Si elles sont satisfaites, la transition est effectuée.  
+5. Des actions peuvent être exécutées.  
+6. Les agents peuvent être sollicités pour analyser, produire ou modifier des documents.  
+7. Overseer vérifie la cohérence, la conformité aux schémas et le versioning.  
+8. Toute erreur déclenche la gestion d’erreurs interne.
 
-Le Workflow Engine est un système de gestion d’états évolutif.
-Chaque workflow suit la logique:
-	1.	Le workflow possède un état courant.
-	2.	Une demande ou un événement propose une transition.
-	3.	Les conditions sont vérifiées.
-	4.	Si valide, l’état change.
-	5.	Des actions sont potentiellement déclenchées.
-	6.	Des agents peuvent être appelés pour générer ou transformer des documents.
-	7.	L’orchestrateur garantit la cohérence, la validation et le versioning.
+Objectifs du Workflow Engine:
+- éviter les boucles  
+- empêcher les transitions invalides  
+- garantir cohérence et traçabilité  
+- permettre automatisation contrôlée et transparente  
+- s’intégrer directement avec ProjectSchema et Overseer  
 
-L’objectif est:
-un système robuste, sans boucle infinie, sans ambiguïté et entièrement traçable.
+---
 
-⸻
-
-2. Schéma JSON complet du Workflow Engine
-
-Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
+# 2. Schéma JSON complet — WorkflowEngineSchema (Version 1.1.0)
 
 {
   "title": "WorkflowEngineSchema",
@@ -50,7 +53,8 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
         "projectId": { "type": "string" },
         "description": { "type": "string" },
         "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "updatedAt": { "type": "string" },
+        "version": { "type": "string" }
       }
     },
 
@@ -61,7 +65,7 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
 
     "states": {
       "type": "array",
-      "description": "Liste des états possibles du workflow",
+      "description": "Liste des états possibles",
       "items": {
         "type": "object",
         "required": ["id", "label"],
@@ -71,12 +75,10 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
           "description": { "type": "string" },
           "onEnter": {
             "type": "array",
-            "description": "Actions exécutées quand l'état est atteint",
             "items": { "$ref": "#/definitions/Action" }
           },
           "onExit": {
             "type": "array",
-            "description": "Actions exécutées avant de quitter l'état",
             "items": { "$ref": "#/definitions/Action" }
           }
         }
@@ -95,20 +97,22 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
 
           "conditions": {
             "type": "array",
-            "description": "Conditions qui doivent être vraies pour permettre la transition",
             "items": { "$ref": "#/definitions/Condition" }
           },
 
           "actions": {
             "type": "array",
-            "description": "Actions automatiquement déclenchées par cette transition",
             "items": { "$ref": "#/definitions/Action" }
           },
 
           "agentsInvolved": {
             "type": "array",
-            "description": "Agents autorisés ou requis pour valider ou exécuter cette transition",
             "items": { "type": "string" }
+          },
+
+          "notes": {
+            "type": "string",
+            "description": "Optionnel, permet de contextualiser la transition"
           }
         }
       }
@@ -116,11 +120,11 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
 
     "errorHandling": {
       "type": "object",
-      "description": "Gestion des erreurs pour assurer la stabilité du workflow",
       "properties": {
         "onInvalidTransition": { "type": "string" },
         "onFailedCondition": { "type": "string" },
-        "onAgentError": { "type": "string" }
+        "onAgentError": { "type": "string" },
+        "onLoopDetected": { "type": "string" }
       }
     }
   },
@@ -128,19 +132,24 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
   "definitions": {
     "Condition": {
       "type": "object",
-      "required": ["type", "value"],
+      "required": ["type"],
       "properties": {
         "type": { 
           "type": "string",
-          "enum": ["fieldEquals", "fieldNotEquals", "flagSet", "documentExists", "custom"]
+          "enum": [
+            "fieldEquals",
+            "fieldNotEquals",
+            "flagSet",
+            "documentExists",
+            "custom",
+            "workflowState",
+            "projectConstraint",
+            "versionCompare"
+          ]
         },
-        "value": {
-          "type": "string",
-          "description": "Valeur ou clé de comparaison"
-        },
+        "value": { "type": "string" },
         "parameters": {
-          "type": "object",
-          "description": "Paramètres optionnels pour des conditions avancées"
+          "type": "object"
         }
       }
     },
@@ -151,21 +160,38 @@ Voici la structure officielle, prête pour Firestore, Cloud Functions et GAS.
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["callAgent", "updateDocument", "setFlag", "logEvent", "custom"]
+          "enum": [
+            "callAgent",
+            "updateDocument",
+            "setFlag",
+            "logEvent",
+            "emitSyncEvent",
+            "enqueueOperation",
+            "custom"
+          ]
         },
-        "agent": {
-          "type": "string",
-          "description": "Agent à appeler si type = callAgent"
-        },
-        "task": {
-          "type": "string",
-          "description": "Tâche individuelle à exécuter par l'agent"
-        },
+        "agent": { "type": "string" },
+        "task": { "type": "string" },
         "parameters": {
-          "type": "object",
-          "description": "Arguments optionnels fournis à l'action"
+          "type": "object"
         }
       }
     }
   }
 }
+
+---
+
+# 3. Cohérence globale
+
+Ce schéma WorkflowEngine 1.1.0 est désormais:
+
+- compatible avec ProjectSchema 1.1.0 (sections workflow, activeWorkflow, logs)  
+- compatible avec Overseer (contrôle versioning, transitions, erreurs)  
+- compatible avec le pipeline Sync (emitSyncEvent)  
+- compatible avec l’orchestrateur (enqueueOperation, callAgent)  
+- compatible avec Document Référent (conditions documentExists, versionCompare)  
+- protégé contre les boucles (onLoopDetected)  
+- extensible sans rupture (actions custom, conditions custom)  
+
+Fin de la mise à jour.
