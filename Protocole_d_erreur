@@ -1,0 +1,259 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Protocole d’erreur complet
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification structurelle des mécanismes d’erreur ou de récupération
+  • Minor (1.X.0): Ajout de types d’erreurs ou précisions sur les comportements
+  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+---
+
+# Protocole d’erreur complet
+
+Le Protocole d’erreur décrit la manière dont le système détecte, classe, traite et résout les erreurs à tous les niveaux.  
+Il couvre:  
+- agents  
+- orchestrateur  
+- Overseer  
+- workflow  
+- Firestore  
+- cohérence documentaire  
+- état global du système
+
+---
+
+# 1. Classification des erreurs
+
+Toutes les erreurs appartiennent à l’une de ces catégories:
+
+## 1.1 Erreurs structurelles
+- schéma non respecté  
+- module spécialisé incohérent  
+- méta incorrectes  
+- versioning invalide  
+- sections manquantes  
+- JSON non strict  
+
+## 1.2 Erreurs de cohérence
+- contradictions internes au document  
+- contradictions entre documents  
+- lien cassé ou référence inexistante  
+- datation incorrecte  
+
+## 1.3 Erreurs agentiques
+- sortie non JSON  
+- champ manquant  
+- agent incorrect  
+- tâche hors périmètre  
+- tentative d’action autonome  
+
+## 1.4 Erreurs de workflow
+- transition impossible  
+- état inexistant  
+- action invalide  
+- cycle non autorisé  
+
+## 1.5 Erreurs de contexte
+- currentProject manquant  
+- projet changé durant l’opération  
+- document d’un autre projet  
+
+## 1.6 Erreurs système
+- surcharge  
+- boucle détectée  
+- taux d'appels agents trop élevé  
+- corruption Firestore  
+- snapshot manquant  
+
+---
+
+# 2. États du système lors d'une erreur
+
+Le système peut adopter l’un des trois états:
+
+## 2.1 warning
+- anomalie légère détectée  
+- opération encore possible  
+- Overseer doit vérifier  
+
+## 2.2 error
+- opération arrêtée immédiatement  
+- aucune modification appliquée  
+- Overseer doit corriger ou rediriger  
+
+## 2.3 halted
+- erreur critique  
+- toutes les opérations suspendues  
+- seule systemRecovery peut rétablir le système  
+
+---
+
+# 3. Détection des erreurs
+
+Les erreurs peuvent être détectées par:
+
+- l’orchestrateur  
+- Overseer  
+- ValidationAgent  
+- WorkflowAgent  
+- ContextAgent  
+- le système de contrôle anti dérive  
+
+Déclencheurs typiques:
+- validation échouée  
+- schéma cassé  
+- tentative d’action interdite  
+- boucle d’appels  
+- incohérence entre documents  
+
+Chaque détection génère immédiatement un `errorReport`.
+
+---
+
+# 4. Structure d’un errorReport
+
+{
+“errorId”: “string”,
+“timestamp”: “datetime”,
+“severity”: “warning|error|halted”,
+“source”: “orchestrator|overseer|agent|workflow|system”,
+“type”: “structural|coherence|agentic|workflow|context|system”,
+“description”: “string”,
+“projectId”: “string|null”,
+“document”: “string|null”,
+“agent”: “string|null”,
+“operationId”: “string|null”
+}
+
+Les errorReports sont stockés dans:
+
+systemLogs/errors/{errorId}.json
+
+---
+
+# 5. Réponse immédiate à une erreur
+
+## 5.1 Si severity = warning
+- Overseer est informé  
+- l’opération peut continuer mais sous surveillance  
+- l’orchestrateur ne modifie rien automatiquement  
+
+## 5.2 Si severity = error
+- l’opération en cours est annulée  
+- aucune écriture Firestore n’est permise  
+- Overseer doit:
+  - analyser  
+  - demander correction  
+  - renvoyer une requête propre  
+
+## 5.3 Si severity = halted
+- toute action est bloquée  
+- l’état du projet est gelé  
+- seule systemRecovery peut reprendre le contrôle  
+
+---
+
+# 6. Règles de rollback
+
+Lorsqu’une erreur empêche une opération d’aboutir:
+
+1. aucune donnée n’est écrite  
+2. aucune version n’est incrémentée  
+3. un snapshot antérieur ne doit pas être modifié  
+4. les modifications partielles sont ignorées  
+5. Overseer reçoit un état clair et exploitable de l’échec  
+
+En cas d’erreur critique:
+- restauration automatique du dernier snapshot stable
+
+---
+
+# 7. Processus de systemRecovery
+
+L’orchestrateur exécute:
+
+1. suspension globale  
+2. restitution du dernier snapshot correct  
+3. purge des opérations partielles  
+4. création d’un errorReport critique  
+5. renvoi d’un état clair à Overseer  
+
+Pour sortir de halted:
+1. Overseer demande une validation complète  
+2. ValidationAgent confirme la cohérence  
+3. le flag halted est levé  
+4. les opérations reprennent en mode safe  
+5. retour au mode normal après deux opérations valides  
+
+---
+
+# 8. Règles d’arrêt immédiat
+
+Une opération est interrompue si:
+
+- currentProject change en milieu d’exécution  
+- un agent tente d’agir sans instruction  
+- un document revient avec un schéma cassé  
+- une transition workflow invalide est demandée  
+- une boucle agentique est détectée  
+- l’orchestrateur identifie un conflit de version  
+- un document cible n’existe pas  
+- une date est incorrecte ou absente  
+
+---
+
+# 9. Comportement d’Overseer lors d’une erreur
+
+Overseer doit:
+
+- stopper immédiatement toute délégation agentique  
+- analyser l’errorReport  
+- déterminer le besoin:
+  - correction agentique  
+  - validation  
+  - rollback simple  
+  - systemRecovery  
+- informer l’utilisateur  
+- reformuler une demande propre si nécessaire  
+
+---
+
+# 10. Comportement des agents lors d’une erreur
+
+Les agents doivent:
+
+- renvoyer un JSON d’erreur strict  
+- ne pas tenter d’effectuer une correction autonome  
+- ne pas réessayer sans instruction explicite  
+- se conformer à toute directive de correction fournie par Overseer  
+
+---
+
+# 11. Journalisation
+
+Chaque erreur génère un log dans:
+
+systemLogs/errors/{errorId}.json
+
+Avec:
+- contexte  
+- source  
+- sévérité  
+- projet  
+- document  
+- agent  
+- description  
+- impact potentiel  
+
+L’historique est utilisé pour:
+- prévenir les dérives futures  
+- optimiser les workflows  
+- améliorer la robustesse du système  
+
+---
+
+Fin du Protocole d’erreur complet.
