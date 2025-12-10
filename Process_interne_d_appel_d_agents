@@ -1,10 +1,11 @@
 
 ---
-Version: 1.0.0
-Date: 2025-12-09
+Version: 1.0.1
+Date: 2025-12-10
 Changelog:
-  - 1.0.0 (2025-12-09): Création du document Process interne d’appel d’agents
-Breaking Changes: Aucun depuis 1.0.0
+  - 1.0.1 (2025-12-10): Ajout de la section complète 3.9 Retour à l’utilisateur et harmonisation avec l’orchestrateur, correction cohérence globale.
+  - 1.0.0 (2025-12-10): Création du document Process interne d’appel d’agents
+Breaking Changes: Aucun depuis 1.0.1
 
 Règle de versioning:
   • Major (X.0.0): Modification structurelle du mécanisme d’appel agentique
@@ -15,7 +16,7 @@ Règle de versioning:
 # Process interne d’appel d’agents
 
 Ce document décrit la séquence normative par laquelle Overseer, l’orchestrateur et les agents interagissent.  
-Il garantit que l’exécution des tâches se déroule selon un protocole sûr, déterministe et traçable.
+Il garantit un fonctionnement sûr, déterministe et traçable.
 
 ---
 
@@ -23,9 +24,9 @@ Il garantit que l’exécution des tâches se déroule selon un protocole sûr, 
 
 - Overseer est le seul agent autorisé à déléguer une tâche à un agent spécialisé.  
 - Les agents ne communiquent jamais entre eux directement.  
-- Toute tâche agentique doit passer par l’orchestrateur.  
-- Une tâche ne peut viser qu’un seul document ou objectif à la fois.  
-- Aucune action ne peut être effectuée sans currentProject actif.  
+- Toute tâche agentique passe par l’orchestrateur.  
+- Une tâche ne vise qu’un seul document ou objectif à la fois.  
+- Aucune action n’est autorisée sans currentProject actif.  
 - L’orchestrateur est responsable de la validation, de l’exécution et du logging.
 
 ---
@@ -45,75 +46,73 @@ Chaque étape est obligatoire et vérifiée.
 Overseer identifie:
 - l’objectif demandé  
 - le document ou module concerné  
-- l’agent le plus approprié  
-- le type de version à appliquer (Major, Minor, Patch)  
+- l’agent approprié  
+- le type de version à imposer (Major, Minor, Patch)  
 - les contraintes contextuelles  
 
-Overseer génère ensuite une **instruction formelle** destinée à l’agent.
+Overseer génère ensuite une instruction formelle destinée à l’agent.
 
 Structure minimale de l’instruction:
 
 {
-“task”: “description précise”,
-“targetDocument”: “typeDocument”,
-“versionType”: “Major|Minor|Patch”,
-“context”: { … },
-“constraints”: { … }
+  "task": "description précise",
+  "targetDocument": "typeDocument",
+  "versionType": "Major|Minor|Patch",
+  "context": { ... },
+  "constraints": { ... }
 }
+
+---
 
 ## 3.2 Transmission à l’orchestrateur
 
-Overseer transmet l’instruction à l’orchestrateur.  
 L’orchestrateur vérifie:
-
 - l’existence d’un currentProject  
 - la validité du document ciblé  
-- l’autorisation pour l’agent choisi  
+- l’autorisation de l’agent  
 - la structure correcte de l’instruction  
 
-Si tout est valide, l’orchestrateur formate la requête pour le modèle de l’agent.
+Si valide, l’orchestrateur prépare l’appel agentique.
 
 ---
 
 ## 3.3 Appel de l’agent
 
-L’orchestrateur appelle l’agent via GAS (Gemini), en lui fournissant:
+L’orchestrateur appelle l’agent via GAS, en fournissant:
 
-- son systemPrompt  
+- le systemPrompt de l’agent  
 - l’instruction formelle  
-- le document référent actuel  
-- le contexte du project  
-- les modules spécialisés utiles  
+- le document actuel  
+- le contexte du projet  
+- les modules spécialisés  
 - les règles système  
 
-L’agent doit renvoyer **uniquement un JSON strict** contenant:
+L’agent doit renvoyer un JSON strict:
 
 {
-“updatedDocument”: { … },
-“explanation”: “facultatif”,
-“agent”: “nomAgent”
+  "updatedDocument": { ... },
+  "explanation": "optionnel",
+  "agent": "nomAgent"
 }
 
 ---
 
 ## 3.4 Réception via agentCallback
 
-L’orchestrateur reçoit la réponse de l’agent.  
-Il effectue les vérifications suivantes:
-
-- champ updatedDocument présent  
-- JSON valide  
-- champ agent conforme  
+L’orchestrateur vérifie:
+- présence de updatedDocument  
+- validité JSON  
+- identité agent conforme  
 - correspondance du targetDocument  
-- absence de champ non autorisé  
+- absence de champs non autorisés  
 
-Si une erreur est détectée, l’orchestrateur renvoie `error` à Overseer.
+En cas d’erreur → retour `error` à Overseer.
 
 ---
 
 ## 3.5 Validation documentaire
 
-Le document proposé passe par `validateDocument`:
+Le document proposé passe par validateDocument.
 
 Contrôles:
 - conformité Schéma universel  
@@ -121,10 +120,10 @@ Contrôles:
 - cohérence interne  
 - versioning requis présent  
 - propriétaire correct  
-- date présente et conforme  
+- date correcte  
 
-Si `valid` → étape suivante  
-Si `error` → retour Overseer + blocage de la mise à jour
+Si `valid` → suite  
+Si `error` → retour Overseer
 
 ---
 
@@ -132,12 +131,12 @@ Si `error` → retour Overseer + blocage de la mise à jour
 
 En cas de validation positive:
 
-- incrémentation de version selon le type imposé  
-- mise à jour de meta.updatedAt  
-- définition meta.ownerAgent = agent  
-- écriture atomique dans Firestore  
-- création du snapshot versionné  
-- log de mise à jour généré  
+- incrémentation de version selon versionType  
+- mise à jour meta.updatedAt  
+- mise à jour meta.ownerAgent  
+- écriture atomique Firestore  
+- création snapshot versionné  
+- génération log de mise à jour  
 
 ---
 
@@ -146,73 +145,70 @@ En cas de validation positive:
 L’orchestrateur vérifie si:
 - une transition doit être déclenchée  
 - des actions doivent être exécutées  
-- le workflow change d’état  
+- un nouvel état doit être appliqué  
 
-Si oui, `runWorkflowTransition` est appelé.
+Si oui → runWorkflowTransition.
 
 ---
 
 ## 3.8 Retour à Overseer
 
-L’orchestrateur renvoie un rapport complet:
+Rapport structuré:
 
 {
-“status”: “success”,
-“document”: { … },
-“version”: “x.x.x”,
-“snapshotId”: “string”,
-“workflowTransition”: “none|executed”,
-“agent”: “nomAgent”
+  "status": "success",
+  "document": { ... },
+  "version": "x.x.x",
+  "snapshotId": "string",
+  "workflowTransition": "none|executed",
+  "agent": "nomAgent"
 }
 
-Overseer peut alors:
-- poursuivre la tâche  
-- demander un autre agent  
-- conclure l’opération  
-- initier une nouvelle boucle contrôlée
+---
 
 ## 3.9 Retour à l’utilisateur
 
-Après réception du rapport d’exécution par l’orchestrateur, Overseer doit:
+Après réception du rapport de l’orchestrateur, Overseer:
 
-- interpréter le résultat
-- détecter les points à signaler
-- préparer un message clair et synthétique
-- résumer l’action effectuée ou l’erreur rencontrée
-- informer l’utilisateur du nouvel état du document ou du workflow
-- indiquer les prochaines étapes possibles
+- interprète le résultat  
+- détecte les points à signaler  
+- prépare un message synthétique  
+- résume l’action effectuée ou l’erreur rencontrée  
+- informe l’utilisateur du nouvel état  
+- liste les prochaines étapes possibles  
 
-Le retour utilisateur doit inclure:
-- l’agent ayant effectué la tâche
-- le document ciblé
-- la version appliquée
-- le snapshot créé
-- la transition de workflow éventuelle
-- le statut final de l’opération
-- un résumé compréhensible de la modification
+Le retour utilisateur inclut:
 
-Overseer est l’unique canal de communication entre l’orchestrateur/agents et l’utilisateur.
+- agent ayant effectué la tâche  
+- document ciblé  
+- version appliquée  
+- snapshot créé  
+- transition éventuelle  
+- statut final  
+- synthèse claire de la modification  
+
+Overseer est le seul canal de communication entre agents, orchestrateur et utilisateur.
 
 ---
 
 # 4. Contraintes strictes
 
-- Aucune modification documentaire n’est autorisée sans validation orchestrateur.  
-- Aucun agent ne peut appeler un autre agent.  
-- Overseer doit être impliqué dans toute tâche.  
-- Le processus n’admet qu’une seule exécution agentique à la fois pour un document.  
-- Toute anomalie entraîne un arrêt immédiat selon les règles d’anti dérive.  
+- aucune modification documentaire sans validation orchestrateur  
+- aucun agent ne peut appeler un autre agent  
+- Overseer doit superviser chaque tâche  
+- une seule exécution agentique à la fois par document  
+- toute anomalie suit les règles anti dérive  
 
 ---
 
 # 5. État du système pendant un appel agentique
 
-Pendant la durée du processus:
-- le document ciblé peut être temporairement verrouillé  
+Pendant l’exécution:
+- le document peut être verrouillé  
 - le workflow peut être en état “processing”  
-- l'orchestrateur maintient un statut interne de progression  
+- l’orchestrateur maintient un statut interne  
 
-Si l’appel échoue ou dépasse un délai maximal, le système exécute `systemRecovery`.
+En cas d’échec ou dépassement de délai → systemRecovery.
 
 ---
 
