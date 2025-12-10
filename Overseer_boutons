@@ -1,0 +1,159 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Protocole système des Boutons
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification structurelle des modes ou des interactions fondamentales  
+  • Minor (1.X.0): Ajout de nouveaux boutons ou ajustements non disruptifs  
+  • Patch (1.2.X): Corrections rédactionnelles ou clarifications  
+---
+
+# Protocole Système des Boutons
+
+Ce document définit les mécanismes d’activation, de validation et d’exécution des modes spéciaux d’Overseer déclenchés par des boutons d’interface. Les boutons garantissent une séparation stricte entre les interactions utilisateur normales et les opérations système sensibles.
+
+---
+
+# 1. Liste officielle des boutons système
+
+## 1.1 Bouton “Créer un Projet”
+Active le Mode Création de Projet.  
+Utilisé pour importer un dossier structuré d’un nouveau projet.
+
+## 1.2 Bouton “Synchronisation Externe”
+Active le Mode Sync.  
+Utilisé pour importer un payload structuré provenant d’un agent externe (IDE, assistant de code, autre IA).
+
+## 1.3 Bouton “Changer de Projet”
+Ouvre un sélecteur de projet pour mettre à jour `currentProject`.
+
+---
+
+# 2. États opérationnels d’Overseer
+
+Les boutons modifient l’état interne d’Overseer.  
+Il existe trois états exclusifs:
+
+## 2.1 Mode Normal
+- état par défaut  
+- traite les requêtes utilisateur  
+- délègue aux agents internes  
+- maintient la cohérence documentaire et stratégique  
+
+## 2.2 Mode Création de Projet
+Activé par le bouton “Créer un Projet”.
+
+Overseer attend alors un **dossier structuré**.  
+Dès réception:
+- il le valide  
+- crée le projet  
+- initialise workflow + documents  
+- définit le nouveau `currentProject`  
+- retourne automatiquement en Mode Normal  
+
+## 2.3 Mode Sync
+Activé par le bouton “Synchronisation Externe”.
+
+Overseer attend alors un **payload structuré**.  
+Dès réception:
+- il le valide  
+- analyse les impacts  
+- propose ou applique les mises à jour internes  
+- retourne automatiquement en Mode Normal  
+
+---
+
+# 3. Règles générales des boutons
+
+1. Aucun bouton ne provoque d’action automatique.  
+2. Les boutons ne déclenchent qu’un changement d’état.  
+3. Overseer indique toujours explicitement l’état activé.  
+4. Overseer attend uniquement un contenu structuré dans cet état.  
+5. Tout contenu non structuré est ignoré dans ces modes.  
+6. Une fois le contenu traité, Overseer revient automatiquement en Mode Normal.  
+7. Overseer ne peut pas changer d’état sans bouton.  
+
+---
+
+# 4. Conditions d’activation des boutons
+
+## 4.1 Bouton “Créer un Projet”
+Peut être utilisé même si un projet est actif.  
+Si activé:
+- toute opération interne est suspendue  
+- le prochain message doit être un dossier structuré  
+- si ce n’est pas le cas, Overseer demande le bon format  
+
+## 4.2 Bouton “Synchronisation Externe”
+Utilisable quel que soit l’état du projet actif.  
+Après activation:
+- Overseer n’interprète aucun message hors payload  
+- Overseer reçoit un seul payload par activation  
+- tout message supplémentaire est rejeté tant que le payload n’est pas fourni  
+
+## 4.3 Bouton “Changer de Projet”
+- ne change pas l’état système  
+- ne suspend pas les opérations  
+- n’a aucun impact sur les modes spéciaux  
+
+---
+
+# 5. Protocole d’exécution d’un bouton
+
+Chaque bouton suit un protocole invariant:
+
+1. activation du bouton  
+2. bascule immédiate dans l’état associé  
+3. message d’Overseer indiquant ce qu’il attend  
+4. réception du contenu structuré  
+5. validation  
+6. exécution des actions internes  
+7. retour automatique en Mode Normal  
+8. rendu utilisateur (résumé clair et structuré)  
+
+---
+
+# 6. Rejet des actions incorrectes en mode bouton
+
+Lorsque Overseer est en Mode Création ou Mode Sync:
+
+- tout message non structuré est rejeté  
+- toute requête utilisateur normale est rejetée  
+- toute tentative d’exécuter une tâche interne est rejetée  
+- Overseer répond systématiquement:
+  “Je suis en attente d’un contenu structuré.”  
+
+---
+
+# 7. Journalisation
+
+Chaque activation de bouton crée une entrée Firestore:
+
+systemLogs/buttons/{operationId}.json
+
+Contient:
+- type de bouton  
+- timestamp  
+- projectId  
+- état précédent  
+- état suivant  
+- validation du contenu  
+- erreurs éventuelles  
+
+---
+
+# 8. Sécurité et anti dérive
+
+1. Overseer ne peut pas entrer en Mode Sync ou Création sans bouton.  
+2. Aucun bouton ne peut rester actif après traitement.  
+3. Aucun bouton ne peut être activé automatiquement.  
+4. Un seul bouton actif à la fois.  
+5. Overseer ne peut jamais confondre un message normal avec un payload ou un dossier de projet.  
+
+---
+
+Fin du Protocole Système des Boutons.
