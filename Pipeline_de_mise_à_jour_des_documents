@@ -1,8 +1,9 @@
 
 ---
-Version: 1.0.0
+Version: 1.0.1
 Date: 2025-12-09
 Changelog:
+  - 1.0.1 (2025-12-09): Alignement complet avec la logique de l’orchestrateur, correction des références Firestore, unification avec le Workflow Engine et règles anti-dérive.
   - 1.0.0 (2025-12-09): Création du Pipeline de mise à jour des documents
 Breaking Changes: Aucun depuis 1.0.0
 
@@ -14,8 +15,8 @@ Règle de versioning:
 
 # Pipeline de mise à jour des documents
 
-Ce pipeline décrit la procédure systémique permettant de mettre à jour un document référent via un agent, sous supervision d’Overseer et contrôle technique de l’orchestrateur.  
-Aucune mise à jour documentaire ne peut avoir lieu en dehors de ce pipeline.
+Ce pipeline décrit la procédure officielle et immuable permettant de mettre à jour un document référent via un agent, sous supervision d’Overseer et contrôle technique de l’orchestrateur.  
+Aucune action d’écriture ne peut exister en dehors de ce pipeline.
 
 ---
 
@@ -23,135 +24,166 @@ Aucune mise à jour documentaire ne peut avoir lieu en dehors de ce pipeline.
 
 Une mise à jour documentaire commence lorsque:
 - Overseer transmet une instruction formelle à un agent
-- l’agent renvoie un JSON de mise à jour via agentCallback
+- l’agent renvoie un JSON structuré via agentCallback
 
-Le pipeline démarre seulement si:
-- un currentProject est actif  
-- l’agent est autorisé pour ce type de document  
-- la requête respecte les schémas attendus
+Le pipeline démarre uniquement si:
+- currentProject est défini
+- l’agent est autorisé pour ce type de document
+- targetDocument est explicitement fourni
+- la structure du payload est conforme au schéma d’entrée attendu
 
 ---
 
 # 2. Validation initiale de l’agentCallback
 
 L’orchestrateur vérifie:
-- l’identité de l’agent émetteur
-- la présence du champ targetDocument
-- la validité du JSON brut (syntaxe minimale)
-- la présence des champs obligatoires du Schéma universel
+- identité logique de l’agent émetteur
+- cohérence des métadonnées (projectId, documentId, type)
+- présence d’un JSON valide (syntaxe)
+- présence des champs obligatoires du Schéma universel
 
-Si échec:
-- l’orchestrateur renvoie une erreur à Overseer  
-- aucune modification n’est appliquée
+En cas d’échec:
+- statut error envoyé à Overseer
+- aucune modification système
+- écriture d’un log d’erreur
 
 ---
 
-# 3. Validation structurelle
+# 3. Validation structurelle complète
 
-L’orchestrateur exécute `validateDocument`:
+L’orchestrateur appelle validateDocument:
 
-Contrôles effectués:
+Contrôles réalisés:
 - conformité au Schéma universel du Document Référent
-- conformité au module spécialisé correspondant
-- cohérence interne (meta, content, specialized, narrative)
-- présence des champs de versioning requis
-- respect des schémas imbriqués
-- absence de champs non reconnus
-- références internes valides
-- format date conforme
+- conformité au module spécialisé
+- cohérence interne (sections, specialized, narrative, links)
+- cohérence inter-documents si des liens sont fournis
+- conformité du versioning existant
+- présence des champs meta obligatoires
+- absence de valeurs hors schéma
 
-Sorties possibles:
+Résultat:
 - `valid`
-- `error` + détails des anomalies
+- `error` (avec détails de validation)
 
-Aucune écriture Firestore n’a lieu avant cette validation.
+Aucune mise à jour n’a lieu avant validation complète.
 
 ---
 
-# 4. Application du versioning
+# 4. Application stricte du versioning
 
 Si la validation est `valid`, l’orchestrateur applique:
-- meta.ownerAgent = agent émetteur
-- meta.updatedAt = date du jour
-- incrémentation de la version selon le type imposé par Overseer:
-  - Major
-  - Minor
-  - Patch
 
-Le document doit contenir une nouvelle entrée dans `meta.changelog`:
+- meta.ownerAgent = agent émetteur  
+- meta.updatedAt = date du jour  
+- calcul de la version:
+  - Major si Overseer l’a imposé
+  - Minor si Overseer l’a imposé
+  - Patch si modification locale non-structurelle
 
-“{version} ({date du jour}): {raison de la modification}”
+L’entrée du changelog doit être ajoutée:
+
+“{version} ({date}): {reason}”
+
+Le changelog n’est jamais optionnel.
 
 ---
 
-# 5. Écriture contrôlée dans Firestore
+# 5. Préparation de l’écriture contrôlée
 
-L’orchestrateur remplace l’ancien document par la nouvelle version dans:
+L’orchestrateur vérifie:
+- que le document appartient bien à currentProject
+- que le document n’a pas été modifié depuis la requête (anti-race condition)
+- que le document n’est pas en état locked
+- que la version entrante est strictement supérieure à la version existante
 
-projects/{projectId}/documents/{documentType}.json
+En cas d’incohérence:
+- l’opération est annulée
+- Overseer reçoit un statut error
+- log système enregistré
+
+---
+
+# 6. Écriture contrôlée du document
+
+L’orchestrateur remplace la version existante du document par la nouvelle version, dans la structure logique Firestore suivante (au moment du déploiement):
+
+projects/{projectId}/documents/{documentId}
 
 Critères d’écriture:
-- transaction atomique  
-- refus si une version plus récente est détectée  
-- refus si currentProject a changé entre temps  
-- refus si le document est en état “locked”
-
-En cas de conflit, l’opération est annulée.
+- transaction atomique (pas de moitié d’état)
+- écriture uniquement si validation + versioning sont corrects
+- aucune tolérance aux écarts de schéma
 
 ---
 
-# 6. Génération du snapshot versionné
+# 7. Création du snapshot versionné
 
-Après écriture réussie, le système crée un snapshot:
+Après écriture réussie, l’orchestrateur génère un snapshot:
 
-projects/{projectId}/snapshots/versions/{snapshotId}/
-document.json
-timestamp
-version
-agent
-reason
+snapshots/{projectId}/{snapshotId}/
+- document.json
+- timestamp
+- version
+- agent
+- reason
 
-Le snapshot représente l’état complet du document après mise à jour.
-
----
-
-# 7. Évaluation des conséquences sur le Workflow Engine
-
-L’orchestrateur vérifie si la mise à jour documentaire:
-- déclenche une transition du workflow
-- modifie l’état du projet
-- nécessite l’exécution d’actions du Workflow Engine
-
-Si oui, `runWorkflowTransition` est exécuté immédiatement.
+Chaque snapshot représente un point stable pour restauration.
 
 ---
 
-# 8. Journalisation
+# 8. Interaction avec le Workflow Engine
+
+Après la mise à jour documentaire:
+- l’orchestrateur vérifie les triggers éventuels du Workflow Document
+- si une transition est déclenchée:
+  - runWorkflowTransition est exécuté immédiatement
+- si aucune action de workflow n’est nécessaire:
+  - le pipeline continue normalement
+
+Une transition peut:
+- déclencher des actions d’agents
+- modifier l’état global du projet
+- créer un nouveau snapshot
+
+---
+
+# 9. Journalisation complète
 
 L’orchestrateur écrit un log dans:
 
 projects/{projectId}/logs/updates/{logId}.json
 
-Contenu:
-- document modifié  
-- version appliquée  
-- agent responsable  
-- date  
-- validation effectuée  
-- transition effectuée (si applicable)
+Contient:
+- id du document modifié
+- version finale
+- agent responsable
+- date
+- type de mise à jour
+- statut de validation
+- transition de workflow éventuelle
+- snapshotId généré
+
+Les journaux sont immuables.
 
 ---
 
-# 9. Retour à Overseer
+# 10. Retour final à Overseer
 
-L’orchestrateur renvoie à Overseer:
-- statut final (`success` ou `error`)
-- version finale du document
-- transition éventuelle réalisée
-- snapshotId associé
-- message synthétique pour coordination agentique
+Une réponse formelle est envoyée à Overseer:
 
-Overseer utilise ces informations pour poursuivre un éventuel workflow, déléguer à un autre agent, ou clore la tâche.
+- statut: success ou error
+- documentId
+- version finale
+- snapshotId
+- transition éventuelle
+- résumé synthétique de la mise à jour
+
+Overseer utilise cette réponse pour:
+- déclencher d’autres agents
+- poursuivre un workflow
+- demander une correction
+- ou clore proprement la tâche
 
 ---
 
