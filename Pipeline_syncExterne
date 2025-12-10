@@ -1,0 +1,184 @@
+
+---
+Version: 1.0.0
+Date: 2025-12-09
+Changelog:
+  - 1.0.0 (2025-12-09): Création du Pipeline complet de Synchronisation Externe
+Breaking Changes: Aucun depuis 1.0.0
+
+Règle de versioning:
+  • Major (X.0.0): Modification structurelle du pipeline  
+  • Minor (1.X.0): Ajout d’étapes ou amélioration de logique  
+  • Patch (1.2.X): Clarifications rédactionnelles  
+---
+
+# Pipeline Complet de Synchronisation Externe
+
+Ce pipeline décrit la totalité du flux opérationnel lorsque Overseer doit intégrer des données provenant d’un agent externe (IDE, assistant de code, moteur d’analyse, autre IA).  
+Il couvre l’activation, la validation, l’analyse, la délégation, les mises à jour internes et le retour utilisateur.
+
+---
+
+# 1. Activation du Mode Sync
+
+1. L’utilisateur appuie sur le bouton « Synchronisation Externe ».  
+2. Overseer bascule en Mode Sync.  
+3. Overseer annonce explicitement qu’il attend un payload structuré conforme au schéma ExternalSyncPayload.  
+4. Toutes les requêtes normales sont ignorées jusqu’à réception du payload.
+
+---
+
+# 2. Réception du Payload Externe
+
+Le message reçu doit être un JSON strict et complet, contenant:
+
+- projectId  
+- résumé  
+- liste de changements  
+- impacts  
+- erreurs éventuelles  
+- timestamp  
+
+Si le format ne respecte pas le schéma:
+- Overseer rejette le message  
+- Overseer demande un payload conforme  
+- aucune action interne n’est déclenchée  
+
+---
+
+# 3. Validation Technique du Payload
+
+Étapes de validation:
+
+1. Vérification du schéma ExternalSyncPayload  
+2. Vérification que projectId correspond au currentProject  
+3. Vérification que le timestamp est présent et valide  
+4. Vérification que chaque changement possède un type reconnu  
+5. Vérification que les impacts sont renseignés  
+
+En cas d’échec:
+- errorReport généré (severity = error)  
+- aucune écriture Firestore  
+- Overseer demande un nouveau payload  
+
+---
+
+# 4. Analyse Interne du Payload
+
+Une fois le payload validé, Overseer procède à une analyse interne:
+
+1. analyse des changements:  
+   - création, suppression, modification de fichiers  
+   - impacts sur architecture  
+   - impacts sur workflow  
+   - impacts sur documents référents  
+
+2. classification des risques  
+3. détection des contradictions potentielles  
+4. détection des incohérences système  
+5. évaluation du besoin de mise à jour documentaire  
+6. évaluation du besoin d’intervention agentique  
+
+---
+
+# 5. Détermination du Plan d’Action
+
+Overseer produit un plan structuré:
+
+- quelles mises à jour doivent être effectuées  
+- quelles sections ou documents doivent être modifiés  
+- quel agent doit intervenir (Architecture, UX, Strategy, Workflow, Notes, Validation…)  
+- type de versioning à appliquer (Patch, Minor, Major)  
+- risques à confirmer avec l’utilisateur  
+- questions éventuelles pour l’agent externe  
+
+Si une décision utilisateur est requise:
+- Overseer suspend l’exécution interne  
+- Overseer demande la confirmation avant de passer à l’étape suivante  
+
+---
+
+# 6. Délégation aux Agents Internes
+
+Lorsque tout est validé:
+
+1. Overseer prépare une tâche formelle pour chaque agent impliqué  
+2. L’orchestrateur exécute chaque tâche séquentiellement  
+3. Chaque agent produit un JSON strict et conforme  
+4. L’orchestrateur valide chaque sortie  
+5. En cas d’anomalie, le protocole d’erreur complet est invoqué  
+
+---
+
+# 7. Mise à Jour Firestore
+
+Après chaque tâche validée:
+
+1. l’orchestrateur met à jour le document concerné  
+2. un snapshot automatique est créé  
+3. la version est incrémentée selon les règles  
+4. les logs sont mis à jour  
+5. le Workflow Engine est mis à jour si pertinent  
+
+---
+
+# 8. Finalisation de la Synchronisation
+
+À l’issue de toutes les mises à jour internes:
+
+1. Overseer consolide les résultats  
+2. Overseer produit un rapport utilisateur lisible contenant:  
+   - résumé de la synchronisation  
+   - modifications internes effectuées  
+   - agents mobilisés  
+   - versions modifiées  
+   - incohérences détectées  
+   - actions futures possibles  
+3. Overseer quitte automatiquement le Mode Sync  
+4. Overseer repasse en Mode Normal  
+
+---
+
+# 9. Dialogue post-synchronisation
+
+Après le retour au Mode Normal:
+
+- l’utilisateur peut discuter librement du payload  
+- Overseer peut analyser ou commenter hors mode Sync  
+- Overseer peut générer des questions destinées à l’agent externe  
+- l’utilisateur peut effectuer plusieurs allers-retours avec l’externe  
+- une nouvelle synchronisation nécessitera un nouveau clic sur le bouton Sync  
+
+---
+
+# 10. Règles de Sécurité
+
+1. Un seul payload par activation du Mode Sync  
+2. Overseer ne traite jamais un payload hors Mode Sync  
+3. Overseer quitte toujours le Mode Sync après traitement  
+4. Aucun agent interne n’est appelé sans validation du payload  
+5. Aucune mise à jour Firestore sans versioning imposé  
+6. Les cycles potentiels (payload → sync → payload modifié) sont contrôlés par operationId  
+7. Aucune synchronisation n’est effectuée si projectId ≠ currentProject  
+
+---
+
+# 11. Journalisation de la Synchronisation
+
+Chaque synchronisation crée une entrée Firestore:
+
+systemLogs/sync/{syncId}.json
+
+Contenant:
+- syncId  
+- timestamp  
+- payload d’origine  
+- actions internes déclenchées  
+- documents modifiés  
+- snapshots créés  
+- agents mobilisés  
+- erreurs éventuelles  
+
+---
+
+Fin du Pipeline complet de Synchronisation Externe.
