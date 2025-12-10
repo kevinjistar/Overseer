@@ -1,9 +1,10 @@
 
 ---
-Version: 1.0.0
-Date: 2025-12-09
+Version: 1.0.1
+Date: 2025-12-10
 Changelog:
-  - 1.0.0 (2025-12-09): Création de la Structure Cloud Functions / Orchestrateur
+  - 1.0.1 (2025-12-10): Mise à jour pour alignement avec le système GAS et la logique locale des phases. Clarification des points d’entrée et suppression des ambiguïtés d’exécution distante.
+  - 1.0.0 (2025-12-10): Création de la Structure Cloud Functions / Orchestrateur
 Breaking Changes: Aucun depuis 1.0.0
 
 Règle de versioning:
@@ -14,94 +15,102 @@ Règle de versioning:
 
 # Structure Cloud Functions / Orchestrateur
 
-L’orchestrateur est l’unité de gouvernance technique. Il exécute les règles système, valide les documents, applique le versioning, déclenche les transitions de workflow, gère les snapshots et relaie les instructions des agents.
+L’orchestrateur est la couche d’exécution de la gouvernance Overseer.  
+Il applique les règles système, valide les documents, gère le versioning, exécute les transitions de workflow, maintient les snapshots et relaie les instructions d’Overseer de manière déterministe.
+
+Il ne prend jamais d’initiative autonome.  
+Il ne fait jamais d’appel réseau spontané.  
+Il ne réalise rien sans instruction explicite d’Overseer.
 
 ---
 
 # 1. Points d’entrée Cloud Functions
 
-/functions/
-createProject
-updateDocument
-runWorkflowTransition
-setCurrentProject
-createSnapshot
-validateDocument
-agentCallback
-systemRecovery
+Sous /functions/, l’orchestrateur expose les points d’entrée suivants:
+
+createProject  
+updateDocument  
+runWorkflowTransition  
+setCurrentProject  
+createSnapshot  
+validateDocument  
+agentCallback  
+systemRecovery  
+
+Chaque point d’entrée correspond à un rôle strict dans le système, sans chevauchement.
 
 ---
 
 # 2. createProject
 
 Déclenchement:  
-- Appel direct lors de la création d’un projet.
+- Instruction explicite d’Overseer lors de la création d’un projet.
 
 Fonctions:
-- générer l’arborescence Firestore du projet
-- créer les documents référents initiaux
-- initialiser le Workflow Engine
+- créer l’arborescence documentaire du projet (côté logique orchestrateur)
+- initialiser les documents référents (versions 1.0.0)
+- initialiser le Workflow Engine associé
 - créer le snapshot initial
-- générer les logs de création
-- renvoyer un statut de création à Overseer
+- enregistrer un log de création
+- renvoyer un rapport de création à Overseer
 
 ---
 
 # 3. updateDocument
 
 Déclenchement:  
-- Requête d’Overseer pour appliquer une modification d’agent.
+- Requête d’Overseer pour appliquer une mise à jour issue d’un agent ou d’une transition.
 
 Fonctions:
-- valider le JSON via validateDocument  
-- incrémenter le versioning  
+- appeler validateDocument  
+- appliquer la règle de versioning  
 - mettre à jour meta.updatedAt et meta.ownerAgent  
-- enregistrer le changelog  
-- écrire le document dans Firestore  
-- générer un snapshot versionné  
-- produire un log d’update  
+- ajouter l’entrée correcte dans le changelog  
+- préparer l’écriture du document (l’écriture réelle dépendra de l’environnement Firebase au moment du déploiement)
+- créer un snapshot cohérent  
+- écrire un log d’update  
 
 ---
 
 # 4. runWorkflowTransition
 
 Déclenchement:  
-- Demande explicite d’Overseer  
-- Résultat d’une mise à jour documentaire nécessitant une transition
+- Instruction d’Overseer  
+- Ou besoin issu d’une mise à jour documentaire conforme aux règles du Workflow Engine
 
 Fonctions:
-- lire le Workflow Engine du projet  
+- lire la définition du Workflow Engine du projet  
 - vérifier les conditions de transition  
-- appliquer la transition si valide  
+- appliquer la transition si validée  
 - exécuter les actions associées  
-- enregistrer un log de transition  
-- mettre à jour l’état du workflow dans Firestore  
+- mettre à jour l’état du workflow  
+- logguer la transition
 
 ---
 
 # 5. setCurrentProject
 
 Déclenchement:  
-- Appel d’Overseer lorsqu’un nouveau projet est sélectionné.
+- Instruction explicite d’Overseer lors d’un changement de projet en cours.
 
 Fonctions:
-- vérifier l’existence du projectId  
-- écrire userContext/{userId}/currentProject.json  
-- logguer le changement  
-- retourner l’état mis à jour  
+- valider l’existence du projectId  
+- mettre à jour le contexte utilisateur (currentProject)  
+- écrire un log d’état  
+- renvoyer la confirmation à Overseer  
 
 ---
 
 # 6. createSnapshot
 
 Déclenchement:  
-- Lors de la création d’un projet  
-- Lors d’une mise à jour documentaire  
-- Lors d’une transition de workflow  
-- Sur demande explicite d’Overseer
+- Création d’un projet  
+- Mise à jour documentaire  
+- Transition de workflow  
+- Demande d’Overseer
 
 Fonctions:
-- capturer l’état actuel du projet  
+- capturer l’état global actuel du projet  
 - stocker un snapshot horodaté  
 - enregistrer le motif et l’agent responsable  
 
@@ -111,13 +120,14 @@ Fonctions:
 
 Déclenchement:  
 - Interne à updateDocument  
-- Interne lors d’un snapshot  
-- Sur demande d’Overseer
+- Interne à createSnapshot  
+- Ou demande explicite d’Overseer
 
 Fonctions:
-- valider conformité au Schéma universel  
-- valider conformité au module spécialisé  
+- valider conformité au Schéma universel du Document Référent  
+- valider conformité au module spécialisé (architecture, UX, stratégie, workflow, notes)  
 - vérifier cohérence interne  
+- vérifier cohérence inter-document si nécessaire  
 - vérifier versioning  
 - vérifier liens et références  
 - renvoyer un statut: valid ou error  
@@ -127,56 +137,61 @@ Fonctions:
 # 8. agentCallback
 
 Déclenchement:  
-- Réponse d’un agent externe via GAS.
+- Réception d’une réponse d’un agent externe (via Overseer, jamais directement).
 
 Fonctions:
-- réceptionner le JSON produit par l’agent  
-- vérifier l’agent émetteur  
-- transmettre à updateDocument ou runWorkflowTransition  
-- journaliser l’activité de l’agent  
+- réceptionner le payload JSON  
+- vérifier l’identité logique de l’agent externe  
+- transmettre la demande à updateDocument ou runWorkflowTransition  
+- journaliser l’activité  
+- renvoyer à Overseer un rapport de traitement  
 
 ---
 
 # 9. systemRecovery
 
 Déclenchement:  
-- Erreur critique détectée  
-- Boucle potentielle identifiée  
+- Détection d’une erreur critique  
+- Détection d’une boucle potentielle  
 - Incohérence structurelle  
-- Demande explicite d’Overseer
+- Instruction explicite d’Overseer
 
 Fonctions:
-- suspendre toute exécution en cours  
+- suspendre l’exécution en cours  
 - restaurer le dernier snapshot stable  
-- enregistrer un log d’erreur  
-- renvoyer un rapport d’état  
+- produire un log d’erreur  
+- renvoyer un rapport à Overseer  
 
 ---
 
 # 10. Règles transversales de l’orchestrateur
 
-- assurer la validation stricte avant toute écriture  
-- refuser tout document hors contexte du currentProject  
-- empêcher les agents d’effectuer des actions automatisées répétées  
-- journaliser systématiquement chaque opération  
+L’orchestrateur doit toujours:
+- effectuer une validation stricte avant toute modification  
+- refuser les actions hors currentProject  
+- empêcher toute boucle opérationnelle  
+- journaliser chaque étape significative  
 - garantir des snapshots continus et cohérents  
-- appliquer rigoureusement la logique du Workflow Engine  
+- appliquer les règles du Workflow Engine sans exception  
+- rester strictement déterministe (aucune interprétation libre)  
 
 ---
 
 # 11. Interactions Overseer ↔ Orchestrateur
 
 Overseer:
-- décide, contrôle, supervise
+- décide, contextualise, sélectionne les agents, supervise la cohérence, gouverne la version du système.
 
 Orchestrateur:
-- exécute, valide, applique
+- exécute, valide, applique, enregistre, stabilise.
 
-Flux typique:
+Flux standard:
 
-Overseer → orchestrateur: demande validate/update/transition
-Orchestrateur → Firestore: écriture + snapshot
-Orchestrateur → Overseer: rapport d’exécution
+1. Overseer → orchestrateur: instruction (validate, update, transition, snapshot)  
+2. Orchestrateur → Firestore (ou couche future): écriture + snapshot  
+3. Orchestrateur → Overseer: rapport structuré  
+
+Aucune action n’est exécutée sans instruction préalable d’Overseer.
 
 ---
 
