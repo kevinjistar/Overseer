@@ -1,212 +1,205 @@
 
 ---
-Version: 1.0.0
-Date: 2025-12-09
+Document: Instructions_globales_de_constitution_du_système
+Version: 2.0.0
+Date: 2025-12-11
+PolicyType: SystemAssemblyGuide
+
+PolicyVersions:
+  WorkflowPolicy: 1.0.0
+  ValidationPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+
 Changelog:
-  - 1.0.0 (2025-12-09): Création du document Instructions globales de constitution du système
-Breaking Changes: Aucun depuis 1.0.0
+  - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, SuperiorValidationAgent, Processus interne v2, Workflow Engine v2, CorrectionMode_Policy et Policies versionnées.
+  - 1.0.0 (2025-12-10): Version initiale.
 
-Règle de versioning:
-  • Major (X.0.0): Modification structurelle de l’architecture générale ou du processus d’installation
-  • Minor (1.X.0): Ajout ou adaptation non disruptive à l’architecture
-  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+Breaking Changes:
+  - Intégration des Policies versionnées comme fondation obligatoire.
+  - SuperiorValidationAgent remplace ValidationAgent.
+  - Séparation stricte structurel / métier dans l’ordre de constitution du système.
 ---
 
-# Instructions globales de constitution du système
+1. Objet du document
 
-Ce document décrit la procédure complète pour assembler, installer et initialiser le système multi-agents Overseer dans Google AI Studio, Firebase (Firestore) et Cloud Functions.  
-Il sert de guide d’intégration principal et doit être suivi dans l’ordre strict.
+Ce document définit l’ordre officiel, les dépendances et les priorités nécessaires pour construire, charger, initialiser puis maintenir le système Overseer dans un état cohérent.
 
----
+Il sert de:
+• plan directeur,  
+• guide de dépendances,  
+• référence de priorités documentaires,  
+• protocole d’intégration des mises à jour.
 
-# 1. Préparation de l’environnement
 
-## 1.1 Création du projet Firebase
-- Le projet Firebase doit être créé (Firestore + Cloud Functions activés).
-- La configuration client n’a pas besoin d’être incluse dans les documents système.
-- Seules les fonctionnalités backend sont utilisées par GAS pour installer les modules.
+2. Vision générale
 
-## 1.2 Activation des composants nécessaires
-- Firestore en mode production  
-- Cloud Functions en environnement Node  
-- IAM configuré pour permettre à GAS d’écrire dans:
-  - Firestore
-  - Cloud Functions
-  - systemLogs
-  - userContext
+Le système Overseer repose sur quatre couches interdépendantes:
 
-## 1.3 Vérification initiale
-- Le projet doit être vide avant déploiement.  
-- Aucun schéma ou collection n’est créé manuellement.
+1. Schémas fondamentaux  
+2. Policies versionnées  
+3. Spécifications comportementales (Overseer, orchestrateur, agents)  
+4. Processus opérationnels (workflows, pipelines, création projet, sync)
 
----
+L’ordre de construction est essentiel pour éviter les dérives et assurer la cohérence métier + structurelle.
 
-# 2. Importation des documents système dans GAS
 
-Tous les documents établis doivent être fournis à GAS sous forme de fichiers texte.  
-L’ordre d’importation est structurel.
+3. Ordre officiel de constitution du système
 
-## 2.1 Ordre d’envoi recommandé
-1. Schéma universel du Document Référent  
-2. Modules spécialisés (5 fichiers)  
-3. Schéma Workflow Engine  
-4. Structure Firestore  
-5. Structure Cloud Functions / Orchestrateur  
-6. Pipeline d’entrée des projets  
-7. Pipeline de mise à jour des documents  
-8. Process interne d’appel d’agents  
-9. Process de chargement du contexte et des documents  
-10. Process du Workflow Engine  
-11. Contrôle anti dérive / Règles d’arrêt  
-12. Règles système des agents  
-13. Document Overseer  
-14. Protocole d’erreur complet  
-15. Instructions globales (ce document)
+L’ensemble du système doit être chargé dans l’ordre strict suivant.
 
-Chaque fichier doit être envoyé individuellement à GAS accompagné d’une instruction simple:
 
-Voici un document système. Analyse-le et intègre-le dans la configuration interne.
-Aucune action de création Firestore ou Cloud Functions pour l’instant.
+3.1 Couche 1 — Schémas fondamentaux
 
----
+Ce sont les artefacts obligatoires qui définissent la structure universelle.
 
-# 3. Construction des agents dans Google AI Studio
+1. Schema_Document_Référent  
+2. Schema_Project  
+3. Schema_Workflow  
+4. Modules specialized  
+5. Structure_Firestore  
+6. Structure_Cloud_Function_Orchestrateur  
 
-Une fois les documents système intégrés, GAS doit créer les agents Gemini correspondants.
+Un système ne peut exister sans ces schémas.  
+Aucune logique ne peut être définie tant que ces schémas ne sont pas stables.
 
-## 3.1 Agents à créer
-- ArchitectureAgent  
-- UXAgent  
-- StrategyAgent  
-- WorkflowAgent  
-- NotesAgent  
-- ValidationAgent  
-- DocumentAgent  
-- PlanningAgent  
-- ResearchAgent  
-- ContextAgent  
-- Overseer (en tant que modèle central)
 
-## 3.2 Configuration des agents
-Chaque agent doit être configuré avec:
-- son rôle  
-- ses règles opérationnelles  
-- ses contraintes  
-- son format de sortie JSON  
-- les schémas associés  
-- les règles système des agents  
+3.2 Couche 2 — Policies versionnées
 
-Overseer doit être le seul modèle autorisé à recevoir des requêtes utilisateur.
+Les Policies déterminent le comportement métier et systémique global.
 
----
+1. VersioningPolicy  
+2. WorkflowPolicy  
+3. ValidationPolicy_Global  
+4. CorrectionMode_Policy  
+5. System_Agent_Edit_Policy  
+6. Policies_Versioning_Spec (référentiel des versions)
 
-# 4. Installation de l’Orchestrateur dans Cloud Functions
+Elles doivent être chargées **avant toute définition d’Overseer** car elles gouvernent son comportement.
 
-GAS doit générer automatiquement les Cloud Functions suivantes:
 
-- createProject  
-- updateDocument  
-- validateDocument  
-- createSnapshot  
-- runWorkflowTransition  
-- setCurrentProject  
-- agentCallback  
-- systemRecovery  
+3.3 Couche 3 — Spécifications comportementales
 
-## 4.1 Règle absolue
-Aucune fonction ne doit contenir de logique improvisée, uniquement ce qui est spécifié dans les documents système.
+Cette couche définit l’intelligence et les rôles du système.
 
-## 4.2 Format d'installation
-Pour chaque fonction GAS doit:
-- créer le fichier  
-- injecter la logique  
-- lier Firestore  
-- valider la compatibilité des types  
+1. Overseer_spec  
+2. SuperiorValidationAgent_spec  
+3. Rôle_des_agents  
+4. Règles_système_des_agents  
+5. Controle_anti_dérive  
+6. Protocole_d_erreur  
 
----
+Ces documents définissent:
+• qui pense,  
+• qui valide,  
+• qui produit,  
+• qui exécute,  
+• qui garantit l’ordre,  
+• comment le système réagit en cas d’erreur.
 
-# 5. Déploiement de la structure Firestore
 
-GAS doit créer les arborescences Firestore décrites dans:
+3.4 Couche 4 — Processus opérationnels
 
-- Structure Firestore  
-- Schéma universel du Document Référent  
-- Workflow Engine Schema  
+Ces documents décrivent comment le système fonctionne réellement au quotidien.
 
-## 5.1 Aucune donnée initiale
-Hormis:
-- les projets créés par createProject  
-- userContext initial  
-- systemSettings  
+1. Process_interne_d’appel_d’agents v2  
+2. Pipeline_de_mise_à_jour_des_documents v2  
+3. Processus_standard_de_mise_à_jour_avec_SuperiorValidationAgent  
+4. Process_de_chargement_du_contexte_et_des_documents  
+5. Pipeline_d_entrée_des_projets  
+6. Processus_standard_de_création_d’un_projet  
+7. Process_du_Workflow_Engine v2  
+8. Cahier_des_charges_new_project  
+9. Cahier_des_charges_syncAgent  
 
-Aucune autre donnée Firestore ne doit être générée.
+Ces processus utilisent les couches précédentes pour fournir un comportement stable et cohérent.
 
----
 
-# 6. Vérification de la cohérence système
+3.5 Couche 5 — UX et gouvernance
 
-Avant activation, GAS doit vérifier:
+1. Overseer_boutons  
+2. Design_UX  
+3. Gestion_CurrentProject  
 
-1. conformité de tous les documents importés  
-2. correspondance entre les agents et leurs responsabilités  
-3. cohérence de l’arborescence Firestore  
-4. intégrité des Cloud Functions  
-5. mécanismes anti dérive opérationnels  
-6. capacité du Workflow Engine à être exécuté  
-7. capacité de Overseer à:  
-   - charger un contexte  
-   - appeler un agent  
-   - gérer un versioning  
-   - produire un compte rendu  
+Ces éléments n’impactent pas la logique interne, mais sont nécessaires pour une utilisation cohérente et sans dérive du système.
 
-Si un point échoue, GAS doit stopper le déploiement.
 
----
+4. Règles de dépendances
 
-# 7. Première activation
+4.1 Un document ne peut dépendre que d'une couche inférieure  
+Exemple:  
+Le Workflow Engine ne peut pas dépendre d’un processus; un processus peut dépendre du Workflow Engine.
 
-Une fois validé, GAS peut activer le système.
+4.2 Les Policies gouvernent toutes les couches supérieures  
+Elles doivent être chargées et versionnées avant Overseer et les agents.
 
-## 7.1 Opérations à effectuer
-- initialiser systemSettings  
-- activer Overseer  
-- valider le Pipeline d’entrée des projets  
-- créer un projet test  
-- sélectionner ce projet comme currentProject  
-- exécuter une mise à jour documentaire simple  
-- vérifier les logs et snapshots  
-- tester une transition workflow  
+4.3 Overseer dépend de toutes les Policies  
+Toute mise à jour des Policies impose une mise à jour potentielle d’Overseer_spec.
 
-## 7.2 Critère de réussite
-Si les opérations s’enchaînent sans error/halted, le système est considéré fonctionnel.
+4.4 L’orchestrateur ne dépend d’aucune logique métier  
+Il dépend uniquement des schémas et Policies structurelles (notamment VersioningPolicy).
 
----
 
-# 8. Engagement du protocole utilisateur
+5. Mise à jour du système
 
-Une fois le système en place:
+5.1 Mise à jour d’un schéma  
+→ nécessite mise à jour des agents, d’Overseer, des workflows, et d’une partie des process.
 
-- Overseer devient l’interface unique utilisateur  
-- les projets sont créés via lui  
-- les documents ne sont jamais manipulés manuellement  
-- toute action passe par le Process interne d’appel d’agents  
+5.2 Mise à jour d’une Policy  
+→ Overseer doit être actualisé, ainsi que les process qui invoquent cette Policy.
 
----
+5.3 Mise à jour d’un document comportemental  
+→ Overseer doit recharger le référentiel et invalider son cache logique.
 
-# 9. Maintenance et mises à jour
+5.4 Mise à jour d’un processus  
+→ impact uniquement opérationnel, tant que les couches 1 à 3 restent stables.
 
-Toute modification du système doit suivre le protocole de versioning:
 
-- Major pour changements structurels  
-- Minor pour ajouts non disruptifs  
-- Patch pour corrections légères  
+6. Mode de lecture recommandé pour la compréhension du système
 
-Chaque changement implique:
-- mise à jour du document  
-- mise à jour du fichier correspondant  
-- mise à jour du systemSettings si nécessaire  
-- redéploiement contrôlé
+Pour assimiler Overseer dans sa globalité, les documents doivent être lus dans cet ordre:
 
----
+1. Schema_Document_Référent  
+2. Schema_Project  
+3. Policies versionnées  
+4. Overseer_spec  
+5. SuperiorValidationAgent_spec  
+6. Règles_système_des_agents  
+7. Process internes  
+8. Workflow Engine v2  
+9. CorrectionMode  
+10. Anti-dérive & Protocole d’erreur  
+11. Process de création et mise à jour  
+12. Sync & UX
 
-Fin du document Instructions globales de constitution du système.
+
+7. Critères d’un système complet et cohérent
+
+Le système est considéré comme correctement constitué si:
+
+• Tous les schémas ont une version valide.  
+• Toutes les Policies sont chargées et référencées.  
+• Overseer_spec est compatible avec les Policies.  
+• SuperiorValidationAgent est défini et isolé.  
+• Orchestrateur_spec ne contient aucune logique métier.  
+• Processus internes reflètent le pipeline v2.  
+• Workflow Engine v2 ne contient aucune condition métier.  
+• CorrectionMode est opérationnel.  
+• Anti-dérive sépare structurel et métier.  
+• Tous les documents de niveau supérieur indiquent clairement leurs dépendances.
+
+
+8. Invariants de constitution
+
+Toujours vrais:
+
+• Les Policies gouvernent l’ensemble du système.  
+• Overseer est l’unique centre de logique métier.  
+• L’orchestrateur est l’unique exécuteur structurel.  
+• Les agents sont des exécutants sans autonomie.  
+• Les schémas sont la base non négociable.  
+• Un système mal assemblé ne doit jamais fonctionner.  
+• Toute incohérence impose correctionMode ou halt.  
+
+Fin du document.
