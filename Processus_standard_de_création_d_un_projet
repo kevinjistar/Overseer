@@ -5,10 +5,6 @@ Changelog:
   - 1.0.0 (2025-12-09): Création du Processus standard de création d’un projet
 Breaking Changes: Aucun depuis 1.0.0
 
-Règle de versioning:
-  • Major (X.0.0): Modification structurelle du processus ou des responsabilités système
-  • Minor (1.X.0): Ajout ou amélioration d’une étape sans briser la logique
-  • Patch (1.2.X): Ajustements rédactionnels, clarifications
 ---
 
 # Processus standard de création d’un projet
@@ -80,14 +76,14 @@ Le système crée un moteur minimal conforme au Workflow Engine Schema:
 initialState: “draft”
 states:
 	•	id: “draft”
-label: “Brouillon”
+	label: “Brouillon”
 	•	id: “active”
-label: “Actif”
+	label: “Actif”
 transitions:
 	•	from: “draft”
-to: “active”
-conditions: []
-actions: []
+	to: “active”
+	conditions: []
+	actions: []
 
 ---
 
@@ -147,7 +143,7 @@ Contenu:
 
 ---
 
-# 9. Activation du projet (optionnelle)
+# 9. Activation du projet (optionnel)
 
 Si demandé, le système active le projet:
 
@@ -155,6 +151,6 @@ userContext/{userId}/currentProject
 
 Les agents utilisent alors ce projet comme contexte standard.
 
----
+--
 
 Fin du Processus standard de création d’un projet.
