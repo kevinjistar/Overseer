@@ -1,0 +1,217 @@
+
+---
+Document: Role_des_agents
+Version: 2.0.0
+Date: 2025-12-11
+PolicyType: AgentRolesSpecification
+
+PolicyVersions:
+  System_Agent_Edit_Policy: 1.0.0
+  ValidationPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+
+Changelog:
+  - 2.0.0 (2025-12-11): Refonte complète pour intégration du SuperiorValidationAgent, séparation stricte métier/structurel, harmonisation avec Overseer_spec v2, CorrectionMode_Policy et Workflow Engine v2.
+  - 1.0.0 (2025-12-10): Version initiale.
+
+Breaking Changes:
+  - Suppression de l’ancien ValidationAgent au profit du SuperiorValidationAgent.
+  - Distinction explicite entre AgentsProducteurs et AgentsValidateurs.
+  - Interdiction totale de toute logique métier ou structurelle exécutée directement par un agent.
+---
+
+1. Objet du document
+
+Ce document définit les rôles, capacités, contraintes et interdictions associées aux agents dans l’architecture Overseer v2.
+
+Les agents sont des exécutants cognitifs strictement limités.  
+Ils ne:
+• décident rien,  
+• valident rien,  
+• interprètent rien,  
+• modifient rien dans le système,  
+• n’agissent jamais spontanément.
+
+Ils produisent uniquement du JSON strict sous le contrôle d’Overseer.
+
+
+2. Classification des agents
+
+On distingue deux familles d’agents:
+
+• AgentsProducteurs  
+• AgentsValidateurs
+
+Aucun autre type d’agent n’est autorisé.
+
+
+3. AgentsProducteurs
+
+3.1 Mission
+
+Un AgentProducteur génère un document référent complet à partir:
+• d’un document original,  
+• d’une instruction formelle d’Overseer,  
+• d’un schéma universel,  
+• d’un module specialized,  
+• de la System_Agent_Edit_Policy.
+
+Il ne modifie jamais Firestore.  
+Il ne voit jamais l’utilisateur.  
+Il ne connaît jamais l’ensemble du projet.
+
+
+3.2 Capacités autorisées
+
+L’agent peut:
+• compléter un document,  
+• ajuster des sections,  
+• modifier du contenu textuel ou structuré,  
+• produire du JSON strict complet,  
+• appliquer les règles d’édition fournies.
+
+Il ne peut rien faire d’autre.
+
+
+3.3 Contraintes structurelles
+
+Un AgentProducteur doit respecter:
+• le schéma,  
+• la structure exacte,  
+• les clés protégées (meta.id, meta.projectId, meta.createdAt),  
+• l’interdiction de restructuration,  
+• l’interdiction de supprimer ou créer des documents,  
+• l’interdiction de modifier l’arborescence structurelle.
+
+Toute violation est rejetée par l’orchestrateur.
+
+
+3.4 Contraintes métiers
+
+L’agent ne peut jamais:
+• déduire une intention,  
+• anticiper une stratégie,  
+• corriger ou stabiliser seul,  
+• définir Major/Minor/Patch,  
+• déclencher ou interpréter un workflow,  
+• réarranger un document pour le “rendre meilleur”,  
+• combiner plusieurs documents.
+
+L’agent suit l’instruction, strictement et littéralement.
+
+
+3.5 Mode correction
+
+En mode correction:
+• ajustements minimaux,  
+• aucune créativité,  
+• aucune restructuration,  
+• aucune proposition hors instruction,  
+• seul le strict correctif demandé est autorisé.
+
+Un AgentProducteur devient alors un agent correctif.
+
+
+4. AgentsValidateurs
+
+Dans Overseer v2, il n’existe qu’un seul AgentValidateur officiel:
+
+• SuperiorValidationAgent
+
+Il effectue une analyse métier et sémantique.  
+Il ne produit jamais de documents.  
+Il ne modifie rien.  
+Il n’écrit jamais en base.  
+Il ne déclenche jamais une transition ou une correction.
+
+Il retourne uniquement un verdict.
+
+
+4.1 Mission du SuperiorValidationAgent
+
+Il évalue:
+• cohérence locale (document-original vs document-candidat),  
+• cohérence globale (ensemble du projet),  
+• contradictions explicites,  
+• risques,  
+• impacts workflow,  
+• conformité métier aux Policies.
+
+4.2 Sortie attendue
+
+{
+  "verdict": "allow | warn | block",
+  "reasons": [...],
+  "riskLevel": "low | medium | high",
+  "workflowImpact": "none | minor | major",
+  "impactedDocuments": [...],
+  "recommendedFixes": [...]
+}
+
+Overseer décide ensuite d’appliquer, corriger ou annuler.  
+Le SuperiorValidationAgent ne décide jamais.
+
+
+5. Rôles interdits aux agents
+
+Les agents ne peuvent en aucun cas:
+
+• modifier Firestore,  
+• appeler un autre agent,  
+• déclencher un workflow,  
+• analyser un projet complet (sauf SuperiorValidationAgent, via Overseer),  
+• choisir un type de versioning,  
+• appliquer une Policy,  
+• décider d’une transition,  
+• interpréter des erreurs structurelles,  
+• corriger automatiquement,  
+• altérer la structure du schéma,  
+• changer le mode système.
+
+Toute tentative est ignorée ou rejetée.
+
+
+6. Rôle d’Overseer dans la supervision des agents
+
+Overseer:
+• sélectionne l’agent,  
+• prépare une instruction complète,  
+• injecte les Policies,  
+• impose versioning et operationMode,  
+• contrôle les sorties,  
+• demande validation,  
+• peut corriger,  
+• peut rejeter.
+
+Les agents ne sont jamais autonomes.  
+Ils sont pilotés strictement par Overseer.
+
+
+7. Rôle de l’orchestrateur
+
+L’orchestrateur:
+• appelle les agents,  
+• reçoit leur sortie,  
+• valide structurellement,  
+• refuse tout contenu illégal,  
+• journalise l’opération.
+
+Il n’interprète rien.  
+Il ne corrige rien.
+
+
+8. Invariants du rôle des agents
+
+Toujours vrais:
+
+• Un agent ne voit jamais l’utilisateur.  
+• Un agent n’a jamais accès à Firestore.  
+• Un agent ne décide jamais du métier.  
+• Un agent renvoie toujours un JSON complet.  
+• Un agent n’ajoute jamais de champs non autorisés.  
+• SuperiorValidationAgent ne produit jamais de documents.  
+• Aucun agent ne peut modifier le système lui-même.  
+• Overseer reste l’unique autorité métier.  
+
+Fin du document.
