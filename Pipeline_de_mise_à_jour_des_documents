@@ -1,190 +1,268 @@
 
 ---
-Version: 1.0.1
-Date: 2025-12-09
+Document: Pipeline_de_mise_à_jour_des_documents
+Version: 2.0.0
+Date: 2025-12-11
+PolicyType: DocumentUpdatePipeline
+
+PolicyVersions:
+  ValidationPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+
 Changelog:
-  - 1.0.1 (2025-12-09): Alignement complet avec la logique de l’orchestrateur, correction des références Firestore, unification avec le Workflow Engine et règles anti-dérive.
-  - 1.0.0 (2025-12-09): Création du Pipeline de mise à jour des documents
-Breaking Changes: Aucun depuis 1.0.0
+  - 2.0.0 (2025-12-11): Refonte complète intégrant SuperiorValidationAgent, ValidationPolicy_Global, CorrectionMode, Workflow Engine v2 et Processus interne d’appel d’agents v2.
+  - 1.0.0 (2025-12-10): Version initiale.
 
-Règle de versioning:
-  • Major (X.0.0): Modification de la séquence ou de la logique de mise à jour documentaire
-  • Minor (1.X.0): Ajout de contrôles supplémentaires ou d’étapes non disruptives
-  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+Breaking Changes:
+  - Suppression complète de l’ancienne validation unique.
+  - Intégration obligatoire de la double validation (structurelle + sémantique locale/globale).
+  - Ajout du mode correction et de ses règles restrictives.
+  - Abandon de tout déclenchement automatique de workflow.
 ---
 
-# Pipeline de mise à jour des documents
+1. Objet du document
 
-Ce pipeline décrit la procédure officielle et immuable permettant de mettre à jour un document référent via un agent, sous supervision d’Overseer et contrôle technique de l’orchestrateur.  
-Aucune action d’écriture ne peut exister en dehors de ce pipeline.
+Ce pipeline définit le processus complet de mise à jour d’un document référent dans Overseer.  
+Il décrit, étape par étape, comment une modification passe:
 
----
+• De l’intention utilisateur  
+• À la production agentique  
+• À la validation structurelle  
+• À la validation sémantique (locale + globale)  
+• À la décision métier d’Overseer  
+• À l’écriture finale dans Firestore  
+• Aux transitions workflow structurelles validées  
 
-# 1. Réception de la requête
+Ce pipeline garantit:
+• absence de dérive,  
+• cohérence globale,  
+• contrôle absolu de la logique métier,  
+• traçabilité totale.
 
-Une mise à jour documentaire commence lorsque:
-- Overseer transmet une instruction formelle à un agent
-- l’agent renvoie un JSON structuré via agentCallback
 
-Le pipeline démarre uniquement si:
-- currentProject est défini
-- l’agent est autorisé pour ce type de document
-- targetDocument est explicitement fourni
-- la structure du payload est conforme au schéma d’entrée attendu
+2. Préconditions à toute mise à jour documentaire
 
----
+2.1 Projet actif  
+Un currentProject valide doit être défini.
 
-# 2. Validation initiale de l’agentCallback
+2.2 État système  
+• correctionMode = false  
+• halted = false  
+
+2.3 Intégrité précédente  
+• snapshot valide disponible  
+• absence d’erreurs structurelles actives  
+
+2.4 Chargement des Policies  
+Overseer doit charger:
+• ValidationPolicy_Global  
+• VersioningPolicy  
+• WorkflowPolicy  
+• CorrectionMode_Policy  
+• System_Agent_Edit_Policy  
+
+
+3. Étape 1 — Intention utilisateur
+
+L’utilisateur exprime une demande.  
+Overseer:
+• analyse l’intention,  
+• identifie le document concerné,  
+• détermine si une mise à jour documentaire est nécessaire,  
+• évalue le type de versioning (Major/Minor/Patch),  
+• vérifie compatibilité avec les Policies.
+
+Sortie: décision de démarrer le pipeline documentaire.
+
+
+4. Étape 2 — Préparation du contexte par Overseer
+
+Overseer:
+• charge le document original,  
+• charge les schémas (universel + specialized),  
+• charge System_Agent_Edit_Policy (extrait pertinent),  
+• définit operationMode (normal ou correction),  
+• génère operationId,  
+• assemble une systemInstruction complète.
+
+systemInstruction =  
+• document original  
+• schémas  
+• EditRules  
+• Policies actives  
+• intention explicite  
+• type de versioning imposé  
+• operationMode  
+• meta opérationnelle  
+
+
+5. Étape 3 — Appel de l’AgentProducteur
+
+L’orchestrateur reçoit systemInstruction et:
+• valide structurellement l’instruction,  
+• appelle l’AgentProducteur,  
+• reçoit un JSON strict contenant candidateDocument.
+
+Aucun texte libre n’est accepté.  
+Un document complet est requis.
+
+
+6. Étape 4 — Validation structurelle par l’orchestrateur
 
 L’orchestrateur vérifie:
-- identité logique de l’agent émetteur
-- cohérence des métadonnées (projectId, documentId, type)
-- présence d’un JSON valide (syntaxe)
-- présence des champs obligatoires du Schéma universel
+• conformité au Schema_Document_Référent,  
+• conformité au module specialized,  
+• types et structure valides,  
+• absence de champs inconnus,  
+• meta conforme,  
+• version séquentielle correcte (pas le type métier),  
+• JSON strict uniquement.
 
-En cas d’échec:
-- statut error envoyé à Overseer
-- aucune modification système
-- écriture d’un log d’erreur
+En cas d’échec → erreur structurelle → pipeline interrompu → retour Overseer.
 
----
 
-# 3. Validation structurelle complète
+7. Étape 5 — Validation sémantique locale (obligatoire)
 
-L’orchestrateur appelle validateDocument:
+Overseer envoie au SuperiorValidationAgent:
+• originalDocument  
+• candidateDocument  
+• diff  
+• projectContext minimal  
+• operationMeta  
 
-Contrôles réalisés:
-- conformité au Schéma universel du Document Référent
-- conformité au module spécialisé
-- cohérence interne (sections, specialized, narrative, links)
-- cohérence inter-documents si des liens sont fournis
-- conformité du versioning existant
-- présence des champs meta obligatoires
-- absence de valeurs hors schéma
+Le SuperiorValidationAgent retourne un verdict local:
 
-Résultat:
-- `valid`
-- `error` (avec détails de validation)
+{
+  "verdict": "allow | warn | block",
+  "reasons": [...],
+  "impactedDocuments": [...],
+  "workflowImpact": "none | minor | major",
+  "riskLevel": "low | medium | high",
+  "recommendedFixes": [...]
+}
 
-Aucune mise à jour n’a lieu avant validation complète.
+block → Overseer doit corriger ou annuler.  
+override possible uniquement en mode normal (marqué comme exception).  
+En correctionMode → override interdit.
 
----
 
-# 4. Application stricte du versioning
+8. Étape 6 — Validation sémantique globale (si requise)
 
-Si la validation est `valid`, l’orchestrateur applique:
+Selon ValidationPolicy_Global:
+• version Major,  
+• documents racine,  
+• workflowImpact = major,  
+• mode correction,  
+• risque global élevé,  
 
-- meta.ownerAgent = agent émetteur  
-- meta.updatedAt = date du jour  
-- calcul de la version:
-  - Major si Overseer l’a imposé
-  - Minor si Overseer l’a imposé
-  - Patch si modification locale non-structurelle
+→ validation globale OBLIGATOIRE.
 
-L’entrée du changelog doit être ajoutée:
+SuperiorValidationAgent reçoit un contexte élargi:
+• tous les documents du projet,  
+• workflowState,  
+• Policies,  
+• logs récents.
 
-“{version} ({date}): {reason}”
+block → correction ou abandon.  
+warn → arbitrage Overseer.  
+allow → continuer.
 
-Le changelog n’est jamais optionnel.
 
----
+9. Étape 7 — Décision finale d’Overseer
 
-# 5. Préparation de l’écriture contrôlée
+Overseer combine:
+• validation structurelle,  
+• validation locale,  
+• validation globale (si effectuée),  
+• type de versioning,  
+• Policies,  
+• état du projet,  
+• operationMode.
 
-L’orchestrateur vérifie:
-- que le document appartient bien à currentProject
-- que le document n’a pas été modifié depuis la requête (anti-race condition)
-- que le document n’est pas en état locked
-- que la version entrante est strictement supérieure à la version existante
+Décisions possibles:
 
-En cas d’incohérence:
-- l’opération est annulée
-- Overseer reçoit un statut error
-- log système enregistré
+• apply (appliquer)  
+• warn & apply (application avec risque, log obligatoire)  
+• correction (nouvelle instruction à un agent correctif)  
+• abort (arrêt de l’opération)
 
----
+En mode correction:
+• seules les décisions correction ou abort sont permises si risque élevé.
 
-# 6. Écriture contrôlée du document
 
-L’orchestrateur remplace la version existante du document par la nouvelle version, dans la structure logique Firestore suivante (au moment du déploiement):
+10. Étape 8 — Écriture finale par l’orchestrateur
 
-projects/{projectId}/documents/{documentId}
+Si Overseer autorise:
 
-Critères d’écriture:
-- transaction atomique (pas de moitié d’état)
-- écriture uniquement si validation + versioning sont corrects
-- aucune tolérance aux écarts de schéma
+L’orchestrateur:
+• écrit le document dans Firestore,  
+• applique version mécanique (X.Y.Z),  
+• met à jour meta.updatedAt,  
+• ajoute appliedPolicies,  
+• crée snapshot selon Policy,  
+• loggue l’événement.
 
----
+Aucune logique métier n’est exécutée ici.  
+L’orchestrateur suit un protocole strictement structurel.
 
-# 7. Création du snapshot versionné
 
-Après écriture réussie, l’orchestrateur génère un snapshot:
+11. Étape 9 — Exécution des transitions workflow structurelles
 
-snapshots/{projectId}/{snapshotId}/
-- document.json
-- timestamp
-- version
-- agent
-- reason
+Après écriture:
+• Overseer évalue si une transition métier est pertinente.  
+• S’il en décide ainsi, il envoie un ordre `runWorkflowTransition`.
 
-Chaque snapshot représente un point stable pour restauration.
+L’orchestrateur:
+• vérifie l’existence structurelle de la transition,  
+• applique la transition,  
+• exécute les actions structurelles,  
+• loggue l’état final.
 
----
+Aucune condition métier n’est évaluée côté orchestrateur.
 
-# 8. Interaction avec le Workflow Engine
 
-Après la mise à jour documentaire:
-- l’orchestrateur vérifie les triggers éventuels du Workflow Document
-- si une transition est déclenchée:
-  - runWorkflowTransition est exécuté immédiatement
-- si aucune action de workflow n’est nécessaire:
-  - le pipeline continue normalement
+12. Étape 10 — Vérification post-opération par Overseer
 
-Une transition peut:
-- déclencher des actions d’agents
-- modifier l’état global du projet
-- créer un nouveau snapshot
+Overseer:
+• vérifie cohérence globale du projet,  
+• détecte contradictions métier,  
+• active correctionMode si nécessaire,  
+• met à jour son contexte interne,  
+• prépare un rapport utilisateur.
 
----
 
-# 9. Journalisation complète
+13. Résumé du pipeline v2 (essence)
 
-L’orchestrateur écrit un log dans:
+1. Intention utilisateur  
+2. Contexte + policies  
+3. Instruction agent  
+4. Production JSON  
+5. Validation structurelle (orchestrateur)  
+6. Validation locale (SuperiorValidationAgent)  
+7. Validation globale si requise  
+8. Décision Overseer  
+9. Écriture Firestore + snapshot  
+10. Transition workflow structurelle (si ordonnée)  
+11. Vérification finale  
+12. Rapport utilisateur
 
-projects/{projectId}/logs/updates/{logId}.json
 
-Contient:
-- id du document modifié
-- version finale
-- agent responsable
-- date
-- type de mise à jour
-- statut de validation
-- transition de workflow éventuelle
-- snapshotId généré
+14. Invariants du pipeline de mise à jour
 
-Les journaux sont immuables.
+Toujours vrais:
 
----
+• Aucun agent ne modifie Firestore.  
+• Aucun agent ne déduit la logique métier.  
+• Overseer ne modifie jamais un document lui-même.  
+• Orchestrateur n’exécute jamais une transition non ordonnée par Overseer.  
+• SuperiorValidationAgent valide toujours la sémantique locale.  
+• La validation globale suit strictement ValidationPolicy_Global.  
+• Le mode correction désactive toute évolution structurelle non nécessaire.  
+• Aucune écriture sans snapshot cohérent.  
+• Aucun workflow automatique.  
+• Traçabilité complète via operationId et snapshotId.
 
-# 10. Retour final à Overseer
-
-Une réponse formelle est envoyée à Overseer:
-
-- statut: success ou error
-- documentId
-- version finale
-- snapshotId
-- transition éventuelle
-- résumé synthétique de la mise à jour
-
-Overseer utilise cette réponse pour:
-- déclencher d’autres agents
-- poursuivre un workflow
-- demander une correction
-- ou clore proprement la tâche
-
----
-
-Fin du Pipeline de mise à jour des documents.
+Fin du document.
