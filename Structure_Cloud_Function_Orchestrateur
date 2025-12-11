@@ -1,198 +1,370 @@
 
 ---
-Version: 1.0.1
-Date: 2025-12-10
+Document: Structure_Cloud_Function_Orchestrateur
+Version: 2.0.0
+Date: 2025-12-11
+PolicyType: OrchestratorSpecification
+
+PolicyVersions:
+  ValidationPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+
 Changelog:
-  - 1.0.1 (2025-12-10): Mise à jour pour alignement avec le système GAS et la logique locale des phases. Clarification des points d’entrée et suppression des ambiguïtés d’exécution distante.
-  - 1.0.0 (2025-12-10): Création de la Structure Cloud Functions / Orchestrateur
-Breaking Changes: Aucun depuis 1.0.0
+  - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer_spec v2, Workflow_Engine_Schema v2, SuperiorValidationAgent_spec, ValidationPolicy_Global, CorrectionMode_Policy et le pipeline de mise à jour v2.
+  - 1.0.0 (2025-12-10): Version initiale.
 
-Règle de versioning:
-  • Major (X.0.0): Changement structurel des fonctions ou de l’architecture d’orchestration
-  • Minor (1.X.0): Ajout de fonctions non disruptives ou élargissement de comportements
-  • Patch (1.2.X): Ajustements rédactionnels ou améliorations mineures
+Breaking Changes:
+  - L’orchestrateur ne porte plus aucune logique métier.
+  - validateDocument ne réalise plus aucune validation sémantique ou inter-documents.
+  - runWorkflowTransition n’évalue plus aucune condition métier; il applique uniquement des transitions structurelles ordonnées par Overseer.
+  - Toute réparation automatique est interdite; seules les erreurs structurelles sont remontées.
 ---
 
-# Structure Cloud Functions / Orchestrateur
+1. Objet du document
 
-L’orchestrateur est la couche d’exécution de la gouvernance Overseer.  
-Il applique les règles système, valide les documents, gère le versioning, exécute les transitions de workflow, maintient les snapshots et relaie les instructions d’Overseer de manière déterministe.
+Ce document décrit la structure et le rôle des Cloud Functions constituant l’orchestrateur dans Overseer.
 
-Il ne prend jamais d’initiative autonome.  
-Il ne fait jamais d’appel réseau spontané.  
-Il ne réalise rien sans instruction explicite d’Overseer.
+L’orchestrateur:
+- est la **seule couche autorisée à écrire dans Firestore**,  
+- applique des règles **strictement structurelles et déterministes**,  
+- ne contient **aucune logique métier**,  
+- n’interagit jamais directement avec l’utilisateur,  
+- ne communique qu’avec Overseer et les agents.
 
----
+Les fonctions décrites sont:
+- validateDocument  
+- updateDocument  
+- createSnapshot  
+- runWorkflowTransition  
+- agentCallback  
+- systemRecovery  
 
-# 1. Points d’entrée Cloud Functions
 
-Sous /functions/, l’orchestrateur expose les points d’entrée suivants:
+2. Principes fondamentaux
 
-createProject  
-updateDocument  
-runWorkflowTransition  
-setCurrentProject  
-createSnapshot  
-validateDocument  
-agentCallback  
-systemRecovery  
+2.1 Séparation stricte des responsabilités  
+- Overseer: logique métier, décisions, workflows métiers, usage de SuperiorValidationAgent.  
+- Orchestrateur: validations structurelles, écritures, exécution de transitions workflow structurelles, snapshots, logs, verrous.  
+- Agents: production de JSON strict.  
+- Firestore: persistance passive.
 
-Chaque point d’entrée correspond à un rôle strict dans le système, sans chevauchement.
+2.2 Aucune logique métier dans l’orchestrateur  
+L’orchestrateur ne:
+- déduit aucune intention,  
+- n’interprète aucun contenu sémantique,  
+- ne juge jamais la pertinence d’une modification,  
+- ne corrige jamais un document.
 
----
+2.3 Point d’entrée unique pour les mutations  
+Toute mutation (document, workflow, logs, snapshots) passe par:
+- une Cloud Function de l’orchestrateur,  
+- un operationId et un projectId valides.
 
-# 2. createProject
+2.4 Compatibilité avec correctionMode  
+En mode correction:
+- certaines opérations sont limitées,  
+- aucune transition workflow n’est autorisée,  
+- seules les écritures correctives validées par Overseer sont permises.
 
-Déclenchement:  
-- Instruction explicite d’Overseer lors de la création d’un projet.
 
-Fonctions:
-- créer l’arborescence documentaire du projet (côté logique orchestrateur)
-- initialiser les documents référents (versions 1.0.0)
-- initialiser le Workflow Engine associé
-- créer le snapshot initial
-- enregistrer un log de création
-- renvoyer un rapport de création à Overseer
+3. Modèle général des Cloud Functions
 
----
+Chaque fonction de l’orchestrateur respecte:
+- Entrée: JSON strict, signé logiquement par Overseer (operationId, projectId, type d’opération, payload).  
+- Validation:
+  - projectId cohérent et currentProject valide,  
+  - operationId présent,  
+  - runtime non halted (sauf systemRecovery),  
+  - respect des contraintes de CorrectionMode_Policy.  
+- Exécution:
+  - opérations Firestore atomiques,  
+  - aucun appel direct à un LLM,  
+  - logs systématiques.  
+- Sortie:
+  - succès structurés (status, snapshotId éventuel),  
+  - erreurs structurelles détaillées.
 
-# 3. updateDocument
 
-Déclenchement:  
-- Requête d’Overseer pour appliquer une mise à jour issue d’un agent ou d’une transition.
+4. Fonction: validateDocument
 
-Fonctions:
-- appeler validateDocument  
-- appliquer la règle de versioning  
-- mettre à jour meta.updatedAt et meta.ownerAgent  
-- ajouter l’entrée correcte dans le changelog  
-- préparer l’écriture du document (l’écriture réelle dépendra de l’environnement Firebase au moment du déploiement)
-- créer un snapshot cohérent  
-- écrire un log d’update  
+4.1 Rôle  
+validateDocument vérifie **uniquement** la validité structurelle d’un document candidat avant écriture.
 
----
+4.2 Entrée  
+{
+  "projectId": "string",
+  "operationId": "string",
+  "documentCandidate": { ... },
+  "expectedSchemaVersion": "X.Y.Z",
+  "documentType": "string"
+}
 
-# 4. runWorkflowTransition
+4.3 Vérifications réalisées  
+- JSON strict, parseable.  
+- Conformité au Schema_Document_Référent.  
+- Conformité au module specialized correspondant.  
+- Types et structures des champs valides.  
+- Absence de clés inconnues.  
+- Présence des zones meta, structured, specialized, narrative, links.  
+- meta.id immuable (identique au document original).  
+- meta.projectId cohérent avec projectId.  
+- meta.createdAt non modifié.  
+- Séquence de version valide (version > précédente, pas de downgrade).  
+- appliedPolicies présents si requis.
 
-Déclenchement:  
-- Instruction d’Overseer  
-- Ou besoin issu d’une mise à jour documentaire conforme aux règles du Workflow Engine
+4.4 Ce que validateDocument ne fait pas  
+- Ne juge pas Major/Minor/Patch sur un plan métier.  
+- Ne vérifie pas la cohérence inter-documents.  
+- Ne vérifie pas la stratégie, l’architecture, la narration.  
+- Ne corrige aucune erreur.
 
-Fonctions:
-- lire la définition du Workflow Engine du projet  
-- vérifier les conditions de transition  
-- appliquer la transition si validée  
-- exécuter les actions associées  
-- mettre à jour l’état du workflow  
-- logguer la transition
+4.5 Sortie  
+Succès:
+{
+  "status": "ok",
+  "projectId": "...",
+  "operationId": "...",
+  "validated": true
+}
 
----
+Erreur structurelle:
+{
+  "status": "error",
+  "projectId": "...",
+  "operationId": "...",
+  "errorType": "SchemaViolation | VersionSequenceError | MetaIncoherent | JsonInvalid",
+  "details": "..."
+}
 
-# 5. setCurrentProject
 
-Déclenchement:  
-- Instruction explicite d’Overseer lors d’un changement de projet en cours.
+5. Fonction: updateDocument
 
-Fonctions:
-- valider l’existence du projectId  
-- mettre à jour le contexte utilisateur (currentProject)  
-- écrire un log d’état  
-- renvoyer la confirmation à Overseer  
+5.1 Rôle  
+updateDocument applique une mise à jour documentaire **structurellement validée** dans Firestore.
 
----
+5.2 Préconditions  
+- validateDocument a renvoyé un succès pour cette operationId.  
+- Overseer a décidé d’appliquer la modification (apply / warn & apply).  
+- Aucun état halted structurel.  
+- respect CorrectionMode_Policy (en mode correction, patch correctif uniquement).
 
-# 6. createSnapshot
+5.3 Entrée  
+{
+  "projectId": "string",
+  "operationId": "string",
+  "documentCandidate": { ... }
+}
 
-Déclenchement:  
-- Création d’un projet  
-- Mise à jour documentaire  
-- Transition de workflow  
-- Demande d’Overseer
+5.4 Exécution  
+- Vérification finale projectId / operationId.  
+- Vérification que runtime.halted = false.  
+- Écriture atomique du document:  
+  - remplacement complet par documentCandidate,  
+  - mise à jour meta.updatedAt,  
+  - application de meta.version (déjà déterminée par Overseer + VersioningPolicy),  
+  - ajout/ajustement de appliedPolicies.  
+- Appel à createSnapshot si requis par Policy.  
+- Log de l’opération dans logs/{projectId}/events.
 
-Fonctions:
-- capturer l’état global actuel du projet  
-- stocker un snapshot horodaté  
-- enregistrer le motif et l’agent responsable  
+5.5 Sortie  
+Succès:
+{
+  "status": "ok",
+  "projectId": "...",
+  "operationId": "...",
+  "documentId": "...",
+  "snapshotId": "..."
+}
 
----
+Erreur (ex: conflit d’écriture, runtime.halted, incohérence interne Firestore):
+- pipeline interrompu,  
+- erreur renvoyée à Overseer,  
+- aucun rollback métier; la correction appartient à Overseer.
 
-# 7. validateDocument
 
-Déclenchement:  
-- Interne à updateDocument  
-- Interne à createSnapshot  
-- Ou demande explicite d’Overseer
+6. Fonction: createSnapshot
 
-Fonctions:
-- valider conformité au Schéma universel du Document Référent  
-- valider conformité au module spécialisé (architecture, UX, stratégie, workflow, notes)  
-- vérifier cohérence interne  
-- vérifier cohérence inter-document si nécessaire  
-- vérifier versioning  
-- vérifier liens et références  
-- renvoyer un statut: valid ou error  
+6.1 Rôle  
+createSnapshot capture un état cohérent d’un document ou d’un projet pour restauration future.
 
----
+6.2 Entrée  
+{
+  "projectId": "string",
+  "operationId": "string",
+  "scope": "document | project",
+  "documentId": "string (optionnel si scope=project)"
+}
 
-# 8. agentCallback
+6.3 Exécution  
+- Récupération de la dernière version persistée.  
+- Écriture dans snapshots/{projectId}/... avec:
+  - contenu complet,  
+  - meta (date, operationId, policies, workflowState).  
 
-Déclenchement:  
-- Réception d’une réponse d’un agent externe (via Overseer, jamais directement).
+6.4 Politique de rétention  
+Gérée par Policies_Versioning_Spec; l’orchestrateur applique seulement:
+- création du snapshot,  
+- marquage du type (Major/Minor/Patch) transmis par Overseer.
 
-Fonctions:
-- réceptionner le payload JSON  
-- vérifier l’identité logique de l’agent externe  
-- transmettre la demande à updateDocument ou runWorkflowTransition  
-- journaliser l’activité  
-- renvoyer à Overseer un rapport de traitement  
+6.5 Sortie  
+{
+  "status": "ok",
+  "projectId": "...",
+  "operationId": "...",
+  "snapshotId": "..."
+}
 
----
 
-# 9. systemRecovery
+7. Fonction: runWorkflowTransition
 
-Déclenchement:  
-- Détection d’une erreur critique  
-- Détection d’une boucle potentielle  
-- Incohérence structurelle  
-- Instruction explicite d’Overseer
+7.1 Rôle  
+Appliquer **structurellement** une transition du Workflow Engine v2, ordonnée par Overseer.
 
-Fonctions:
-- suspendre l’exécution en cours  
-- restaurer le dernier snapshot stable  
-- produire un log d’erreur  
-- renvoyer un rapport à Overseer  
+7.2 Entrée  
+{
+  "projectId": "string",
+  "operationId": "string",
+  "transitionId": "string"
+}
 
----
+7.3 Vérifications  
+- runtime.halted = false.  
+- correctionMode = false (sinon: refus).  
+- WorkflowEngine chargé pour projectId.  
+- transitionId existe dans transitions[].  
+- currentState du workflow = transition.from.  
+- transition.to état valide.  
+- actions structurelles valides (snapshot, log, callAgent structuré).
 
-# 10. Règles transversales de l’orchestrateur
+7.4 Exécution  
+- Mise à jour de currentState vers transition.to.  
+- Exécution des actions déclarées:
+  - snapshot: appel createSnapshot.  
+  - log: écriture dans logs.  
+  - callAgent: création d’une tâche d’appel agentique via Overseer (l’orchestrateur n’appelle jamais directement un LLM).  
 
-L’orchestrateur doit toujours:
-- effectuer une validation stricte avant toute modification  
-- refuser les actions hors currentProject  
-- empêcher toute boucle opérationnelle  
-- journaliser chaque étape significative  
-- garantir des snapshots continus et cohérents  
-- appliquer les règles du Workflow Engine sans exception  
-- rester strictement déterministe (aucune interprétation libre)  
+7.5 Ce que runWorkflowTransition ne fait pas  
+- Ne vérifie aucune condition métier.  
+- Ne décide pas si la transition est “logique”.  
+- Ne déclenche pas automatiquement de transition.
 
----
+7.6 Sortie  
+Succès:
+{
+  "status": "ok",
+  "projectId": "...",
+  "operationId": "...",
+  "from": "stateId",
+  "to": "stateId"
+}
 
-# 11. Interactions Overseer ↔ Orchestrateur
+Erreur (transition inexistante, état invalide, mode correction):
+- transition non appliquée,  
+- erreur renvoyée à Overseer.
 
-Overseer:
-- décide, contextualise, sélectionne les agents, supervise la cohérence, gouverne la version du système.
 
-Orchestrateur:
-- exécute, valide, applique, enregistre, stabilise.
+8. Fonction: agentCallback
 
-Flux standard:
+8.1 Rôle  
+Recevoir la sortie JSON d’un agent et la transmettre au pipeline de validation structurelle, sans interprétation.
 
-1. Overseer → orchestrateur: instruction (validate, update, transition, snapshot)  
-2. Orchestrateur → Firestore (ou couche future): écriture + snapshot  
-3. Orchestrateur → Overseer: rapport structuré  
+8.2 Entrée  
+{
+  "projectId": "string",
+  "operationId": "string",
+  "agentId": "string",
+  "output": {
+    "documentCandidate": { ... }
+  }
+}
 
-Aucune action n’est exécutée sans instruction préalable d’Overseer.
+8.3 Exécution  
+- Vérification projectId / operationId.  
+- Vérification que runtime.halted = false.  
+- Vérification que l’agentId attendu correspond à l’instruction initiale.  
+- Passage du documentCandidate à validateDocument.  
+- Renvoi du résultat (succès/erreur structurelle) à Overseer.
 
----
+8.4 Ce que agentCallback ne fait pas  
+- Ne modifie jamais Firestore.  
+- Ne décide jamais d’appliquer ou non la modification.  
+- Ne contacte pas SuperiorValidationAgent.  
+- Ne juge aucune cohérence métier.
 
-Fin du document Structure Cloud Functions / Orchestrateur.
+8.5 Sortie  
+{
+  "status": "ok | error",
+  "projectId": "...",
+  "operationId": "...",
+  "validationResult": { ... }
+}
+
+
+9. Fonction: systemRecovery
+
+9.1 Rôle  
+Restaurer un état stable à partir d’un snapshot en cas d’erreur critique (halted).
+
+9.2 Entrée  
+{
+  "projectId": "string",
+  "operationId": "string",
+  "snapshotId": "string"
+}
+
+9.3 Préconditions  
+- runtime.halted = true.  
+- snapshotId existant et vérifié.
+
+9.4 Exécution  
+- Restauration des documents référents depuis snapshotId.  
+- Restauration éventuelle du WorkflowEngine associé.  
+- Mise à jour des meta système (runtime.halted = false, correctionMode = true le temps de valider).  
+- Création d’un nouveau snapshot post-restauration.  
+- Log détaillé dans logs/{projectId}/events.
+
+9.5 Post-recovery  
+- Overseer doit exécuter une validation globale (SuperiorValidationAgent).  
+- sortie de correctionMode uniquement après confirmation.
+
+9.6 Sortie  
+{
+  "status": "ok",
+  "projectId": "...",
+  "operationId": "...",
+  "restoredSnapshotId": "..."
+}
+
+
+10. Gestion de correctionMode et halted dans l’orchestrateur
+
+10.1 correctionMode  
+- Les fonctions updateDocument et createSnapshot continuent de fonctionner, mais uniquement pour des corrections validées par Overseer.  
+- runWorkflowTransition renvoie systématiquement une erreur si correctionMode = true.  
+
+10.2 halted  
+- Lorsqu’un état halted = true:
+  - toutes les fonctions, sauf systemRecovery, refusent d’exécuter l’opération.  
+  - une erreur structurelle est renvoyée à Overseer.
+
+10.3 Aucune sortie autonome  
+L’orchestrateur ne peut jamais lever halted, ni quitter correctionMode, de sa propre initiative.
+
+
+11. Invariants de l’orchestrateur
+
+Toujours vrais:
+
+- Seul composant autorisé à écrire dans Firestore.  
+- Aucune logique métier exécutée.  
+- Aucune réparation automatique du contenu.  
+- Toute écriture liée à un operationId et un projectId.  
+- Respect strict des Policies actives (via paramètres transmis par Overseer).  
+- Aucune transition workflow sans ordre explicite d’Overseer.  
+- Aucune écriture en mode halted (sauf systemRecovery).  
+- Log systématique de toutes les opérations critiques.
+
+Fin du document.
