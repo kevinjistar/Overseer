@@ -73,15 +73,15 @@ Chaque document initial contient:
 
 Le système crée un moteur minimal conforme au Workflow Engine Schema:
 
-initialState: “draft”
+initialState: "draft"
 states:
-	•	id: “draft”
-	label: “Brouillon”
-	•	id: “active”
-	label: “Actif”
+	•	id: "draft"
+	label: "Brouillon"
+	•	id: "active"
+	label: "Actif"
 transitions:
-	•	from: “draft”
-	to: “active”
+	•	from: "draft"
+	to: "active"
 	conditions: []
 	actions: []
 
