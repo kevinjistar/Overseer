@@ -1,130 +1,43 @@
 
+---
+Document: Gestion_CurrentProject
 Version: 1.0.0
-Date: 2025-12-09
+Date: 2025-12-12
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit les règles de gestion du projet actif (currentProject) dans le système Overseer.
+
+
+2. Principe fondamental
+
+À tout instant:
+• un seul projectId est actif par utilisateur,
+• aucune opération n’est autorisée sans projectId explicite.
+
+
+3. Mécanisme
+
+• le projectId actif est stocké dans le contexte utilisateur,
+• chaque opération capture un operationProjectId,
+• toute divergence entraîne l’annulation de l’opération.
+
+
+4. Sécurité et cohérence
+
+• pas de changement de projectId en cours d’opération,
+• verrouillage logique pendant opérations critiques,
+• journalisation systématique des changements de contexte.
+
+
+Document Metadata & Changelog
+
 Changelog:
-  - 1.0.0 (2025-12-09): Création du document Gestion du currentProject
-Breaking Changes: Aucun depuis 1.0.0
+  - 1.0.0 (2025-12-12): Création du document de gestion du currentProject.
 
-Règle de versioning:
-  • Major (X.0.0): Modification structurelle de la logique de gestion du projet actif
-  • Minor (1.X.0): Ajout de règles ou précisions non disruptives
-  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
----
-
-# Gestion du currentProject
-
-La gestion du projet actif garantit qu’un seul projet est utilisé comme contexte de travail pour Overseer, les agents, le Workflow Engine et l’orchestrateur. Aucune action ne peut être effectuée sans qu’un projet actif soit défini.
-
----
-
-# 1. Définition
-Le `currentProject` correspond à l’identifiant du projet actuellement sélectionné par l’utilisateur.  
-Il est stocké dans:
-
-userContext/{userId}/currentProject.json
-
----
-
-# 2. Structure du document currentProject.json
-
-{
-“projectId”: “string”,
-“selectedAt”: “datetime”,
-“selectedBy”: “string”,
-“status”: “active”
-}
-
----
-
-# 3. Règles générales
-
-- Le système doit toujours disposer d’un `currentProject` pour exécuter une action.
-- Overseer refuse toute requête s’il n’existe pas de projet actif.
-- La sélection d’un projet met automatiquement à jour le document userContext.
-- La sélection d’un nouveau projet remplace l’ancien sans historique dans ce fichier.
-- Le journal global (logs système) conserve cependant une trace de chaque changement.
-
----
-
-# 4. Sélection d’un projet
-
-La sélection suit la procédure suivante:
-
-1. L’utilisateur indique l’identifiant du projet à activer.
-2. Overseer vérifie l’existence du projet.
-3. Overseer demande à l’orchestrateur de définir `currentProject`.
-4. L’orchestrateur écrit le fichier:
-
-userContext/{userId}/currentProject.json
-
-Avec:
-- projectId
-- selectedAt = date du jour
-- selectedBy = utilisateur
-- status = "active"
-
-5. Overseer confirme la mise à jour du contexte.
-
----
-
-# 5. Contraintes de cohérence
-
-- Aucun agent ne peut agir sur un autre projet que celui défini dans currentProject.
-- Overseer doit rappeler explicitement ce projet dans chaque transmission de tâche.
-- Le contexte doit être chargé avant tout appel d’agent.
-- Le système ne peut pas avoir plusieurs currentProject simultanés pour un même utilisateur.
-
----
-
-# 6. Désactivation du projet actif
-
-Un projet peut être désactivé selon la procédure suivante:
-
-1. L’utilisateur demande une désactivation.
-2. Overseer vérifie qu’aucune action critique n’est en cours.
-3. L’orchestrateur met à jour:
-
-userContext/{userId}/currentProject.json
-
-En:
-
-{
-“projectId”: null,
-“selectedAt”: null,
-“selectedBy”: null,
-“status”: “none”
-}
-
-4. Toute requête d’agent est désormais bloquée jusqu’à sélection d’un nouveau projet.
-
----
-
-# 7. Journalisation
-
-Chaque changement de projet actif doit être inscrit dans:
-
-systemLogs/currentProjectSwitch/
-
-Avec:
-- userId
-- previousProjectId
-- newProjectId
-- timestamp
-- méthode (sélection, désactivation)
-- statut
-
----
-
-# 8. Comportement attendu d’Overseer
-
-Overseer doit:
-- vérifier l’existence du currentProject à chaque requête
-- rappeler le currentProject dans toute instruction envoyée aux agents
-- empêcher toute modification documentaire hors contexte
-- signaler à l’utilisateur si aucun projet actif n’est défini
-- empêcher un agent de changer lui-même le currentProject
-- déclencher ContextAgent pour charger les données du projet
-
----
-
-Fin du document Gestion du currentProject.
+Breaking Changes:
+  - Aucun, document initial.
