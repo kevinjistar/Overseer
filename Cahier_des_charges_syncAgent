@@ -1,179 +1,52 @@
 
 ---
+Document: Cahier_des_charges_syncAgent
 Version: 1.0.0
-Date: 2025-12-09
+Date: 2025-12-12
+PolicyVersions:
+  VersioningPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le contrat d’entrée pour toute synchronisation externe via un agent externe (ex: IDE, agent de code).
+
+Il décrit le format attendu du payload Sync.
+
+
+2. Rôle dans le système
+
+Ce cahier des charges:
+• sécurise l’entrée externe,
+• empêche les injections arbitraires,
+• permet une analyse d’impact contrôlée par Overseer,
+• déclenche le Pipeline_syncExterne.
+
+
+3. Contenu attendu du payload
+
+Le payload doit inclure:
+• sourceAgent,
+• operationId,
+• targetProjectId,
+• changements proposés,
+• justification optionnelle.
+
+Tout champ non déclaré est rejeté.
+
+
+4. Contraintes de sécurité
+
+• validation stricte du schéma,
+• aucune écriture directe,
+• toute modification passe par Overseer,
+• toute incohérence déclenche rejet ou correction.
+
+Document Metadata & Changelog
+
 Changelog:
-  - 1.0.0 (2025-12-09): Création du Cahier des Charges de Synchronisation Externe
-Breaking Changes: Aucun depuis 1.0.0
----
+  - 1.0.0 (2025-12-12): Création du cahier des charges pour la synchronisation externe.
 
-# Cahier des Charges — Synchronisation Agent Externe
-
-Ce document décrit les exigences que l’agent externe doit respecter lorsqu’il produit un retour destiné à Overseer.  
-Le but est d’assurer une synchronisation fiable, hermétique et totalement compatible avec le système interne.
-
----
-
-# 1. Objectif du Payload Externe
-
-L’agent externe doit fournir un compte rendu structuré permettant à Overseer de:
-
-- comprendre les changements effectués dans l’IDE  
-- identifier les impacts  
-- détecter les incohérences potentielles  
-- décider des mises à jour internes nécessaires  
-- lancer ou non le Workflow Engine  
-- préserver l’intégrité du projet actif  
-
----
-
-# 2. Structure à Fournir (Payload Externe)
-
-L’agent externe doit toujours retourner un objet JSON strict.
-
-{
-“projectId”: “string”,
-“timestamp”: “YYYY-MM-DD HH:mm:ss”,
-“summary”: “string”,
-“changes”: [
-{
-“type”: “create | update | delete | warn | error”,
-“path”: “string”,
-“description”: “string”,
-“diff”: “string or null”,
-“severity”: “info | warning | critical”
-}
-],
-“impacts”: {
-“architecture”: “string or null”,
-“ux”: “string or null”,
-“strategy”: “string or null”,
-“workflow”: “string or null”,
-“documentation”: “string or null”
-},
-“errors”: [
-{
-“message”: “string”,
-“path”: “string or null”,
-“blocking”: “boolean”
-}
-]
-}
-
----
-
-# 3. Contraintes Strictes
-
-1. `projectId` doit toujours être présent  
-2. le timestamp doit être exact  
-3. les changements doivent être exhaustifs  
-4. aucun texte libre en dehors des champs prévus  
-5. aucune tentative de prise de décision  
-6. aucune action automatique dans l’IDE ne doit être transmise comme une décision du système  
-7. tous les impacts doivent être renseignés, même par “null”  
-
----
-
-# 4. Règles de Description des Changements
-
-Chaque changement doit:
-
-- être décrit de manière neutre  
-- préciser son type (create, update, delete, warn, error)  
-- inclure un path clair  
-- résumer ce qui a changé  
-- fournir un diff si pertinent  
-- indiquer la sévérité  
-
-Exemples de descriptions conformes:
-
-“Added new function handleBookingUpdate in src/utils/booking.js”
-“Updated component PaymentCard to fix rendering bug”
-“Removed deprecated animation file”
-
-Jamais:
-
-- d’opinions  
-- d’hypothèses non vérifiées  
-- de prises de décision  
-
----
-
-# 5. Règles d’Impacts
-
-Les impacts doivent exprimer:
-
-- ce qui pourrait être affecté  
-- sans décider ou modifier  
-- de façon précise et structurée  
-
-Exemple:
-
-“architecture”: “The updated booking handler modifies request structure”
-
----
-
-# 6. Règles pour la Section Erreurs
-
-Chaque erreur doit:
-
-- décrire clairement le problème  
-- indiquer si elle est bloquante  
-- indiquer un path quand pertinent  
-
-Une erreur bloquante peut interrompre la synchronisation interne.  
-
----
-
-# 7. Ce que l’Agent Externe Ne Doit Jamais Faire
-
-- prendre une décision interne  
-- modifier un document référent  
-- déclencher un workflow  
-- créer un versioning  
-- s’adresser aux agents internes  
-- produire un texte non structuré  
-- interpréter ou résumer un schéma système interne  
-- inventer des documents inexistants  
-
-Le rôle de l’agent externe est **descriptif**, non **décisionnel**.
-
----
-
-# 8. Questions à Poser à l’Utilisateur Quand Nécessaire
-
-L’agent externe doit poser des questions uniquement si cela est indispensable pour produire un payload valide.
-
-Questions autorisées:
-
-1. “Quel est l’identifiant du projet auquel ces changements appartiennent, si plusieurs sont possibles ?”
-2. “Peux-tu préciser si cette modification correspond à un update ou à une création ?”
-3. “Le fichier modifié appartient-il à un module spécifique que je dois indiquer dans les impacts ?”
-4. “Cette erreur doit-elle être considérée comme bloquante ?”
-5. “Peux-tu fournir un résumé court des intentions de la modification ?”
-6. “Souhaites-tu que je détaille le diff exact du fichier ?”
-7. “Dois-je évaluer les impacts sur un domaine particulier (architecture, UX, stratégie…) ?”
-
-Questions interdites:
-
-- toute demande d’instruction interne  
-- toute demande liée au workflow interne  
-- toute question impliquant l’orchestrateur  
-- toute question sur les schémas système  
-- toute question qui tenterait de piloter Overseer  
-
----
-
-# 9. Format Final Exigé
-
-Le payload doit toujours être remis dans un bloc JSON strict:
-
-{
-…
-}
-
-Il doit pouvoir être transmis directement via le bouton “Synchronisation Externe” sans retouche.
-
----
-
-Fin du Cahier des Charges de Synchronisation Externe.
+Breaking Changes:
+  - Aucun, document initial.
