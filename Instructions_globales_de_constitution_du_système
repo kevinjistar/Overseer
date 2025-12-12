@@ -1,205 +1,45 @@
 
 ---
 Document: Instructions_globales_de_constitution_du_système
-Version: 2.0.0
-Date: 2025-12-11
-PolicyType: SystemAssemblyGuide
-
+Version: 1.0.0
+Date: 2025-12-12
 PolicyVersions:
-  WorkflowPolicy: 1.0.0
-  ValidationPolicy: 1.0.0
   VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
-  System_Agent_Edit_Policy: 1.0.0
-
-Changelog:
-  - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, SuperiorValidationAgent, Processus interne v2, Workflow Engine v2, CorrectionMode_Policy et Policies versionnées.
-  - 1.0.0 (2025-12-10): Version initiale.
-
-Breaking Changes:
-  - Intégration des Policies versionnées comme fondation obligatoire.
-  - SuperiorValidationAgent remplace ValidationAgent.
-  - Séparation stricte structurel / métier dans l’ordre de constitution du système.
+  ValidationPolicy_Global: 1.0.0
 ---
 
 1. Objet du document
 
-Ce document définit l’ordre officiel, les dépendances et les priorités nécessaires pour construire, charger, initialiser puis maintenir le système Overseer dans un état cohérent.
-
-Il sert de:
-• plan directeur,  
-• guide de dépendances,  
-• référence de priorités documentaires,  
-• protocole d’intégration des mises à jour.
+Ce document définit l’ordre, les dépendances et les règles de constitution du système Overseer à partir des documents de spécification.
 
 
-2. Vision générale
+2. Principe
 
-Le système Overseer repose sur quatre couches interdépendantes:
-
-1. Schémas fondamentaux  
-2. Policies versionnées  
-3. Spécifications comportementales (Overseer, orchestrateur, agents)  
-4. Processus opérationnels (workflows, pipelines, création projet, sync)
-
-L’ordre de construction est essentiel pour éviter les dérives et assurer la cohérence métier + structurelle.
+Le système doit être construit de manière séquentielle, sans contournement ni omission.
 
 
-3. Ordre officiel de constitution du système
+3. Ordre recommandé
 
-L’ensemble du système doit être chargé dans l’ordre strict suivant.
-
-
-3.1 Couche 1 — Schémas fondamentaux
-
-Ce sont les artefacts obligatoires qui définissent la structure universelle.
-
-1. Schema_Document_Référent  
-2. Schema_Project  
-3. Schema_Workflow  
-4. Modules specialized  
-5. Structure_Firestore  
-6. Structure_Cloud_Function_Orchestrateur  
-
-Un système ne peut exister sans ces schémas.  
-Aucune logique ne peut être définie tant que ces schémas ne sont pas stables.
+1. Schémas (Document, Project, Workflow)  
+2. Policies  
+3. Overseer_spec  
+4. Orchestrateur  
+5. Pipelines  
+6. Agents  
+7. UX et documents support  
 
 
-3.2 Couche 2 — Policies versionnées
+4. Règles strictes
 
-Les Policies déterminent le comportement métier et systémique global.
-
-1. VersioningPolicy  
-2. WorkflowPolicy  
-3. ValidationPolicy_Global  
-4. CorrectionMode_Policy  
-5. System_Agent_Edit_Policy  
-6. Policies_Versioning_Spec (référentiel des versions)
-
-Elles doivent être chargées **avant toute définition d’Overseer** car elles gouvernent son comportement.
+• aucun document ne doit être interprété hors contexte,
+• aucune étape ne peut être sautée,
+• toute incohérence doit être corrigée avant de poursuivre.
 
 
-3.3 Couche 3 — Spécifications comportementales
+Document Metadata & Changelog
 
-Cette couche définit l’intelligence et les rôles du système.
+Changelog:
+  - 1.0.0 (2025-12-12): Création des instructions globales de constitution du système.
 
-1. Overseer_spec  
-2. SuperiorValidationAgent_spec  
-3. Rôle_des_agents  
-4. Règles_système_des_agents  
-5. Controle_anti_dérive  
-6. Protocole_d_erreur  
-
-Ces documents définissent:
-• qui pense,  
-• qui valide,  
-• qui produit,  
-• qui exécute,  
-• qui garantit l’ordre,  
-• comment le système réagit en cas d’erreur.
-
-
-3.4 Couche 4 — Processus opérationnels
-
-Ces documents décrivent comment le système fonctionne réellement au quotidien.
-
-1. Process_interne_d’appel_d’agents v2  
-2. Pipeline_de_mise_à_jour_des_documents v2  
-3. Processus_standard_de_mise_à_jour_avec_SuperiorValidationAgent  
-4. Process_de_chargement_du_contexte_et_des_documents  
-5. Pipeline_d_entrée_des_projets  
-6. Processus_standard_de_création_d’un_projet  
-7. Process_du_Workflow_Engine v2  
-8. Cahier_des_charges_new_project  
-9. Cahier_des_charges_syncAgent  
-
-Ces processus utilisent les couches précédentes pour fournir un comportement stable et cohérent.
-
-
-3.5 Couche 5 — UX et gouvernance
-
-1. Overseer_boutons  
-2. Design_UX  
-3. Gestion_CurrentProject  
-
-Ces éléments n’impactent pas la logique interne, mais sont nécessaires pour une utilisation cohérente et sans dérive du système.
-
-
-4. Règles de dépendances
-
-4.1 Un document ne peut dépendre que d'une couche inférieure  
-Exemple:  
-Le Workflow Engine ne peut pas dépendre d’un processus; un processus peut dépendre du Workflow Engine.
-
-4.2 Les Policies gouvernent toutes les couches supérieures  
-Elles doivent être chargées et versionnées avant Overseer et les agents.
-
-4.3 Overseer dépend de toutes les Policies  
-Toute mise à jour des Policies impose une mise à jour potentielle d’Overseer_spec.
-
-4.4 L’orchestrateur ne dépend d’aucune logique métier  
-Il dépend uniquement des schémas et Policies structurelles (notamment VersioningPolicy).
-
-
-5. Mise à jour du système
-
-5.1 Mise à jour d’un schéma  
-→ nécessite mise à jour des agents, d’Overseer, des workflows, et d’une partie des process.
-
-5.2 Mise à jour d’une Policy  
-→ Overseer doit être actualisé, ainsi que les process qui invoquent cette Policy.
-
-5.3 Mise à jour d’un document comportemental  
-→ Overseer doit recharger le référentiel et invalider son cache logique.
-
-5.4 Mise à jour d’un processus  
-→ impact uniquement opérationnel, tant que les couches 1 à 3 restent stables.
-
-
-6. Mode de lecture recommandé pour la compréhension du système
-
-Pour assimiler Overseer dans sa globalité, les documents doivent être lus dans cet ordre:
-
-1. Schema_Document_Référent  
-2. Schema_Project  
-3. Policies versionnées  
-4. Overseer_spec  
-5. SuperiorValidationAgent_spec  
-6. Règles_système_des_agents  
-7. Process internes  
-8. Workflow Engine v2  
-9. CorrectionMode  
-10. Anti-dérive & Protocole d’erreur  
-11. Process de création et mise à jour  
-12. Sync & UX
-
-
-7. Critères d’un système complet et cohérent
-
-Le système est considéré comme correctement constitué si:
-
-• Tous les schémas ont une version valide.  
-• Toutes les Policies sont chargées et référencées.  
-• Overseer_spec est compatible avec les Policies.  
-• SuperiorValidationAgent est défini et isolé.  
-• Orchestrateur_spec ne contient aucune logique métier.  
-• Processus internes reflètent le pipeline v2.  
-• Workflow Engine v2 ne contient aucune condition métier.  
-• CorrectionMode est opérationnel.  
-• Anti-dérive sépare structurel et métier.  
-• Tous les documents de niveau supérieur indiquent clairement leurs dépendances.
-
-
-8. Invariants de constitution
-
-Toujours vrais:
-
-• Les Policies gouvernent l’ensemble du système.  
-• Overseer est l’unique centre de logique métier.  
-• L’orchestrateur est l’unique exécuteur structurel.  
-• Les agents sont des exécutants sans autonomie.  
-• Les schémas sont la base non négociable.  
-• Un système mal assemblé ne doit jamais fonctionner.  
-• Toute incohérence impose correctionMode ou halt.  
-
-Fin du document.
+Breaking Changes:
+  - Aucun, document initial.
