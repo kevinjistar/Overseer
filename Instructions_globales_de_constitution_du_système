@@ -1,45 +1,64 @@
 
 ---
-Document: Instructions_globales_de_constitution_du_système
+Document: Global_Overview
 Version: 1.0.0
 Date: 2025-12-12
 PolicyVersions:
   VersioningPolicy: 1.0.0
   ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 1. Objet du document
 
-Ce document définit l’ordre, les dépendances et les règles de constitution du système Overseer à partir des documents de spécification.
+Ce document est le document maître du système Overseer.
+Il fournit une vision globale, cohérente et unifiée de l’architecture, des rôles, des processus et des principes fondamentaux.
 
 
-2. Principe
+2. Vision globale du système
 
-Le système doit être construit de manière séquentielle, sans contournement ni omission.
+Overseer est un système de gouvernance multi-agents strictement contrôlé, déterministe et traçable.
 
+Principe central:
 
-3. Ordre recommandé
-
-1. Schémas (Document, Project, Workflow)  
-2. Policies  
-3. Overseer_spec  
-4. Orchestrateur  
-5. Pipelines  
-6. Agents  
-7. UX et documents support  
+Overseer pense.  
+Les agents produisent.  
+L’orchestrateur exécute.  
+Firestore persiste.
 
 
-4. Règles strictes
+3. Composants principaux
 
-• aucun document ne doit être interprété hors contexte,
-• aucune étape ne peut être sautée,
-• toute incohérence doit être corrigée avant de poursuivre.
+• Overseer: gouvernance et logique métier,  
+• SuperiorValidationAgent: validation sémantique,  
+• Orchestrateur: exécution structurelle,  
+• Agents producteurs: production documentaire,  
+• Firestore: persistance passive.
 
+
+4. Flux canonique
+
+Utilisateur → Overseer → Orchestrateur → Agent → Orchestrateur → Overseer → Utilisateur
+
+
+5. Invariants globaux
+
+• aucune autonomie agentique,
+• aucune écriture hors orchestrateur,
+• aucune logique métier dans les couches structurelles,
+• aucune décision implicite,
+• traçabilité et auditabilité totales.
+
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création des instructions globales de constitution du système.
+  - 1.0.0 (2025-12-12): Création du document maître de synthèse du système Overseer.
 
 Breaking Changes:
   - Aucun, document initial.
