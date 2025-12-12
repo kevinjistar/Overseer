@@ -10,34 +10,44 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit les règles de gestion du projet actif (currentProject) dans le système Overseer.
+Ce document définit les règles strictes de gestion du projet actif (currentProject) dans le système Overseer.
 
 
 2. Principe fondamental
 
 À tout instant:
 • un seul projectId est actif par utilisateur,
-• aucune opération n’est autorisée sans projectId explicite.
+• aucune opération n’est autorisée sans projectId explicite et valide.
 
 
-3. Mécanisme
+3. Mécanisme de gestion
 
 • le projectId actif est stocké dans le contexte utilisateur,
-• chaque opération capture un operationProjectId,
-• toute divergence entraîne l’annulation de l’opération.
+• chaque opération capture un operationProjectId au lancement,
+• toute divergence entre operationProjectId et currentProject entraîne l’annulation de l’opération.
 
 
 4. Sécurité et cohérence
 
-• pas de changement de projectId en cours d’opération,
-• verrouillage logique pendant opérations critiques,
+• aucun changement de projectId pendant une opération en cours,
+• verrouillage logique lors des opérations critiques,
 • journalisation systématique des changements de contexte.
 
+
+5. Cas d’erreur
+
+• projectId absent → rejet immédiat,
+• projectId incohérent → annulation et log,
+• changement concurrent → arrêt contrôlé.
+
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création du document de gestion du currentProject.
+  - 1.0.0 (2025-12-12): Création du document de gestion stricte du currentProject.
 
 Breaking Changes:
   - Aucun, document initial.
