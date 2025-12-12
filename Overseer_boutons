@@ -11,31 +11,40 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit les boutons et modes d’interaction utilisateur exposés par Overseer.
-Les boutons ne déclenchent jamais d’actions directes, ils modifient uniquement l’état interne d’Overseer.
+Ce document définit les boutons et modes d’interaction exposés par Overseer à l’utilisateur.
+
+Les boutons ne déclenchent jamais directement d’actions métier ou techniques.
 
 
-2. Liste des boutons
+2. Principe général
 
-2.1 Mode Normal  
-État par défaut du système.  
-Toutes les opérations standards sont autorisées.
+Un bouton modifie uniquement l’état interne d’Overseer.
+Toute action réelle est décidée et orchestrée par Overseer selon le mode actif.
 
-2.2 Mode Création de Projet  
+
+3. Modes disponibles
+
+3.1 Mode Normal  
+Mode par défaut.
+Les opérations standard sont autorisées.
+
+3.2 Mode Création de Projet  
 Autorise uniquement les opérations liées à l’initialisation d’un nouveau projet.
 
-2.3 Mode Sync  
+3.3 Mode Sync  
 Autorise uniquement la réception et l’analyse de payloads externes.
 
-2.4 Mode Correction  
-État exclusif déclenché lors d’une incohérence métier.
+3.4 Mode Correction  
+Mode exclusif déclenché lors d’une incohérence métier nécessitant réparation.
 
 
-3. Règles strictes
+4. Règles strictes
 
-• un seul mode actif à la fois,  
-• aucun bouton ne déclenche une action métier directe,  
-• Overseer interprète toujours le mode avant toute opération.
+• un seul mode actif à la fois,
+• aucun bouton ne déclenche une action automatique,
+• tout changement de mode est journalisé,
+• Overseer interprète toujours le mode avant toute décision.
+
 
 Fin du document
 ---
@@ -43,7 +52,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création du document de gestion des boutons Overseer.
+  - 1.0.0 (2025-12-12): Création du document définissant les boutons et modes Overseer.
 
 Breaking Changes:
   - Aucun, document initial.
