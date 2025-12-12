@@ -1,54 +1,76 @@
 
 ---
-Document: CorrectionMode_Policy
-Version: 1.0.0
+Document: Controle_anti_dérive
+Version: 2.0.0
 Date: 2025-12-12
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  System_Agent_Edit_Policy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
 ---
 
-1. Objet de la policy
+1. Objet du document
 
-Cette policy définit le comportement du système lorsqu’il entre en mode correction.
+Ce document définit les mécanismes de détection, de classification et de traitement des dérives au sein du système Overseer.
 
-
-2. Déclenchement
-
-CorrectionMode est activé lorsque:
-• une incohérence métier est détectée,
-• une validation globale échoue,
-• Overseer impose une réparation immédiate.
+Il est normatif sur les types de dérive et leurs traitements associés.
 
 
-3. Règles en CorrectionMode
+2. Définition d’une dérive
 
-• un seul agent autorisé,
-• aucune transition workflow,
-• validation globale obligatoire,
-• modifications minimales,
-• logs enrichis.
+Une dérive est toute situation dans laquelle le système s’écarte de ses invariants structurels ou métier, de manière contrôlée ou non.
 
 
-4. Sortie du mode correction
+3. Types de dérive
 
-La sortie n’est possible que si:
-• la validation globale retourne allow,
-• Overseer confirme la stabilité retrouvée.
+3.1 Dérive structurelle
+
+Exemples:
+• JSON invalide,
+• non-respect d’un schéma,
+• versioning incohérent,
+• transition workflow inexistante.
+
+Traitement:
+• arrêt immédiat de l’opération,
+• aucune écriture en base,
+• retour d’erreur technique à Overseer.
 
 
-5. Interdictions absolues
+3.2 Dérive métier
 
-• aucune sync externe,
-• aucune création de document,
-• aucune modification non explicitement demandée.
+Exemples:
+• incohérences inter-documents,
+• contradictions sémantiques,
+• décisions métier instables.
 
+Traitement:
+• activation du CorrectionMode,
+• correction contrôlée,
+• validation globale obligatoire.
+
+
+4. Acteurs de la détection
+
+• Orchestrateur: dérives structurelles uniquement.
+• Overseer: dérives métier et violations d’invariants.
+• SuperiorValidationAgent: analyse sémantique et détection de contradictions.
+
+
+5. États système associés
+
+• warning: anomalie détectée mais surveillée,
+• correction: état réparateur contrôlé,
+• halted: arrêt critique nécessitant recovery explicite.
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création de la policy CorrectionMode et définition des règles d’entrée, d’exécution et de sortie.
+  - 2.0.0 (2025-12-12): Refonte complète, séparation stricte dérives structurelles / métier, alignement avec CorrectionMode et SuperiorValidationAgent.
+  - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun, policy initiale.
+  - Introduction formelle du mode correction avant tout arrêt critique métier.
