@@ -12,12 +12,12 @@ PolicyVersions:
 1. Objet du document
 
 Ce document décrit les éléments UX d’un projet Overseer.
-Il sert de support structuré pour la conception de l’expérience utilisateur sans jamais contenir de logique métier ou technique.
+Il sert de support structuré à la conception de l’expérience utilisateur.
 
 
-2. Portée
+2. Portée du document
 
-Le document Design_UX peut inclure:
+Le document Design_UX peut contenir:
 • écrans,
 • parcours utilisateurs,
 • personas,
@@ -25,28 +25,33 @@ Le document Design_UX peut inclure:
 • principes d’ergonomie,
 • contraintes UX.
 
-Il ne contient aucune décision stratégique globale.
+Il ne définit aucune logique métier, technique ou stratégique globale.
 
 
 3. Règles d’édition
 
-• les agents peuvent modifier le contenu uniquement sur instruction explicite,
-• aucune restructuration globale n’est autorisée,
-• aucune déduction métier n’est permise,
-• aucune interaction directe avec le workflow.
+• les agents ne modifient le contenu que sur instruction explicite,
+• aucune restructuration globale du document n’est autorisée,
+• aucune déduction métier ou stratégique n’est permise,
+• aucune interaction directe avec le workflow n’est possible.
 
 
 4. Rôle dans le système
 
 • support de conception,
-• référence pour validation sémantique,
-• jamais source de décision automatique.
+• base d’analyse sémantique,
+• référence qualitative pour Overseer et SuperiorValidationAgent.
 
+Il ne déclenche aucune action automatique.
+
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création du document Design UX standard.
+  - 1.0.0 (2025-12-12): Création du document Design_UX standard.
 
 Breaking Changes:
   - Aucun, document initial.
