@@ -2,211 +2,66 @@
 ---
 Document: Controle_anti_dérive
 Version: 2.0.0
-Date: 2025-12-11
-PolicyType: AntiDriftControl
-
+Date: 2025-12-12
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
-  System_Agent_Edit_Policy: 1.0.0
-
-Changelog:
-  - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2 et CorrectionMode_Policy.
-  - 1.0.0 (2025-12-10): Version initiale.
-
-Breaking Changes:
-  - Distinction explicite entre dérives structurelles et dérives métier.
-  - SuperiorValidationAgent remplace l’ancien ValidationAgent.
-  - Les transitions workflow ne peuvent jamais être détectées comme dérive côté orchestrateur.
-  - Introduction d’un protocole formel correctionMode avant toute mise à l’état halted pour dérive métier.
+  CorrectionMode_Policy: 1.0.0
 ---
 
 1. Objet du document
 
-Ce document définit les mécanismes de détection et de gestion des dérives dans Overseer v2.
-
-Anti-dérive couvre deux domaines strictement séparés:
-• dérive structurelle (détectée par l’orchestrateur),  
-• dérive métier (détectée par Overseer + SuperiorValidationAgent).
-
-Aucune entité ne peut corriger automatiquement une dérive.  
-Toute correction passe par Overseer et obéit à CorrectionMode_Policy.
+Ce document définit les mécanismes de détection et de gestion des dérives du système Overseer.
 
 
-2. Définitions
+2. Types de dérive
 
-2.1 Dérive structurelle  
-Toute anomalie liée à la structure technique du système:
-• JSON invalide ou corrompu,  
-• schéma non respecté,  
-• transition workflow structurellement impossible,  
-• dépassement des quotas structurels (ex: trop de transitions par minute),  
-• incohérence meta détectée par l’orchestrateur,  
-• boucle structurelle (répétition mécanique d’une même transition).
+2.1 Dérive structurelle
 
-2.2 Dérive métier  
-Toute incohérence conceptuelle ou stratégique:
-• documents contradictoires,  
-• boucle métier (actions répétées sans progression),  
-• transitions métier incohérentes,  
-• modifications qui dégradent la cohérence globale,  
-• corrections successives qui n’améliorent pas l’état,  
-• risques détectés par SuperiorValidationAgent.
+Exemples:
+• JSON invalide,
+• schéma non respecté,
+• versioning incohérent,
+• transition workflow inexistante.
 
-La dérive métier n’est jamais détectée par l’orchestrateur.
+Traitement:
+• arrêt immédiat,
+• aucune écriture,
+• retour d’erreur technique.
 
 
-3. Acteurs impliqués
+2.2 Dérive métier
 
-• Orchestrateur: détection structurelle uniquement, jamais métier.  
-• Overseer: analyse métier, réactions, décisions.  
-• SuperiorValidationAgent: détection sémantique locale + globale.  
-• Agents producteurs: ne détectent jamais les dérives.  
-• Firestore: stockage passif.
+Exemples:
+• incohérences inter-documents,
+• décisions contradictoires,
+• logique métier instable.
 
-
-4. Mécanismes de détection
-
-4.1 Détection structurelle (orchestrateur)  
-Déclenchée lorsque:
-• validateDocument échoue,  
-• runWorkflowTransition détecte une transition invalide,  
-• updateDocument rencontre un meta illégal,  
-• un document viole le schéma,  
-• quota structurel dépassé (WorkflowPolicy),  
-• opérations concurrentes anormales.
-
-L’orchestrateur ne tente jamais de réparer.
-
-4.2 Détection métier (Overseer + SuperiorValidationAgent)
-
-Déclenchée lorsque:
-• verdict local ou global = block,  
-• contradictions inter-documents détectées,  
-• workflowImpact = major,  
-• risque global élevé,  
-• opérations successives sans progression,  
-• incohérences narratives majeures,  
-• processus cyclique ou ambigu détecté par Overser.
-
-Overseer décide ensuite de passer en correctionMode.
+Traitement:
+• activation de CorrectionMode,
+• correction contrôlée,
+• validation globale obligatoire.
 
 
-5. États anti-dérive
+3. Rôles dans la détection
 
-5.1 état normal  
-Aucun problème structurel ni métier détecté.
-
-5.2 état warning  
-Un risque mineur a été détecté:
-• anomaly structurelle légère,  
-• verdict warn,  
-• progression encore possible.
-
-L’opération peut continuer mais est journalisée.
-
-5.3 état correction (mode correction)  
-Activé par Overseer lorsqu’une dérive métier sérieuse est identifiée:
-• modifications limitées,  
-• transitions workflow interdites,  
-• agent correctif unique autorisé,  
-• validation globale obligatoire à la fin.
-
-5.4 état halted  
-Réservé aux cas critiques:
-• violation structurelle majeure,  
-• corruption grave du projet,  
-• impossibilité de restaurer une cohérence métier minimale.
-
-Seul systemRecovery peut sortir halted.
+• Orchestrateur: dérives structurelles uniquement.
+• Overseer: dérives métier.
+• SuperiorValidationAgent: analyse sémantique de support.
 
 
-6. Protocole de réaction aux dérives
+4. États système
 
-6.1 Réaction dérive structurelle (orchestrateur)
-1. L’opération est immédiatement stoppée.  
-2. Une erreur structurelle détaillée est renvoyée à Overseer.  
-3. Aucun snapshot n’est appliqué.  
-4. Aucun correctif n’est tenté.  
-5. Overseer décide: retry, correctionMode, ou abort.
-
-6.2 Réaction dérive métier (Overseer)
-1. Overseer identifie la dérive (via SuperiorValidationAgent ou logique interne).  
-2. Overseer active correctionMode.  
-3. Overseer génère une instruction correctrice minimale.  
-4. L’agent correctif produit un document strict.  
-5. Orchestrateur valide structurellement et écrit.  
-6. Overseer lance une validation globale.  
-7. Si stable → sortie correctionMode.  
-8. Sinon → nouvelle correction ou halt métier.
-
-6.3 Passage en halted  
-Le halt intervient uniquement lorsque:
-• correctionMode ne parvient pas à restaurer la cohérence,  
-• ou une anomalie structurelle invalide empêche toute poursuite.
+• warning: anomalie surveillée,
+• correction: état réparateur contrôlé,
+• halted: arrêt critique nécessitant recovery.
 
 
-7. Gestion des boucles
+Document Metadata & Changelog
 
-7.1 Boucles structurelles (orchestrateur)
-Détection:
-• transitions répétitives identiques > limite,  
-• opérations identiques consécutives sans modification de state.
+Changelog:
+  - 2.0.0 (2025-12-12): Refonte complète, séparation stricte dérives structurelles / métier, alignement avec CorrectionMode et SuperiorValidationAgent.
+  - 1.0.0 (2025-12-10): Version initiale.
 
-Réaction:
-• arrêt immédiat,  
-• erreur renvoyée à Overseer.
-
-7.2 Boucles métier (Overseer)
-Détection:
-• modifications conceptuelles en aller-retour,  
-• contradictions reapparaissant après correction,  
-• absence de progression observée par SuperiorValidationAgent.
-
-Réaction:
-• correctionMode obligatoire,  
-• analyse globale,  
-• warning ou block selon severity.
-
-Aucune boucle n’est autorisée dans le système.
-
-
-8. Gestion workflow et dérive
-
-• Toute transition automatique est interdite.  
-• Overseer valide métier puis ordonne explicitement une transition.  
-• Orchestrateur n’applique qu’une transition structurellement valide.  
-• Si une transition semblerait provoquer une boucle métier → block via SuperiorValidationAgent.  
-
-
-9. Journalisation anti-dérive
-
-Tous les événements anti-dérive sont journalisés dans:
-logs/{projectId}/driftEvents
-
-Chaque entrée contient:
-• timestamp  
-• operationId  
-• type: structural | semantic | correction | halted  
-• source: orchestrator | overseer | validationAgent  
-• details  
-• policies actives  
-• stateBefore  
-• stateAfter  
-
-
-10. Invariants anti-dérive
-
-Toujours vrais:
-
-• Aucune réparation automatique côté orchestrateur.  
-• Toute dérive métier passe par correctionMode avant halted.  
-• Toute dérive structurelle stoppe immédiatement l’opération.  
-• Aucune transition workflow sans validation métier d’Overseer.  
-• SuperiorValidationAgent n’écrit jamais en base, ne corrige jamais.  
-• Overseer est souverain mais ne peut jamais overrider un block en correctionMode.  
-• halted = état critique nécessitant systemRecovery uniquement.  
-• correctionMode = état temporaire de stabilisation.  
-
-Fin du document.
+Breaking Changes:
+  - Introduction formelle du mode correction avant tout arrêt critique métier.
