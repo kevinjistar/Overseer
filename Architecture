@@ -1,49 +1,142 @@
 
+---
+Document: Architecture
 Version: 1.0.0
-Date: 2025-12-09
-
+Date: 2025-12-12
+PolicyVersions:
+  VersioningPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
-ArchitectureSpecializedSchema:
-  description: "Module spécialisé décrivant l'architecture technique d'un projet"
+1. Objet du document
 
-  specialized:
-    layers:
-      description: "Couches structurelles du projet"
-      type: array
-      itemStructure:
-        name: string
-        purpose: string
-        technologies: array of strings
-        constraints: array of strings
+Ce document décrit l’architecture conceptuelle et logique du système Overseer.  
+Il définit les couches, leurs responsabilités, leurs interactions et les invariants structurels qui garantissent la cohérence globale du système.
 
-    components:
-      description: "Composants principaux, leur rôle et leurs relations"
-      type: array
-      itemStructure:
-        name: string
-        responsibility: string
-        inputs: array of strings
-        outputs: array of strings
-        dependencies: array of strings
-        risks: array of strings
+Ce document ne décrit ni l’implémentation technique détaillée ni les processus opérationnels pas à pas.
 
-    integrations:
-      description: "Services externes ou modules connectés"
-      type: array
-      itemStructure:
-        provider: string
-        purpose: string
-        apiUsed: string
-        constraints: array of strings
 
-    constraints:
-      description: "Contraintes fortes imposées par l’architecture"
-      type: array
-      itemStructure:
-        type: string
-        description: string
+2. Vue d’ensemble
+
+Le système Overseer repose sur une séparation stricte des responsabilités, organisée en couches non ambiguës.
+
+Principe fondamental:
+
+Overseer pense.  
+Les agents produisent.  
+L’orchestrateur exécute.  
+Firestore persiste.
+
+
+3. Couches architecturales
+
+3.1 Couche métier
+
+Responsable:
+• Overseer
+
+Rôle:
+• interprétation des intentions utilisateur,
+• décision métier,
+• gouvernance globale,
+• évaluation des conditions dynamiques,
+• orchestration des agents,
+• déclenchement explicite des transitions de workflow,
+• activation des modes système (normal, sync, correction).
+
+Cette couche contient toute la logique décisionnelle.
+
+
+3.2 Couche sémantique
+
+Responsable:
+• SuperiorValidationAgent
+
+Rôle:
+• validation de la cohérence sémantique locale,
+• validation de la cohérence globale inter-documents,
+• détection des contradictions,
+• analyse d’impact métier et workflow,
+• émission de verdict allow / warn / block.
+
+Cette couche ne décide jamais et ne modifie jamais l’état du système.
+
+
+3.3 Couche structurelle
+
+Responsable:
+• Orchestrateur (Cloud Functions)
+
+Rôle:
+• validation structurelle des JSON,
+• application mécanique du versioning,
+• écriture atomique dans Firestore,
+• gestion des snapshots,
+• exécution structurelle du Workflow Engine,
+• journalisation complète.
+
+Cette couche n’interprète jamais le métier.
+
+
+3.4 Couche de persistance
+
+Responsable:
+• Firestore
+
+Rôle:
+• stockage passif,
+• versionnement historique,
+• logs,
+• snapshots.
+
+Aucune logique n’y réside.
+
+
+4. Architecture des agents
+
+Les agents sont des fonctions LLM exécutives strictement contraintes.
+
+Ils:
+• ne décident rien,
+• ne valident rien,
+• ne voient jamais l’utilisateur,
+• ne connaissent que le document fourni,
+• produisent uniquement du JSON complet et conforme.
+
+Ils sont gouvernés par System_Agent_Edit_Policy et pilotés exclusivement par Overseer.
+
+
+5. Architecture des workflows
+
+Le Workflow Engine est une structure d’états et de transitions purement formelle.
+
+• aucune condition métier n’est évaluée dans le workflow,
+• aucune décision autonome n’est possible,
+• toute transition est décidée explicitement par Overseer,
+• l’orchestrateur applique uniquement la transition autorisée.
+
+
+6. Invariants architecturaux
+
+Toujours vrais:
+
+• aucune logique métier dans l’orchestrateur,
+• aucun agent autonome,
+• aucune écriture hors orchestrateur,
+• aucune validation sémantique structurelle,
+• aucune transition implicite,
+• toute incohérence mène à correction ou arrêt contrôlé.
+
+Fin du document.
+
+
+Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-09): Initialisation du module spécialisé Architecture
-Breaking Changes: Aucun depuis 1.0.0
+  - 1.0.0 (2025-12-12): Création du document d’architecture, définition des couches, responsabilités et invariants fondamentaux.
+
+Breaking Changes:
+  - Aucun, document initial.
