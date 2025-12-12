@@ -2,120 +2,53 @@
 ---
 Document: CorrectionMode_Policy
 Version: 1.0.0
-Date: 2025-12-11
-PolicyType: CorrectionPolicy
-
+Date: 2025-12-12
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-
-Changelog:
-  - 1.0.0 (2025-12-11): Création de la policy correctionMode, définissant les règles, contraintes et restrictions du mode correction dans Overseer.
-
-Breaking Changes: Aucun depuis 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
-1. Objet de la CorrectionMode_Policy
+1. Objet de la policy
 
-Cette policy définit le mode "correction", un état opérationnel spécial activé par Overseer lorsque:
-- une incohérence sémantique majeure est détectée,
-- un verdict "block" est rendu par SuperiorValidationAgent,
-- une écriture précédente a introduit un état instable,
-- une restauration corrective doit être effectuée avant reprise normale.
-
-Le mode correction sert exclusivement à restaurer la cohérence, jamais à introduire de nouvelles évolutions métier.
+Cette policy définit le comportement du système lorsqu’il entre en mode correction.
 
 
-2. Activation du mode correction
+2. Déclenchement
 
-2.1 Déclencheurs autorisés
-Overseer active le mode correction uniquement lorsque:
-- verdict = block (local ou global),  
-- incohérence inter-documents détectée après écriture,  
-- workflow invalide ou contradictoire,  
-- état projet partiellement corrompu,  
-- erreur utilisateur ou agent provoquant incohérence majeure.
-
-2.2 Déclencheur interdit
-L’utilisateur ne peut pas activer directement le mode correction.  
-Seul Overseer peut le faire, selon les conditions métier et structurelles.
+CorrectionMode est activé lorsque:
+• une incohérence métier est détectée,
+• une validation globale échoue,
+• Overseer impose une réparation immédiate.
 
 
-3. Garanties du mode correction
+3. Règles en CorrectionMode
 
-Lorsque correctionMode = true, le système garantit:
-
-• aucune transition workflow permise,  
-• aucun appel agentique non supervisé,  
-• aucune évolution structurelle,  
-• aucune mise à jour majeure ou mineure,  
-• corrections minimales uniquement,  
-• un seul agent autorisé: SuperiorValidationAgent ou un CorrectiveAgent dédié,  
-• validation globale obligatoire après chaque proposition de correction,  
-• impossibilité d’override des verdicts "block".  
+• un seul agent autorisé,
+• aucune transition workflow,
+• validation globale obligatoire,
+• modifications minimales,
+• logs enrichis.
 
 
-4. Règles opérationnelles du mode correction
+4. Sortie du mode correction
 
-4.1 Restrictions pour Overseer
-En mode correction, Overseer:
-- ne peut pas initier de transitions workflow,
-- ne peut pas imposer de version Major ou Minor,
-- ne peut autoriser que des patches correctifs,
-- doit demander validation globale après chaque correction candidate.
-
-4.2 Restrictions pour les agents
-• Seul un agent correctif peut agir (SuperiorValidationAgent ou CorrectiveAgent).  
-• Les modifications doivent être minimales, ciblées et justifiées.  
-• Aucune refonte documentaire n’est permise.  
-• Aucun changement conceptuel, stratégique ou architectural.
-
-4.3 Restrictions structurelles
-L’orchestrateur doit:
-- refuser toute transition workflow,
-- exécuter uniquement: log, patch, snapshot,
-- refuser les actions structurelles complexes (actions callAgent non définies pour correction).
-
-4.4 Conditions de sortie
-Overseer peut désactiver le mode correction uniquement si:
-- validation locale = allow ou warn,  
-- validation globale = allow ou warn,  
-- cohérence inter-documents restaurée,  
-- workflow de nouveau compatible,  
-- aucun risque "high" détecté.
-
-Un log dédié doit être créé, marquant la clôture du cycle de correction.
+La sortie n’est possible que si:
+• la validation globale retourne allow,
+• Overseer confirme la stabilité retrouvée.
 
 
-5. Pipeline correctionMode
+5. Interdictions absolues
 
-1. Overseer détecte incohérence → active correctionMode  
-2. Appel agent dédié avec instruction de correction  
-3. Orchestrateur reçoit candidateDocument et valide structure  
-4. SuperiorValidationAgent effectue validation locale  
-5. Validation globale obligatoire  
-6. verdict:
-   - allow → Overseer applique la correction  
-   - warn → Overseer peut appliquer mais log obligatoire  
-   - block → Overseer doit demander nouvelle correction (override interdit)  
-7. Orchestrateur applique patch structurel (pas de transitions)  
-8. Overseer vérifie cohérence globale  
-9. Overseer désactive correctionMode si stabilité retrouvée  
+• aucune sync externe,
+• aucune création de document,
+• aucune modification non explicitement demandée.
 
 
-6. Invariants du mode correction
+Document Metadata & Changelog
 
-Le système doit toujours respecter:
+Changelog:
+  - 1.0.0 (2025-12-12): Création de la policy CorrectionMode et définition des règles d’entrée, d’exécution et de sortie.
 
-• stabilité > évolutivité,  
-• patch > refonte,  
-• cohérence globale > cohérence locale,  
-• validation globale obligatoire,  
-• aucun override d’un block,  
-• aucune transition workflow,  
-• aucun changement stratégique,  
-• une seule correction par cycle,  
-• sortie du mode correction uniquement par Overseer.
-
-Fin du document.
+Breaking Changes:
+  - Aucun, policy initiale.
