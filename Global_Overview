@@ -17,7 +17,7 @@ Ce document est le document maître du système Overseer.
 Il fournit une vision globale, cohérente et unifiée de l’architecture, des rôles, des processus et des principes fondamentaux.
 
 
-2. Vision globale
+2. Vision globale du système
 
 Overseer est un système de gouvernance multi-agents strictement contrôlé, déterministe et traçable.
 
@@ -31,10 +31,10 @@ Firestore persiste.
 
 3. Composants principaux
 
-• Overseer: gouvernance et logique métier,
-• SuperiorValidationAgent: validation sémantique,
-• Orchestrateur: exécution structurelle,
-• Agents producteurs: production de documents,
+• Overseer: gouvernance et logique métier,  
+• SuperiorValidationAgent: validation sémantique,  
+• Orchestrateur: exécution structurelle,  
+• Agents producteurs: production documentaire,  
 • Firestore: persistance passive.
 
 
@@ -47,10 +47,13 @@ Utilisateur → Overseer → Orchestrateur → Agent → Orchestrateur → Overs
 
 • aucune autonomie agentique,
 • aucune écriture hors orchestrateur,
-• aucune logique métier structurelle,
+• aucune logique métier dans les couches structurelles,
 • aucune décision implicite,
-• traçabilité absolue.
+• traçabilité et auditabilité totales.
 
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
