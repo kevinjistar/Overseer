@@ -1,124 +1,56 @@
+
 ---
+Document: Cahier_des_charges_new_project
 Version: 1.0.0
-Date: 2025-12-10
----
-# Cahier des charges — Document d’idéation projet
-
-Ce document sert à décrire un projet de manière claire, complète et exploitable par un agent chargé d’analyser, clarifier ou développer l’idée avant transmission au système multi agents.
-
-L’objectif est de fournir une vision structurée permettant de:
-- comprendre la finalité du projet  
-- cerner les besoins  
-- définir les utilisateurs  
-- identifier les contraintes  
-- préparer les éléments nécessaires à la création des documents référents  
-- poser les bases avant l’intégration dans le système agentique
-
+Date: 2025-12-12
+PolicyVersions:
+  VersioningPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
 ---
 
-# 1. Présentation du projet
-- Nom du projet  
-- Description générale  
-- Contexte d’apparition  
-- Problème que le projet résout  
-- Valeur ajoutée recherchée  
+1. Objet du document
 
----
+Ce document définit le format et le contenu attendus pour l’idéation et l’initialisation d’un nouveau projet Overseer.
 
-# 2. Public cible
-- Segments d’utilisateurs  
-- Besoins principaux  
-- Motivations  
-- Frustrations  
-- Utilisations possibles du projet  
+Il sert d’entrée unique au Pipeline_d_entrée_des_projets.
 
----
 
-# 3. Objectifs du projet
-- Objectifs principaux  
-- Objectifs secondaires  
-- Indicateurs de réussite envisagés  
+2. Rôle dans le système
 
----
+Le cahier des charges:
+• capture l’intention initiale,
+• structure la vision du projet,
+• sert de base à la création des documents référents initiaux,
+• n’est jamais modifié automatiquement après création du projet.
 
-# 4. Fonctionnalités clés
-Lister ici les fonctionnalités importantes du projet, sans entrer dans une logique technique.  
-Pour chaque fonctionnalité:
-- nom  
-- description  
-- utilité pour l’utilisateur  
-- interactions prévues  
 
----
+3. Contenu attendu
 
-# 5. Parcours utilisateur
-Décrire les parcours essentiels:
-- entrée dans l’expérience  
-- actions possibles  
-- objectifs atteignables  
-- étapes à forte valeur  
+Le document doit inclure au minimum:
 
----
+• objectif du projet,
+• périmètre fonctionnel,
+• contraintes principales,
+• hypothèses initiales,
+• risques identifiés,
+• critères de succès.
 
-# 6. Positionnement et stratégie
-- Proposition de valeur  
-- Différenciateurs  
-- Concurrence éventuelle  
-- Vision long terme du projet  
+Le contenu est libre mais structuré et explicite.
 
----
 
-# 7. Architecture conceptuelle (non technique)
-Description macro de la structure du projet:
-- parties principales  
-- flux d’information  
-- relations entre modules  
-- dépendances conceptuelles  
+4. Contraintes
 
----
-
-# 8. Contraintes
-- contraintes fonctionnelles  
-- contraintes d’usage  
-- contraintes liées au domaine du projet  
-- risques identifiés  
-
----
-
-# 9. Inspirations et références
-- projets similaires  
-- pratiques à reprendre  
-- éléments à éviter  
-- influences conceptuelles  
-
----
-
-# 10. État actuel de la réflexion
-Notes permettant à l’agent d’idéation de comprendre:
-- ton niveau d’avancement  
-- les zones d’ombre  
-- les intuitions  
-- les questions ouvertes  
-
----
-
-# 11. Attentes vis-à-vis de l’agent d’idéation
-Indiquer ce que tu veux obtenir:
-- clarification  
-- analyse critique  
-- exploration  
-- structuration  
-- proposition d’amélioration  
-- synthèse  
-
----
-
-Fin du Cahier des charges.
+• aucun agent ne peut modifier ce document après création,
+• il n’est jamais versionné au-delà de sa création initiale,
+• il ne déclenche aucun workflow,
+• il sert uniquement de référence fondatrice.
 
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-10): Création du cahier des charges pour initier un nouveau projet
+  - 1.0.0 (2025-12-12): Création du cahier des charges standard pour l’initialisation d’un projet.
 
-Breaking Changes: Aucun depuis 1.0.0
+Breaking Changes:
+  - Aucun, document initial.
