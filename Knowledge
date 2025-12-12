@@ -10,34 +10,42 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document sert de base de connaissances libre pour un projet Overseer.
+Ce document constitue une base de connaissances libre associée à un projet Overseer.
+
+Il permet de conserver des informations non normatives et non exécutables.
 
 
-2. Usage
+2. Contenu autorisé
 
-Il peut contenir:
-• notes,
-• idées,
-• références,
-• décisions informelles,
-• éléments exploratoires.
+Le document Knowledge peut contenir:
+• notes informelles,
+• idées exploratoires,
+• références externes,
+• décisions non structurées,
+• hypothèses temporaires.
 
-Il n’est pas soumis aux mêmes contraintes de rigidité que les documents référents critiques.
+Aucun format strict n’est imposé.
 
 
 3. Contraintes
 
 • aucune logique métier exécutable,
+• aucune règle normative,
 • aucune dépendance workflow,
 • aucune décision automatique.
 
 
-4. Rôle
+4. Rôle dans le système
 
 • support cognitif,
 • mémoire de travail,
-• source d’analyse pour Overseer et SuperiorValidationAgent.
+• matériau d’analyse pour Overseer et SuperiorValidationAgent.
 
+Ce document n’est jamais une source de vérité opérationnelle.
+
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
