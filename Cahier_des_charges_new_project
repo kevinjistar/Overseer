@@ -6,29 +6,29 @@ Date: 2025-12-12
 PolicyVersions:
   VersioningPolicy: 1.0.0
   ValidationPolicy_Global: 1.0.0
-  WorkflowPolicy: 1.0.0
 ---
 
 1. Objet du document
 
-Ce document définit le format et le contenu attendus pour l’idéation et l’initialisation d’un nouveau projet Overseer.
+Ce document définit le format et le rôle du cahier des charges utilisé pour l’idéation et l’initialisation d’un nouveau projet Overseer.
 
-Il sert d’entrée unique au Pipeline_d_entrée_des_projets.
+Il constitue l’entrée unique du Pipeline_d_entrée_des_projets.
 
 
 2. Rôle dans le système
 
 Le cahier des charges:
-• capture l’intention initiale,
-• structure la vision du projet,
+• capture l’intention initiale de l’utilisateur,
+• structure la vision et les objectifs du projet,
 • sert de base à la création des documents référents initiaux,
-• n’est jamais modifié automatiquement après création du projet.
+• fige les hypothèses de départ.
+
+Il n’est jamais modifié automatiquement après la création du projet.
 
 
 3. Contenu attendu
 
 Le document doit inclure au minimum:
-
 • objectif du projet,
 • périmètre fonctionnel,
 • contraintes principales,
@@ -36,16 +36,18 @@ Le document doit inclure au minimum:
 • risques identifiés,
 • critères de succès.
 
-Le contenu est libre mais structuré et explicite.
+Le format exact est libre mais le contenu doit être explicite et structuré.
 
 
-4. Contraintes
+4. Contraintes strictes
 
 • aucun agent ne peut modifier ce document après création,
-• il n’est jamais versionné au-delà de sa création initiale,
-• il ne déclenche aucun workflow,
-• il sert uniquement de référence fondatrice.
+• aucune mise à jour ultérieure n’est autorisée,
+• aucun workflow n’est déclenché par ce document,
+• il n’est utilisé qu’à des fins de référence fondatrice.
 
+Fin du document
+---
 
 Document Metadata & Changelog
 
