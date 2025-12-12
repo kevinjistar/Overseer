@@ -1,12 +1,7 @@
-
 ---
 Version: 1.0.0
-Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Création du Cahier des charges pour agents d’idéation
-Breaking Changes: Aucun depuis 1.0.0
+Date: 2025-12-10
 ---
-
 # Cahier des charges — Document d’idéation projet
 
 Ce document sert à décrire un projet de manière claire, complète et exploitable par un agent chargé d’analyser, clarifier ou développer l’idée avant transmission au système multi agents.
@@ -119,3 +114,11 @@ Indiquer ce que tu veux obtenir:
 ---
 
 Fin du Cahier des charges.
+
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-10): Création du cahier des charges pour initier un nouveau projet
+
+Breaking Changes: Aucun depuis 1.0.0
