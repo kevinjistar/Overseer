@@ -13,56 +13,58 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document décrit l’architecture conceptuelle et logique du système Overseer.  
-Il définit les couches, leurs responsabilités, leurs interactions et les invariants structurels qui garantissent la cohérence globale du système.
+Ce document décrit l’architecture conceptuelle du système Overseer.
+Il définit les couches, leurs responsabilités respectives, leurs interactions et les invariants garantissant la cohérence globale du système.
 
-Ce document ne décrit ni l’implémentation technique détaillée ni les processus opérationnels pas à pas.
+Ce document est normatif sur la répartition des rôles, mais ne décrit pas les implémentations techniques détaillées ni les pipelines opérationnels.
 
 
-2. Vue d’ensemble
+2. Principe architectural fondamental
 
-Le système Overseer repose sur une séparation stricte des responsabilités, organisée en couches non ambiguës.
+Le système Overseer repose sur une séparation stricte et non ambiguë des responsabilités.
 
-Principe fondamental:
+Principe cardinal:
 
 Overseer pense.  
 Les agents produisent.  
 L’orchestrateur exécute.  
 Firestore persiste.
 
+Aucune entité ne peut empiéter sur le rôle d’une autre.
 
-3. Couches architecturales
+
+3. Couches du système
 
 3.1 Couche métier
 
 Responsable:
 • Overseer
 
-Rôle:
+Responsabilités:
 • interprétation des intentions utilisateur,
-• décision métier,
-• gouvernance globale,
-• évaluation des conditions dynamiques,
-• orchestration des agents,
-• déclenchement explicite des transitions de workflow,
-• activation des modes système (normal, sync, correction).
+• gouvernance et décision métier,
+• sélection et orchestration des agents,
+• détermination du versioning,
+• évaluation des conditions métier,
+• autorisation explicite des transitions de workflow,
+• activation et désactivation des modes système.
 
-Cette couche contient toute la logique décisionnelle.
+Aucune logique structurelle ou d’exécution n’existe dans cette couche.
 
 
-3.2 Couche sémantique
+3.2 Couche de validation sémantique
 
 Responsable:
 • SuperiorValidationAgent
 
-Rôle:
+Responsabilités:
 • validation de la cohérence sémantique locale,
 • validation de la cohérence globale inter-documents,
-• détection des contradictions,
-• analyse d’impact métier et workflow,
-• émission de verdict allow / warn / block.
+• détection des contradictions et risques métier,
+• analyse d’impact sur le workflow et les documents,
+• émission de verdicts allow, warn ou block.
 
-Cette couche ne décide jamais et ne modifie jamais l’état du système.
+Cette couche n’écrit jamais, ne corrige jamais et ne décide jamais.
 
 
 3.3 Couche structurelle
@@ -70,15 +72,15 @@ Cette couche ne décide jamais et ne modifie jamais l’état du système.
 Responsable:
 • Orchestrateur (Cloud Functions)
 
-Rôle:
+Responsabilités:
 • validation structurelle des JSON,
 • application mécanique du versioning,
 • écriture atomique dans Firestore,
-• gestion des snapshots,
-• exécution structurelle du Workflow Engine,
-• journalisation complète.
+• gestion des snapshots et des logs,
+• exécution strictement structurelle du Workflow Engine,
+• gestion des états halted, warning et processing.
 
-Cette couche n’interprète jamais le métier.
+Aucune logique métier ne réside dans cette couche.
 
 
 3.4 Couche de persistance
@@ -86,13 +88,12 @@ Cette couche n’interprète jamais le métier.
 Responsable:
 • Firestore
 
-Rôle:
-• stockage passif,
-• versionnement historique,
-• logs,
-• snapshots.
+Responsabilités:
+• stockage passif des données,
+• conservation de l’historique,
+• persistance des snapshots et des logs.
 
-Aucune logique n’y réside.
+Aucune interprétation ni logique ne s’y trouve.
 
 
 4. Architecture des agents
@@ -100,23 +101,25 @@ Aucune logique n’y réside.
 Les agents sont des fonctions LLM exécutives strictement contraintes.
 
 Ils:
-• ne décident rien,
+• ne prennent aucune initiative,
 • ne valident rien,
-• ne voient jamais l’utilisateur,
-• ne connaissent que le document fourni,
+• ne connaissent jamais l’utilisateur,
+• ne voient que le document transmis,
 • produisent uniquement du JSON complet et conforme.
 
-Ils sont gouvernés par System_Agent_Edit_Policy et pilotés exclusivement par Overseer.
+Ils sont gouvernés exclusivement par System_Agent_Edit_Policy et pilotés par Overseer.
 
 
 5. Architecture des workflows
 
-Le Workflow Engine est une structure d’états et de transitions purement formelle.
+Le Workflow Engine est une structure déclarative d’états et de transitions.
 
 • aucune condition métier n’est évaluée dans le workflow,
-• aucune décision autonome n’est possible,
-• toute transition est décidée explicitement par Overseer,
-• l’orchestrateur applique uniquement la transition autorisée.
+• aucune transition n’est déclenchée automatiquement,
+• toute transition est décidée par Overseer,
+• l’orchestrateur exécute uniquement la transition autorisée.
+
+Le workflow n’est jamais un moteur métier.
 
 
 6. Invariants architecturaux
@@ -124,14 +127,14 @@ Le Workflow Engine est une structure d’états et de transitions purement forme
 Toujours vrais:
 
 • aucune logique métier dans l’orchestrateur,
-• aucun agent autonome,
+• aucune autonomie agentique,
 • aucune écriture hors orchestrateur,
 • aucune validation sémantique structurelle,
 • aucune transition implicite,
-• toute incohérence mène à correction ou arrêt contrôlé.
+• toute incohérence déclenche correction ou arrêt contrôlé.
 
-Fin du document.
-
+Fin du document
+---
 
 Document Metadata & Changelog
 
