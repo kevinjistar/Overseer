@@ -1,47 +1,52 @@
 
+---
+Document: Design_UX
 Version: 1.0.0
-Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Initialisation du module spécialisé UX
-Breaking Changes: Aucun depuis 1.0.0
+Date: 2025-12-12
+PolicyVersions:
+  VersioningPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
-UXSpecializedSchema:
-  description: "Module spécialisé décrivant l’expérience utilisateur"
+1. Objet du document
 
-  specialized:
-    screens:
-      description: "Écrans principaux de l’application"
-      type: array
-      itemStructure:
-        id: string
-        name: string
-        purpose: string
-        keyElements: array of strings
-        interactions: array of strings
+Ce document décrit les éléments UX d’un projet Overseer.
+Il sert de support structuré pour la conception de l’expérience utilisateur sans jamais contenir de logique métier ou technique.
 
-    flows:
-      description: "Parcours utilisateur"
-      type: array
-      itemStructure:
-        id: string
-        name: string
-        steps: array of strings
-        conditions: array of strings
 
-    personas:
-      description: "Profils types d’utilisateur"
-      type: array
-      itemStructure:
-        id: string
-        name: string
-        goals: array of strings
-        frustrations: array of strings
-        motivations: array of strings
+2. Portée
 
-    painPoints:
-      description: "Points de friction identifiés"
-      type: array
-      itemStructure:
-        issue: string
-        description: string
+Le document Design_UX peut inclure:
+• écrans,
+• parcours utilisateurs,
+• personas,
+• pain points,
+• principes d’ergonomie,
+• contraintes UX.
+
+Il ne contient aucune décision stratégique globale.
+
+
+3. Règles d’édition
+
+• les agents peuvent modifier le contenu uniquement sur instruction explicite,
+• aucune restructuration globale n’est autorisée,
+• aucune déduction métier n’est permise,
+• aucune interaction directe avec le workflow.
+
+
+4. Rôle dans le système
+
+• support de conception,
+• référence pour validation sémantique,
+• jamais source de décision automatique.
+
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-12): Création du document Design UX standard.
+
+Breaking Changes:
+  - Aucun, document initial.
