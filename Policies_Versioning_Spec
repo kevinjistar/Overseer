@@ -1,242 +1,239 @@
 
 ---
 Document: Policies_Versioning_Spec
-Version: 1.0.0
-Date: 2025-12-11
-PolicyType: SystemPolicySpecification
-
-PolicyVersions:
-  ValidationPolicy: 1.0.0
-  WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
-
-Changelog:
-  - 1.0.0 (2025-12-11): Création de la spécification complète du système de Policies versionnées et de leur gouvernance dans Overseer.
-
-Breaking Changes: Aucun depuis 1.0.0
+Version: 1.1.0
+Date: 2025-12-12
+PolicyType: PolicyVersioningSpecification
 ---
 
 1. Objet du document
 
-Ce document définit le fonctionnement officiel du système de Policies versionnées dans Overseer.
+Ce document définit:
+• le modèle de versioning appliqué aux Policies du système Overseer,  
+• le modèle de versioning applicable à tous les documents de spécification du système,  
+• la manière dont les documents référents déclarent leurs dépendances de PolicyVersions,  
+• les règles de compatibilité, de migration et de traçabilité,  
+• la méthode d’injection des règles dans les instructions agents.
 
-Il précise:
-• les types de policies,  
-• la structure d’une policy,  
-• les règles de versionnement,  
-• comment elles interagissent entre elles,  
-• comment Overseer les applique,  
-• comment elles affectent les documents, les agents et les workflows,  
-• le mécanisme de compatibilité et de migration.
+Ce document est canonique. Toute divergence dans un autre document constitue une incohérence à corriger.
 
-Les Policies sont la couche normative de haut niveau du système. Elles gouvernent tous les comportements métier, sans jamais interférer avec la logique structurelle.
-
-
-2. Définition d’une Policy
-
-Une Policy est un document référent système contenant:
-• des règles métier explicites,  
-• une version indépendante des documents projet,  
-• un périmètre d’application,  
-• un schéma strict,  
-• des invariants,  
-• une gouvernance d’évolution.
-
-Elle ne modifie rien directement.  
-Elle guide Overseer, SuperiorValidationAgent et dans certains cas l’orchestrateur (via restrictions structurelles).
+Note d’architecture:
+Les agents ne consultent jamais directement ce document. Overseer charge ce référentiel et injecte les contraintes pertinentes dans chaque systemInstruction.
 
 
-3. Types de Policies
+2. Définitions
 
-3.1 ValidationPolicy  
-Définit:
-• déclenchement validations locale/globale,  
-• comportements attendus selon verdict (allow/warn/block),  
-• règles strictes en mode correction,  
-• impact sur les décisions d’Overseer.
+2.1 Policy  
+Une Policy est un ensemble de règles normatives gouvernant le comportement du système (validation, workflow, correction, édition agentique, versioning).
 
-3.2 WorkflowPolicy  
-Définit:
-• catégories de transitions (mineure, majeure, critique),  
-• quelles transitions nécessitent validation globale,  
-• restrictions sous correction,  
-• contraintes métier sur les évolutions d’état.
+2.2 Document de spécification  
+Un document de spécification décrit une partie du système Overseer (architecture, process, rôle, policy, schéma). Il possède sa propre ligne de version indépendante.
 
-3.3 VersioningPolicy  
-Définit:
-• règles Major/Minor/Patch,  
-• compatibilités et ruptures autorisées,  
-• conditions métier à respecter pour chaque type de version.
+2.3 PolicyVersion  
+Une PolicyVersion est un identifiant sémantique X.Y.Z appliqué à une Policy ou à un document de spécification.
 
-3.4 CorrectionPolicy  
-Définit:
-• activation du mode correction,  
-• limites opérationnelles,  
-• interdictions,  
-• règles de validation obligatoire,  
-• conditions de sortie.
-
-3.5 Policies futures
-Le système permet d’ajouter:
-• SecurityPolicy,  
-• ConsistencyPolicy,  
-• DocumentationPolicy,  
-• ReleasePolicy, etc.
-
-Elles doivent respecter cette même spécification.
+2.4 PolicyVersions (dans un document)  
+Bloc déclaratif indiquant les versions minimales des Policies nécessaires pour interpréter correctement le document.
 
 
-4. Structure d’une Policy
+3. Principe central du versioning
 
-Chaque Policy doit respecter cette forme:
+3.1 Indépendance totale des versions  
+Chaque document (Policy, spec, process, schéma) évolue selon sa propre ligne de version.  
+Il n’existe aucune version globale du système Overseer.
 
-{
-  "document": "string",
-  "version": "X.Y.Z",
-  "date": "YYYY-MM-DD",
-  "policyType": "ValidationPolicy | WorkflowPolicy | ...",
-  "changelog": [...],
-  "rules": { ... },
-  "invariants": [...],
-  "interactions": {
-    "overseer": [...],
-    "agents": [...],
-    "workflowEngine": [...],
-    "orchestrator": [...]
-  }
-}
+3.2 La cohérence du système  
+La cohérence est assurée par:
+• les schémas,  
+• les Policies,  
+• les PolicyVersions déclarées,  
+• et l’injection explicite des règles par Overseer.
 
-Exigences:
-• JSON strict,  
-• structure stable,  
-• règles centralisées dans rules,  
-• invariants séparés pour clarifier les contraintes essentielles.
+3.3 Autorité d’application  
+• Overseer applique et interprète les Policies.  
+• SuperiorValidationAgent évalue la cohérence sémantique selon les Policies actives.  
+• L’orchestrateur applique uniquement des règles structurelles.  
+• Les agents producteurs exécutent strictement les instructions reçues.
 
 
-5. Règles de versionnement des Policies
+4. Policies officielles reconnues
 
-5.1 Major (X.0.0)
-Déclenchée lorsque:
-• la logique métier change profondément,  
-• les règles deviennent incompatibles avec leurs versions précédentes,  
-• la sémantique de la Policy est réinterprétée,  
-• des documents existants deviennent obsolètes.
+Les Policies suivantes sont canoniques:
 
-Impact:
-• nécessite migration manuelle ou assistée,  
-• Overseer doit appliquer des règles de rétrocompatibilité explicites.
+• VersioningPolicy  
+• WorkflowPolicy  
+• ValidationPolicy_Global  
+• CorrectionMode_Policy  
+• System_Agent_Edit_Policy
 
-5.2 Minor (1.X.0)
-Déclenchée lorsque:
-• ajout de règles non disruptives,  
-• ajout de conditions ou d’exceptions,  
-• amélioration des classifications.
-
-Impact:
-• compatible avec les versions précédentes,  
-• appliquée automatiquement par Overseer à partir de l’activation.
-
-5.3 Patch (1.0.X)
-Déclenchée lorsque:
-• correction d’ambiguïtés,  
-• précisions rédactionnelles,  
-• ajustements non structurels.
-
-Impact:
-• aucune incompatibilité possible.
+Toute Policy non listée ici n’est pas reconnue par le système.
 
 
-6. Application des Policies
+5. Sémantique X.Y.Z pour les Policies
 
-6.1 Rôle d’Overseer
-Overseer:
-• lit toutes les Policies actives,  
-• décide des actions métier en s’appuyant dessus,  
-• injecte les règles pertinentes dans les systemInstructions,  
-• assure que toute décision est compatible avec les Policies,  
-• gère les exceptions et les overrides (sauf en correctionMode).
+5.1 Major (X+1.0.0)  
+Une Major correspond à:
+• modification d’un invariant,  
+• changement de comportement métier,  
+• évolution rendant certains documents ou process incompatibles,  
+• modification des formats attendus,  
+• changement des règles de sécurité ou de correction.
 
-6.2 Rôle de SuperiorValidationAgent
-SuperiorValidationAgent utilise les Policies pour:
-• analyser les modifications,  
-• émettre des verdicts structurés,  
-• déterminer le riskLevel,  
-• identifier les incohérences inter-documents.
+Conséquence: migration explicite requise.
 
-Les Policies influencent directement son raisonnement métier.
+5.2 Minor (X.Y+1.0)  
+Une Minor correspond à:
+• ajout de capacité,  
+• extension de règles existantes,  
+• amélioration non cassante,  
+• nouveaux cas supportés sans invalider les anciens.
 
-6.3 Rôle de l’orchestrateur
-L’orchestrateur utilise les Policies uniquement pour les restrictions structurelles, jamais pour la logique métier.
+Conséquence: compatibilité ascendante présumée.
 
-Exemples:
-• CorrectionPolicy désactive transitions workflow,  
-• WorkflowPolicy peut indiquer des actions structurelles obligatoires.
+5.3 Patch (X.Y.Z+1)  
+Un Patch correspond à:
+• correction interne,  
+• clarification rédactionnelle,  
+• précision sans impact comportemental réel.
 
-6.4 Rôle des agents producteurs
-Les agents producteurs reçoivent les règles des Policies via Overseer, jamais directement.
-
-Ils ne consultent pas les Policies.  
-Ils suivent les consignes injectées dans la systemInstruction.
+Conséquence: aucune migration attendue.
 
 
-7. Attribution des PolicyVersions aux documents
+6. Sémantique X.Y.Z pour les documents de spécification
 
-Chaque document référent possède dans `meta.appliedPolicies`:
+Cette section est normative et s’applique à tous les documents du repository.
 
-{
-  "validation": "1.0.0",
-  "workflow": "1.0.0",
-  "versioning": "1.0.0",
-  "correction": "1.0.0"
-}
+6.1 Major (X+1.0.0)  
+Un document doit incrémenter sa Major si la modification:
+• change le rôle ou la responsabilité d’un acteur (Overseer, orchestrateur, agent),  
+• modifie un invariant architectural,  
+• change un pipeline officiel,  
+• altère l’interprétation correcte du document par le système,  
+• introduit ou supprime une capacité structurante,  
+• rend une partie du document incompatible avec une version antérieure.
 
-Cela permet:
-• de connaître le cadre logique sous lequel une version du document a été créée,  
-• d’assurer des migrations futures,  
-• de tester la cohérence entre documents versionnés sous différentes policies.
+Règle absolue:
+Un changement qui modifie la manière dont le document doit être compris ou appliqué n’est jamais un Patch.
 
+6.2 Minor (X.Y+1.0)  
+Un document doit incrémenter sa Minor si la modification:
+• ajoute une précision importante,  
+• complète un process existant,  
+• introduit un nouveau cas sans invalider les précédents,  
+• renforce une règle sans en changer la nature.
 
-8. Migration de Policies
+6.3 Patch (X.Y.Z+1)  
+Un document doit incrémenter son Patch si la modification:
+• corrige une incohérence rédactionnelle,  
+• améliore la clarté ou la lisibilité,  
+• précise un point déjà implicite,  
+• n’a aucun impact sur l’interprétation opérationnelle.
 
-Lorsqu’une Policy évolue:
-
-Case 1 — Minor ou Patch:
-• Overseer applique automatiquement la nouvelle version,  
-• aucune migration documentaire nécessaire.
-
-Case 2 — Major:
-• Overseer détecte les incompatibilités,  
-• SuperiorValidationAgent propose des correctifs,  
-• Overseer peut demander une migration documentaire,  
-• un document peut rester en ancienne policy tant que non modifié.
-
-Les migrations sont explicites, jamais implicites.
-
-
-9. Activation des nouvelles Policies
-
-Une nouvelle PolicyVersion devient active lorsque:
-
-• Overseer l’annonce dans son contexte interne,  
-• les documents projet enregistrent leur version applicable lors de la prochaine écriture.
-
-Activation atomique:
-• Overseer bascule sur les nouvelles Policies dès leur activation,  
-• aucun état intermédiaire ambigu.
+6.4 Principe de prudence  
+En cas de doute entre Minor et Patch, la Minor prévaut.  
+En cas de doute entre Minor et Major, la Major prévaut.
 
 
-10. Invariants de la gouvernance des Policies
+7. Compatibilité et contradictions
 
-Le système doit toujours garantir:
+7.1 Compatibilité  
+Un document est compatible s’il respecte:
+• les invariants des Policies déclarées,  
+• les règles en vigueur à la PolicyVersion indiquée,  
+• les schémas associés.
 
-• séparation stricte entre Policies et prompts agents,  
-• aucune Policy interprétée par l’orchestrateur comme logique métier,  
-• Policies toujours versionnées, jamais implicites,  
-• aucune décision d’Overseer sans référence à une Policy,  
-• migration contrôlée et traçable,  
-• compatibilité explicite, jamais supposée,  
-• SuperiorValidationAgent toujours aware des PolicyVersions actives.
+7.2 Contradictions de PolicyVersions  
+Si un document référence des PolicyVersions incompatibles:
+• Overseer bloque l’opération,  
+• exige une migration ou correction,  
+• journalise l’anomalie.
 
+Aucune écriture ne doit avoir lieu dans ce cas.
+
+
+8. Déclaration des PolicyVersions
+
+8.1 Dans les documents de spécification  
+Chaque document doit déclarer explicitement les PolicyVersions dont il dépend.
+
+8.2 Dans les documents référents (en base)  
+Chaque document référent doit contenir:
+
+meta.appliedPolicies:
+  versioningPolicy: "X.Y.Z"
+  validationPolicy: "X.Y.Z"
+  workflowPolicy: "X.Y.Z"
+  correctionPolicy: "X.Y.Z"
+  agentEditPolicy: "X.Y.Z"
+
+Ces valeurs représentent l’état logique du système lors de la dernière écriture validée.
+
+
+9. Injection obligatoire dans les instructions agents
+
+9.1 Principe  
+Les agents ne lisent aucun document. Ils exécutent une instruction.
+
+Overseer doit injecter:
+• les règles de versioning applicables,  
+• les invariants d’édition,  
+• le mode opérationnel,  
+• toute contrainte pertinente issue des Policies.
+
+9.2 Preuve d’injection  
+Chaque instruction agent doit contenir:
+
+instructionMeta:
+  policyVersions:
+    versioningPolicy: "X.Y.Z"
+    validationPolicy: "X.Y.Z"
+    workflowPolicy: "X.Y.Z"
+    correctionPolicy: "X.Y.Z"
+    agentEditPolicy: "X.Y.Z"
+
+9.3 Rôle de l’orchestrateur  
+L’orchestrateur vérifie uniquement la présence et la conformité structurelle de ces champs.
+
+
+10. Migrations
+
+10.1 Déclenchement  
+Une migration est requise lors d’un changement Major de Policy ou de document impactant un invariant.
+
+10.2 Procédure  
+• Détection par Overseer  
+• Passage en correctionMode si nécessaire  
+• Mise à jour contrôlée via agents producteurs  
+• Validation par SuperiorValidationAgent  
+• Écriture par orchestrateur
+
+10.3 Journalisation  
+Toute migration doit être loggée avec snapshot avant et après.
+
+
+11. Invariants
+
+Toujours vrais:
+
+• Les versions des documents sont indépendantes.  
+• Les Policies gouvernent le comportement global.  
+• La compatibilité dépend des PolicyVersions, pas d’une version globale.  
+• Les agents ne consultent jamais les specs.  
+• Overseer injecte toutes les contraintes.  
+• L’orchestrateur n’interprète aucune Policy.  
+• Toute incompatibilité majeure déclenche blocage ou correction contrôlée.
 
 Fin du document.
+
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.1.0 (2025-12-12): Ajout des règles normatives Major/Minor/Patch applicables aux documents de spécification, clarification du principe d’indépendance des versions et règle de prudence.
+  - 1.0.0 (2025-12-11): Création du document.
+
+Breaking Changes:
+  - Aucun.
+
+Notes:
+  - Ce document sert de référence unique pour toute décision de versioning dans le système Overseer.
