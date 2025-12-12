@@ -10,18 +10,20 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit le contrat d’entrée pour toute synchronisation externe via un agent externe (ex: IDE, agent de code).
+Ce document définit le contrat d’entrée pour toute synchronisation externe via un agent externe ou un outil tiers.
 
-Il décrit le format attendu du payload Sync.
+Il décrit le format attendu du payload de synchronisation.
 
 
 2. Rôle dans le système
 
 Ce cahier des charges:
-• sécurise l’entrée externe,
-• empêche les injections arbitraires,
-• permet une analyse d’impact contrôlée par Overseer,
-• déclenche le Pipeline_syncExterne.
+• encadre les entrées externes,
+• limite les surfaces d’attaque,
+• empêche toute injection arbitraire,
+• permet une analyse d’impact contrôlée par Overseer.
+
+Il est utilisé exclusivement dans le cadre du Pipeline_syncExterne.
 
 
 3. Contenu attendu du payload
@@ -29,19 +31,22 @@ Ce cahier des charges:
 Le payload doit inclure:
 • sourceAgent,
 • operationId,
-• targetProjectId,
-• changements proposés,
+• projectId ciblé,
+• liste des changements proposés,
 • justification optionnelle.
 
-Tout champ non déclaré est rejeté.
+Tout champ non explicitement déclaré est rejeté.
 
 
 4. Contraintes de sécurité
 
 • validation stricte du schéma,
-• aucune écriture directe,
+• aucune écriture directe autorisée,
 • toute modification passe par Overseer,
-• toute incohérence déclenche rejet ou correction.
+• toute incohérence entraîne rejet ou correction contrôlée.
+
+Fin du document
+---
 
 Document Metadata & Changelog
 
