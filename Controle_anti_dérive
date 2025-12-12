@@ -11,51 +11,60 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit les mécanismes de détection et de gestion des dérives du système Overseer.
+Ce document définit les mécanismes de détection, de classification et de traitement des dérives au sein du système Overseer.
+
+Il est normatif sur les types de dérive et leurs traitements associés.
 
 
-2. Types de dérive
+2. Définition d’une dérive
 
-2.1 Dérive structurelle
+Une dérive est toute situation dans laquelle le système s’écarte de ses invariants structurels ou métier, de manière contrôlée ou non.
+
+
+3. Types de dérive
+
+3.1 Dérive structurelle
 
 Exemples:
 • JSON invalide,
-• schéma non respecté,
+• non-respect d’un schéma,
 • versioning incohérent,
 • transition workflow inexistante.
 
 Traitement:
-• arrêt immédiat,
-• aucune écriture,
-• retour d’erreur technique.
+• arrêt immédiat de l’opération,
+• aucune écriture en base,
+• retour d’erreur technique à Overseer.
 
 
-2.2 Dérive métier
+3.2 Dérive métier
 
 Exemples:
 • incohérences inter-documents,
-• décisions contradictoires,
-• logique métier instable.
+• contradictions sémantiques,
+• décisions métier instables.
 
 Traitement:
-• activation de CorrectionMode,
+• activation du CorrectionMode,
 • correction contrôlée,
 • validation globale obligatoire.
 
 
-3. Rôles dans la détection
+4. Acteurs de la détection
 
 • Orchestrateur: dérives structurelles uniquement.
-• Overseer: dérives métier.
-• SuperiorValidationAgent: analyse sémantique de support.
+• Overseer: dérives métier et violations d’invariants.
+• SuperiorValidationAgent: analyse sémantique et détection de contradictions.
 
 
-4. États système
+5. États système associés
 
-• warning: anomalie surveillée,
+• warning: anomalie détectée mais surveillée,
 • correction: état réparateur contrôlé,
-• halted: arrêt critique nécessitant recovery.
+• halted: arrêt critique nécessitant recovery explicite.
 
+Fin du document
+---
 
 Document Metadata & Changelog
 
