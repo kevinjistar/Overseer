@@ -1,20 +1,48 @@
 
+---
+Document: Knowledge
 Version: 1.0.0
-Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Initialisation du module spécialisé Notes/Knowledge
-Breaking Changes: Aucun depuis 1.0.0
+Date: 2025-12-12
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
-NotesSpecializedSchema:
-  description: "Module spécialisé dédié aux notes, réflexions et connaissances transverses"
+1. Objet du document
 
-  specialized:
-    entries:
-      description: "Entrées de connaissance"
-      type: array
-      itemStructure:
-        id: string
-        title: string
-        content: string
-        tags: array of strings
+Ce document sert de base de connaissances libre pour un projet Overseer.
+
+
+2. Usage
+
+Il peut contenir:
+• notes,
+• idées,
+• références,
+• décisions informelles,
+• éléments exploratoires.
+
+Il n’est pas soumis aux mêmes contraintes de rigidité que les documents référents critiques.
+
+
+3. Contraintes
+
+• aucune logique métier exécutable,
+• aucune dépendance workflow,
+• aucune décision automatique.
+
+
+4. Rôle
+
+• support cognitif,
+• mémoire de travail,
+• source d’analyse pour Overseer et SuperiorValidationAgent.
+
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-12): Création du document Knowledge standard.
+
+Breaking Changes:
+  - Aucun, document initial.
