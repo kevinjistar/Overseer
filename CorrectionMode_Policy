@@ -1,67 +1,116 @@
 
 ---
-Document: Controle_anti_dérive
-Version: 2.0.0
-Date: 2025-12-12
+Document: CorrectionMode_Policy
+Version: 1.0.1
+Date: 2025-12-11
+
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  CorrectionMode_Policy: 1.0.0
+  VersioningPolicy: 1.0.0
 ---
 
-1. Objet du document
+1. Objet de la CorrectionMode_Policy
 
-Ce document définit les mécanismes de détection, de classification et de traitement des dérives au sein du système Overseer.
+Cette policy définit le mode "correction", un état opérationnel spécial activé par Overseer lorsque:
+- une incohérence sémantique majeure est détectée,
+- un verdict "block" est rendu par SuperiorValidationAgent,
+- une écriture précédente a introduit un état instable,
+- une restauration corrective doit être effectuée avant reprise normale.
 
-Il est normatif sur les types de dérive et leurs traitements associés.
-
-
-2. Définition d’une dérive
-
-Une dérive est toute situation dans laquelle le système s’écarte de ses invariants structurels ou métier, de manière contrôlée ou non.
-
-
-3. Types de dérive
-
-3.1 Dérive structurelle
-
-Exemples:
-• JSON invalide,
-• non-respect d’un schéma,
-• versioning incohérent,
-• transition workflow inexistante.
-
-Traitement:
-• arrêt immédiat de l’opération,
-• aucune écriture en base,
-• retour d’erreur technique à Overseer.
+Le mode correction sert exclusivement à restaurer la cohérence, jamais à introduire de nouvelles évolutions métier.
 
 
-3.2 Dérive métier
+2. Activation du mode correction
 
-Exemples:
-• incohérences inter-documents,
-• contradictions sémantiques,
-• décisions métier instables.
+2.1 Déclencheurs autorisés  
+Overseer active le mode correction uniquement lorsque:
+- verdict = block (local ou global),  
+- incohérence inter-documents détectée après écriture,  
+- workflow invalide ou contradictoire,  
+- état projet partiellement corrompu,  
+- erreur utilisateur ou agent provoquant incohérence majeure.
 
-Traitement:
-• activation du CorrectionMode,
-• correction contrôlée,
-• validation globale obligatoire.
-
-
-4. Acteurs de la détection
-
-• Orchestrateur: dérives structurelles uniquement.
-• Overseer: dérives métier et violations d’invariants.
-• SuperiorValidationAgent: analyse sémantique et détection de contradictions.
+2.2 Déclencheur interdit  
+L’utilisateur ne peut pas activer directement le mode correction.  
+Seul Overseer peut le faire, selon les conditions métier et structurelles.
 
 
-5. États système associés
+3. Garanties du mode correction
 
-• warning: anomalie détectée mais surveillée,
-• correction: état réparateur contrôlé,
-• halted: arrêt critique nécessitant recovery explicite.
+Lorsque correctionMode = true, le système garantit:
+
+• aucune transition workflow permise,  
+• aucun appel agentique non supervisé,  
+• aucune évolution structurelle,  
+• aucune mise à jour majeure ou mineure,  
+• corrections minimales uniquement,  
+• un seul agent autorisé: SuperiorValidationAgent ou un CorrectiveAgent dédié,  
+• validation globale obligatoire après chaque proposition de correction,  
+• impossibilité d’override des verdicts "block".  
+
+
+4. Règles opérationnelles du mode correction
+
+4.1 Restrictions pour Overseer  
+En mode correction, Overseer:
+- ne peut pas initier de transitions workflow,
+- ne peut pas imposer de version Major ou Minor,
+- ne peut autoriser que des patches correctifs,
+- doit demander validation globale après chaque correction candidate.
+
+4.2 Restrictions pour les agents  
+• Seul un agent correctif peut agir (SuperiorValidationAgent ou CorrectiveAgent).  
+• Les modifications doivent être minimales, ciblées et justifiées.  
+• Aucune refonte documentaire n’est permise.  
+• Aucun changement conceptuel, stratégique ou architectural.
+
+4.3 Restrictions structurelles  
+L’orchestrateur doit:
+- refuser toute transition workflow,
+- exécuter uniquement: log, patch, snapshot,
+- refuser les actions structurelles complexes non autorisées en mode correction.
+
+4.4 Conditions de sortie  
+Overseer peut désactiver le mode correction uniquement si:
+- validation locale = allow ou warn,  
+- validation globale = allow ou warn,  
+- cohérence inter-documents restaurée,  
+- workflow de nouveau compatible,  
+- aucun risque "high" détecté.
+
+Un log dédié doit être créé, marquant la clôture du cycle de correction.
+
+
+5. Pipeline correctionMode
+
+1. Overseer détecte une incohérence et active correctionMode.  
+2. Appel de l’agent dédié avec instruction de correction.  
+3. L’orchestrateur valide structurellement le candidateDocument.  
+4. SuperiorValidationAgent effectue la validation locale.  
+5. Validation globale obligatoire.  
+6. Verdict:
+   - allow → Overseer applique la correction,  
+   - warn → Overseer peut appliquer avec log obligatoire,  
+   - block → nouvelle correction exigée (override interdit).  
+7. L’orchestrateur applique le patch structurel (sans transition).  
+8. Overseer vérifie la cohérence globale.  
+9. Overseer désactive correctionMode si la stabilité est restaurée.
+
+
+6. Invariants du mode correction
+
+Toujours vrais:
+
+• stabilité > évolutivité,  
+• patch > refonte,  
+• cohérence globale > cohérence locale,  
+• validation globale obligatoire,  
+• aucun override d’un block,  
+• aucune transition workflow,  
+• aucun changement stratégique,  
+• une seule correction par cycle,  
+• sortie du mode correction uniquement par Overseer.
 
 Fin du document
 ---
@@ -69,8 +118,8 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-12): Refonte complète, séparation stricte dérives structurelles / métier, alignement avec CorrectionMode et SuperiorValidationAgent.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.0.1 (2025-12-11): Normalisation de l’en-tête, alignement terminologique et déplacement des métadonnées en bas du document sans modification des règles.
+  - 1.0.0 (2025-12-11): Création de la policy correctionMode, définissant les règles, contraintes et restrictions du mode correction dans Overseer.
 
 Breaking Changes:
-  - Introduction formelle du mode correction avant tout arrêt critique métier.
+  - Aucun depuis 1.0.0.
