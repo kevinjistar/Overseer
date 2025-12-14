@@ -7,7 +7,8 @@ Date: 2025-12-11
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 1. Objet de la CorrectionMode_Policy
