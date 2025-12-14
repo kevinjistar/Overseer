@@ -1,0 +1,427 @@
+
+
+1. Objectif exact de la tâche
+
+Vous devez mettre à jour l’ensemble des documents du projet (environ 32) pour:
+	1.	garantir la cohérence conceptuelle avec l’architecture actuelle (Overseer, orchestrateur, agents, SuperiorValidationAgent, workflow structurel, policies)
+	2.	appliquer une normalisation documentaire uniforme
+	3.	ne jamais dégrader la qualité, la densité normative, ni l’intégrité des spécifications
+	4.	corriger les incohérences terminologiques et les divergences d’en-têtes
+	5.	déplacer les blocs “metadata et changelog” vers la fin du document selon la règle définie.
+
+Le résultat final est une série de documents mis à jour, cohérents entre eux, sans perte de garanties.
+
+⸻
+
+2. Contrainte absolue de méthode
+
+2.1 Source de vérité
+
+Ne jamais reconstruire un document “de mémoire” ou “par synthèse”.
+Toujours partir du contenu exact du fichier.
+
+2.2 Principe: préserver et améliorer
+
+Les modifications de contenu sont autorisées uniquement si elles:
+	•	augmentent la cohérence globale,
+	•	alignent avec les mises à jour récentes,
+	•	renforcent les invariants,
+	•	clarifient sans supprimer de garde-fous.
+
+Toute réduction significative d’un document normatif est interdite.
+
+2.3 Interdictions
+
+Interdit sans accord explicite de l’utilisateur:
+	•	supprimer des sections existantes,
+	•	condenser ou résumer un document normatif,
+	•	réécrire une règle centrale ou déplacer une responsabilité entre couches,
+	•	introduire un nouveau concept non présent dans l’écosystème,
+	•	remplacer un wording normatif dense par un résumé.
+
+⸻
+
+3. Règles d’en-tête et de “footer metadata”
+
+3.1 Format final attendu
+
+Les documents doivent être structurés en 3 zones:
+	1.	Header minimal (en haut du document)
+	2.	Corps principal du document (intégral)
+	3.	Footer metadata (en bas du document)
+
+3.2 Header minimal standard
+
+Le header minimal standard, en haut, doit contenir uniquement:
+	•	Document: 
+	•	Version: <X.Y.Z>
+	•	Date: 
+	•	PolicyVersions: <liste des policies actives, toutes identiques sur tout le repo, voir ci-dessous>
+
+Aucun autre champ dans le header minimal sauf si l’utilisateur l’exige explicitement.
+
+3.3 “Fin du document”
+
+Juste avant le footer metadata, insérer strictement:
+
+Fin du document
+
+L’utilisateur a explicitement demandé ce marqueur.
+
+3.4 Footer metadata standard
+
+En bas, après “Fin du document —”, ajouter la section:
+
+Document Metadata & Changelog
+
+Puis coller le contenu “Changelog” et “Breaking Changes” (et toutes meta additionnelles existantes) provenant du document original, transféré de manière exacte.
+
+Important:
+	•	Le contenu du changelog existant doit être conservé et complété (pas réécrit).
+	•	“Breaking Changes” doit rester présent. Si le document dit “Aucun depuis X”, conserver la formule.
+	•	Si des documents avaient auparavant “PolicyType”, décider une règle unique:
+	•	Soit le supprimer partout,
+	•	soit le conserver partout,
+mais ne jamais laisser un mix. L’utilisateur préfère ne pas ajouter de couches inutiles; donc la solution la plus saine est de le retirer du header et, si besoin, le conserver en footer dans “Document Metadata” comme info non normative.
+
+⸻
+
+4. PolicyVersions à appliquer
+
+L’utilisateur souhaite que le versioning des documents soit indépendant du système global, mais les PolicyVersions peuvent être identiques sur tous les documents.
+
+Règle: PolicyVersions doivent être présents dans chaque document, dans le header minimal, sauf exception explicite.
+
+Les policies actuelles à standardiser:
+	•	ValidationPolicy_Global: 1.0.0
+	•	WorkflowPolicy: 1.0.0
+	•	CorrectionMode_Policy: 1.0.0
+	•	VersioningPolicy: 1.0.0 (si utilisée par le document)
+	•	System_Agent_Edit_Policy: 1.0.0
+
+Important:
+	•	Les noms doivent être uniformes. Ne pas utiliser ValidationPolicy sans suffixe si le système utilise ValidationPolicy_Global.
+	•	CorrectionPolicy doit être renommé en CorrectionMode_Policy partout.
+	•	Si un document n’est pas concerné par une policy (ex: un cahier des charges purement externe), vous pouvez garder PolicyVersions minimal, mais l’utilisateur a demandé une uniformité forte, donc privilégier un set standard identique sauf justification claire.
+
+⸻
+
+5. Cohérence conceptuelle: points non négociables
+
+5.1 Architecture à trois couches
+	•	Overseer = logique métier, décision, orchestration, policies
+	•	Orchestrateur (Cloud Functions) = validation structurelle, exécution mécanique, écriture Firestore, snapshots, workflow structurel
+	•	Firestore = stockage passif
+
+5.2 SuperiorValidationAgent
+	•	valide la sémantique locale et globale
+	•	rend un verdict allow | warn | block
+	•	ne décide pas, n’écrit pas, ne corrige pas
+	•	informe Overseer
+
+5.3 Workflow Engine
+	•	n’est plus un moteur métier
+	•	ne contient pas de conditions métier dynamiques
+	•	Overseer décide, l’orchestrateur exécute structurellement
+
+5.4 CorrectionMode
+	•	état exclusif
+	•	pas de transitions workflow
+	•	pas de sync externe
+	•	corrections minimales, un agent correctif unique
+	•	pas d’override d’un block en correctionMode
+
+5.5 Orchestrateur
+	•	pas de logique métier
+	•	bloque uniquement structurellement (schémas, formats, quotas structurels)
+	•	n’interprète pas, ne répare pas
+
+⸻
+
+6. Versioning des documents
+
+6.1 Principe
+
+Chaque document a son propre versioning indépendant.
+
+6.2 Erreur à corriger
+
+Certains documents ont été passés en “2.x.x” par confusion avec une “version système globale”.
+Le nouvel agent doit réévaluer document par document si 2.0.0 est justifié.
+
+Critère: 2.0.0 n’est justifié que si le document lui-même a subi une refonte majeure de logique ou de structure normative.
+
+Sinon:
+	•	rester en 1.x.x
+	•	incrémenter minor ou patch selon ampleur
+
+6.3 Règle pour cette tâche
+
+Comme la tâche inclut une normalisation et parfois un réalignement conceptuel, appliquer:
+	•	patch (x.y.z+1) si changement de format, déplacement metadata, alignement terminologique non substantiel
+	•	minor (x.(y+1).0) si ajout de sections ou règles non disruptives
+	•	major ((x+1).0.0) si refonte d’un comportement ou d’une responsabilité normative
+
+⸻
+
+7. Exigence critique: ne pas perdre d’information
+
+Pour chaque document:
+	•	aucune section existante ne doit disparaître sans décision explicite
+	•	aucune liste d’invariants ne doit être raccourcie
+	•	aucune interdiction ne doit être simplifiée
+	•	les exemples éventuels doivent être conservés
+
+Le but est d’augmenter la cohérence, pas d’éditer “pour style”.
+
+⸻
+
+8. Procédure opératoire recommandée (document par document)
+
+Pour chaque fichier:
+	1.	Copier le contenu brut du document original.
+	2.	Identifier la zone “header metadata” en haut, repérer:
+	•	Version
+	•	Date
+	•	Changelog
+	•	Breaking Changes
+	•	PolicyType
+	•	PolicyVersions
+	3.	Construire le header minimal standard:
+	•	Document
+	•	Version
+	•	Date
+	•	PolicyVersions (normalisées)
+	4.	Conserver le corps textuel.
+	5.	Insérer “Fin du document” puis “—”
+	6.	Ajouter en footer:
+	•	Document Metadata & Changelog
+	•	Coller le Changelog existant (inchangé) et l’étendre si la mise à jour le justifie
+	•	Coller Breaking Changes existant (inchangé) et l’étendre si nécessaire
+	•	Si PolicyType est conservé, le mettre ici, pas dans le header
+	7.	Ajuster le contenu du corps uniquement si nécessaire pour alignement global:
+	•	terminologie,
+	•	rôle orchestrateur vs Overseer,
+	•	SuperiorValidationAgent,
+	•	workflow structurel,
+	•	correctionMode.
+
+⸻
+
+9. Piège majeur à éviter
+
+Ne jamais “rédiger une nouvelle version” d’un document en partant d’un concept.
+
+La tâche est une mise à jour contrôlée.
+Le risque principal est de perdre la densité normative.
+
+⸻
+
+10. Deliverables attendus
+
+Selon la décision de l’utilisateur, l’agent doit:
+	•	soit produire les documents mis à jour directement
+	•	soit produire un plan de modifications strict, fichier par fichier, avec:
+	•	insertions mot pour mot,
+	•	suppressions mot pour mot,
+	•	remplacements mot pour mot,
+	•	emplacement exact.
+
+L’utilisateur a signalé que les connecteurs bloquent souvent, donc il peut préférer que tout soit fait “ici” en texte complet.
+
+⸻
+
+11. Point de référence essentiel
+
+Le document Overseer_spec canonique n’est pas forcément celui présent dans le ZIP.
+L’utilisateur a fourni la version de référence (longue, normative).
+Cette version doit être utilisée comme base officielle.
+
+Donc:
+	•	si le fichier ZIP est plus court, le remplacer par le canon fourni par l’utilisateur,
+	•	puis aligner tous les autres documents dessus.
+
+Voici un complément d’instructions spécifiquement dédié à la compréhension du système et à la cohérence, à transmettre tel quel à l’autre agent.
+Il ne répète pas les règles opérationnelles, il impose un cadre mental et des garde-fous cognitifs.
+
+⸻
+
+12. Compréhension systémique obligatoire (non négociable)
+
+Avant toute modification, l’agent doit intégrer le système comme un tout cohérent, et non comme une collection de documents indépendants.
+
+12.1 Le système prime toujours sur le document
+
+Un document n’existe jamais isolément.
+
+Toute modification, même locale, doit être évaluée implicitement selon:
+	•	son impact sur Overseer,
+	•	son impact sur l’orchestrateur,
+	•	son impact sur les agents,
+	•	son impact sur les workflows,
+	•	son impact sur les policies,
+	•	son impact sur la traçabilité et l’anti-dérive.
+
+👉 Si une phrase est correcte localement mais affaiblit le système global, elle est incorrecte.
+
+⸻
+
+13. Principe de cohérence forte
+
+La cohérence n’est pas stylistique, elle est logique et normative.
+
+13.1 Cohérence horizontale (entre documents)
+
+Les documents doivent:
+	•	utiliser les mêmes termes pour les mêmes concepts,
+	•	décrire les mêmes responsabilités de la même manière,
+	•	ne jamais se contredire implicitement.
+
+Exemples interdits:
+	•	un document dit que l’orchestrateur “bloque une transition métier”,
+	•	un autre dit que “Overseer décide des transitions métier”.
+
+➡️ Une seule vérité est autorisée.
+
+⸻
+
+13.2 Cohérence verticale (hiérarchie des documents)
+
+Certains documents sont hiérarchiquement supérieurs.
+
+Ordre implicite:
+	1.	Overseer_spec (norme système)
+	2.	Architecture / Global_Overview
+	3.	Policies
+	4.	Pipelines et Process
+	5.	Cahiers des charges et documents support
+
+Règle:
+	•	un document inférieur ne peut jamais contredire ou redéfinir un document supérieur,
+	•	en cas de conflit, le document inférieur doit être ajusté.
+
+⸻
+
+14. Comprendre la fonction réelle des documents
+
+14.1 Documents normatifs (contrats)
+
+Exemples:
+	•	Overseer_spec
+	•	Architecture
+	•	Controle_anti_dérive
+	•	CorrectionMode_Policy
+	•	Policies
+
+Caractéristiques:
+	•	verbosité volontaire,
+	•	redondances intentionnelles,
+	•	formulations négatives (“ne doit jamais…”),
+	•	peu d’exemples, beaucoup d’invariants.
+
+👉 Ces documents protègent le système contre le futur.
+Ils ne doivent jamais être raccourcis sans analyse de garanties perdues.
+
+⸻
+
+14.2 Documents procéduraux (comment ça se passe)
+
+Exemples:
+	•	Pipelines
+	•	Processus
+	•	Workflow Engine
+
+Caractéristiques:
+	•	séquentiels,
+	•	précis,
+	•	orientés exécution,
+	•	alignés strictement avec les documents normatifs.
+
+Ils ne décident rien, ils décrivent ce qui se passe quand la décision est déjà prise.
+
+⸻
+
+14.3 Documents descriptifs / support
+
+Exemples:
+	•	Design_UX
+	•	Knowledge
+	•	Cahiers des charges externes
+
+Caractéristiques:
+	•	jamais décisionnels,
+	•	jamais prescriptifs pour le système,
+	•	jamais sources d’autorité.
+
+⸻
+
+15. Règle d’or de modification (clé absolue)
+
+Avant toute modification de contenu, l’agent doit se poser explicitement cette question:
+
+“Est-ce que cette modification réduit, maintient ou augmente la capacité du système à empêcher des dérives futures que je ne peux pas encore anticiper ?”
+
+	•	Si elle réduit → interdite
+	•	Si elle maintient → acceptable
+	•	Si elle augmente → souhaitable
+
+⸻
+
+16. Interdiction du “raisonnement local”
+
+L’agent ne doit jamais:
+	•	“simplifier parce que c’est clair”,
+	•	“raccourcir parce que c’est redondant”,
+	•	“réorganiser parce que c’est plus élégant”.
+
+Dans ce projet:
+	•	la redondance est une arme,
+	•	la lourdeur est une assurance,
+	•	la rigidité est un choix architectural.
+
+⸻
+
+17. Test mental obligatoire avant validation
+
+Avant de considérer un document comme correct, l’agent doit simuler mentalement:
+	•	un nouveau développeur dans 12 mois,
+	•	un nouvel agent ajouté au système,
+	•	une extension non prévue,
+	•	un retour après plusieurs mois sans contexte.
+
+Question finale:
+
+“Ce document empêche-t-il une mauvaise interprétation dans ce scénario ?”
+
+Si la réponse est “peut-être”, le document n’est pas assez fort.
+
+⸻
+
+18. Signal d’arrêt immédiat
+
+L’agent doit s’arrêter et demander validation s’il rencontre:
+	•	une ambiguïté conceptuelle,
+	•	une contradiction entre documents,
+	•	une tentation de reformuler une règle,
+	•	une envie de “clarifier” par simplification,
+	•	un doute sur la hiérarchie des responsabilités.
+
+Dans ce système:
+👉 le doute impose l’arrêt, jamais l’approximation.
+
+⸻
+
+19. Rappel fondamental
+
+Ce projet n’optimise pas:
+	•	la vitesse,
+	•	la lisibilité marketing,
+	•	la légèreté documentaire.
+
+Il optimise:
+	•	la robustesse,
+	•	la traçabilité,
+	•	la non-dérive,
+	•	la longévité.
+
+Tout doit être évalué à l’aune de cet objectif.
