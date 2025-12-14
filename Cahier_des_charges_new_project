@@ -3,9 +3,12 @@
 Document: Cahier_des_charges_new_project
 Version: 1.0.0
 Date: 2025-12-12
+
 PolicyVersions:
-  VersioningPolicy: 1.0.0
   ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 1. Objet du document
