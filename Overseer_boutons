@@ -1,58 +1,198 @@
 
 ---
 Document: Overseer_boutons
-Version: 1.0.0
-Date: 2025-12-12
+Version: 2.0.0
+Date: 2025-12-11
+PolicyType: OverseerModesAndControls
+
 PolicyVersions:
-  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  CorrectionMode_Policy: 1.0.0
+  ValidationPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 1. Objet du document
 
-Ce document définit les boutons et modes d’interaction exposés par Overseer à l’utilisateur.
+Ce document définit les boutons et modes interactifs accessibles à l’utilisateur au niveau d’Overseer ainsi que leurs effets cognitifs internes.
 
-Les boutons ne déclenchent jamais directement d’actions métier ou techniques.
+Ces boutons:
+• ne déclenchent jamais d’écriture Firestore,  
+• ne déclenchent jamais de workflow,  
+• ne déclenchent jamais d’appel agentique,  
+• modifient uniquement l’état interne d’Overseer.
 
-
-2. Principe général
-
-Un bouton modifie uniquement l’état interne d’Overseer.
-Toute action réelle est décidée et orchestrée par Overseer selon le mode actif.
-
-
-3. Modes disponibles
-
-3.1 Mode Normal  
-Mode par défaut.
-Les opérations standard sont autorisées.
-
-3.2 Mode Création de Projet  
-Autorise uniquement les opérations liées à l’initialisation d’un nouveau projet.
-
-3.3 Mode Sync  
-Autorise uniquement la réception et l’analyse de payloads externes.
-
-3.4 Mode Correction  
-Mode exclusif déclenché lors d’une incohérence métier nécessitant réparation.
+Les actions structurelles sont toujours initiées ensuite via une décision métier explicite d’Overseer.
 
 
-4. Règles strictes
+2. Principes fondamentaux
 
-• un seul mode actif à la fois,
-• aucun bouton ne déclenche une action automatique,
-• tout changement de mode est journalisé,
-• Overseer interprète toujours le mode avant toute décision.
+2.1 Un bouton affecte uniquement le mode cognitif d’Overseer.  
+2.2 Aucun bouton n’appelle directement l’orchestrateur.  
+2.3 Aucun bouton ne déclenche une transition workflow.  
+2.4 Les boutons modifient le contexte d’interprétation et de préparation des instructions.  
+2.5 En CorrectionMode, certains boutons deviennent inopérants.  
+2.6 La logique bouton → état Overseer → décision est strictement séquentielle.
 
 
-Fin du document
+3. Liste officielle des boutons et modes Overseer v2
+
+Les boutons suivants sont les seuls autorisés.
+
+• Mode Normal  
+• Mode Création de Projet  
+• Mode Sync Externe  
+• Mode Correction (CorrectionMode)  
+• Sélection Projet Actif (CurrentProject Select)
+
+
+4. Description détaillée des boutons
+
+4.1 Bouton: Mode Normal
+
+Effets sur Overseer:
+• réinitialise operationMode = "normal",  
+• active toutes les capacités métier,  
+• autorise les transitions workflow (sous validation),  
+• autorise la mise à jour documentaire,  
+• désactive Sync et CorrectionMode.
+
+Interdictions:
+• aucune transition automatique (toujours interdit).  
+• aucune écriture sans pipeline complet.
+
+
+4.2 Bouton: Mode Création de Projet
+
+Effets sur Overseer:
+• place Overseer dans un mode de préparation pour la création d’un projet,  
+• active l’usage obligatoire de Pipeline_d’entrée_des_projets,  
+• désactive transitions workflow et Sync,  
+• impose ValidationPolicy renforcée pour documents initiaux.
+
+Ce bouton n’écrit rien.  
+C’est Overseer, après compréhension des instructions de création, qui déclenche ensuite un pipeline officiel.
+
+
+4.3 Bouton: Mode Sync Externe
+
+Effets sur Overseer:
+• active le pipeline de Sync,  
+• Overseer attend un ExternalSyncPayload strict,  
+• SuperiorValidationAgent devient obligatoire pour analyse d’impact,  
+• transitions workflow désactivées tant que le Sync n’est pas terminé,  
+• operationMode = "sync".
+
+Interdictions:
+• aucune mise à jour documentaire hors pipeline Sync.  
+• aucune transition workflow.
+
+
+4.4 Bouton: Mode Correction (CorrectionMode)
+
+Effets sur Overseer:
+• operationMode = "correction",  
+• seule correction minimaliste est autorisée,  
+• Overseer limite la portée des modifications,  
+• un seul agent correctif est autorisable par cycle,  
+• toute modification doit subir une validation globale,  
+• transitions workflow interdites,  
+• Sync interdit,  
+• agents producteurs deviennent agents correctifs.
+
+Entrée dans CorrectionMode:
+• bouton explicite, ou  
+• déclenché automatiquement par Overseer après une dérive métier.
+
+Sortie du CorrectionMode:
+• validation globale strictement allow,  
+• confirmation explicite d’Overseer,  
+• transition automatique vers Mode Normal.
+
+
+4.5 Bouton: Sélection Projet Actif
+
+Effets sur Overseer:
+• overwriting complet du currentProject interne,  
+• rechargement des documents référents,  
+• invalidation du contexte précédent,  
+• réinitialisation des caches internes.
+
+Constraints:
+• si une opération est en cours → annulée proprement,  
+• si CorrectionMode est activé → sortie interdite jusqu’à stabilisation,  
+• Overseer ne peut traiter aucune action sans currentProject valide.
+
+
+5. Interaction entre les boutons et les Policies
+
+5.1 ValidationPolicy  
+Détermine si l’activation d’un mode exige une validation globale (cas du Mode Sync et du Mode Correction).
+
+5.2 WorkflowPolicy  
+Détermine les transitions possibles en Mode Normal uniquement.
+
+5.3 CorrectionPolicy  
+Détermine les restrictions appliquées en Mode Correction.
+
+5.4 System_Agent_Edit_Policy  
+Détermine le comportement des agents appelés après activation d’un mode.
+
+
+6. Règles strictes des boutons
+
+• Aucun bouton ne déclenche un appel agentique.  
+• Aucun bouton ne déclenche un write Firestore.  
+• Aucun bouton ne déclenche un workflow.  
+• Les boutons modifient uniquement l’état interne cognitif d’Overseer.  
+• Toute action métier ou structurelle découle d’une décision explicite après interprétation.  
+• CorrectionMode est prioritaire sur tous les autres modes.  
+• Mode Sync et Mode Correction sont mutuellement exclusifs.
+
+
+7. Machine d’états des modes Overseer
+
+États possibles:
+• normal  
+• creation  
+• sync  
+• correction  
+
+Transitions autorisées:
+
+normal → creation  
+normal → sync  
+normal → correction  
+creation → normal  
+sync → normal (fin de pipeline Sync)  
+correction → normal (après validation globale)
+
+Transitions interdites:
+• creation → sync  
+• sync → creation  
+• correction → sync  
+• correction → creation  
+
+
+8. Invariants du document
+
+Toujours vrais:
+
+• Les boutons ne sont que des commandes d’état cognitif.  
+• Overseer, pas les boutons, initie les pipelines.  
+• Les modes ne modifient jamais Firestore par eux-mêmes.  
+• Aucun mode ne modifie les schémas.  
+• Aucun mode ne contourne les Policies.  
+• CorrectionMode implique restrictions maximales.  
+• Mode Normal est l’état par défaut et stable du système.
+
+Fin du document.
 ---
 
-Document Metadata & Changelog
-
 Changelog:
-  - 1.0.0 (2025-12-12): Création du document définissant les boutons et modes Overseer.
+  - 2.0.0 (2025-12-11): Ajout du bouton CorrectionMode, alignement complet avec Overseer_spec v2, Workflow Engine v2 et le pipeline de mise à jour. Clarification du fait que les boutons n’exécutent jamais d’action structurelle.
+  - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun, document initial.
+  - Les boutons ne déclenchent plus aucun effet structurel automatique.
+  - CorrectionMode devient un état système officiellement contrôlé par un bouton dédié.
