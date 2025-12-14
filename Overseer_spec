@@ -3,14 +3,26 @@
 Document: Overseer_spec
 Version: 2.0.0
 Date: 2025-12-11
-PolicyType: OverseerCoreSpecification
 
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
+---
+
+# Spécification d’Overseer
+
+## Objet du document
+
+Ce document définit le rôle, les responsabilités, les invariants et les interactions d’Overseer dans l’architecture Overseer v2.
+
+## Rôle du document dans le système
+
+Niveau: normatif (spécification cœur).  
+Ce document fixe les responsabilités et invariants d’Overseer et ses interactions officielles avec l’orchestrateur, les agents et le SuperiorValidationAgent.  
+Il ne décrit pas les implémentations techniques détaillées, ni les schémas, ni les pipelines opérationnels.
+
 ---
 
 1. Objet du document
@@ -227,10 +239,23 @@ Overseer doit toujours garantir:
 • stabilité du système avant d’autoriser toute écriture.
 
 
-Fin du document.
+Fin du document
+---
+
+Document Metadata & Changelog
+
+PolicyType: OverseerCoreSpecification
+
+PolicyVersions:
+  ValidationPolicy: 1.0.0
+  WorkflowPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
+  CorrectionPolicy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+
 --
 Changelog:
-  - 2.0.0 (2025-12-11): Refonte majeure pour alignement avec SuperiorValidationAgent, Workflow Engine v2.0.0, CorrectionMode, Policies versionnées et pipeline standard.
+  - 2.0.0 (2025-12-11): Refonte majeure pour alignement avec....0.0, CorrectionMode, Policies versionnées et pipeline standard.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
