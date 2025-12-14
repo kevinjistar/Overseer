@@ -1,17 +1,35 @@
 
 ---
+Document: Schema_Document_Référent
 Version: 1.1.0
 Date: 2025-12-10
-Changelog:
-  - 1.1.0 (2025-12-10): Mise à jour du schéma universel, ajout compatibilité Sync, ProjectSchema 1.1.0, règles strictes pour versioning, cohérence avec Overseer et workflows
-  - 1.0.0 (2025-12-10): Initialisation du Schéma universel du Document Référent
-Breaking Changes: Aucun depuis 1.0.0
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+# Schéma universel du Document Référent
+
+## Objet du document
+
+Ce document définit le schéma universel que tout Document Référent doit respecter dans le système Overseer.
+
+## Rôle du document dans le système
+
+Niveau: normatif et structurel.  
+Ce document établit la structure stable, commune et non négociable de tous les documents référents utilisés par Overseer, l’orchestrateur et les agents.  
+Il sert de base à la validation structurelle automatique, au versioning mécanique et à la cohérence multi-agents.  
+Il ne définit aucune logique métier, aucun processus opérationnel et aucune règle de validation sémantique.
+
 ---
 
 # SCHÉMA UNIVERSEL DU DOCUMENT RÉFÉRENT
 
 Ce schéma définit la structure stable que tout Document Référent doit respecter.  
-La zone specialized est la seule partie variable selon le type de document.  
+La zone `specialized` est la seule partie variable selon le type de document.  
 Le schéma garantit cohérence multi-agents, validation automatique, robustesse du versioning, compatibilité Firestore et compatibilité Cloud Functions.
 
 ---
@@ -47,6 +65,7 @@ Références internes ou externes.
 
 # 2. JSON SCHEMA — UniversalDocumentSchema (Version 1.1.0)
 
+```json
 {
   "title": "UniversalDocumentSchema",
   "type": "object",
@@ -60,7 +79,7 @@ Références internes ou externes.
         "type": { "type": "string" },
         "projectId": { "type": "string" },
         "version": { "type": "string" },
-        "status": { 
+        "status": {
           "type": "string",
           "enum": ["draft", "active", "archived"]
         },
@@ -97,7 +116,7 @@ Références internes ou externes.
       "description": "Zone dédiée aux modules spécifiques (architecture, UX, stratégie, workflow, notes)"
     },
 
-    "narrativeMarkdown": { 
+    "narrativeMarkdown": {
       "type": "string",
       "description": "Zone narrative optionnelle"
     },
@@ -109,19 +128,30 @@ Références internes ou externes.
   }
 }
 
----
 
-# 3. Cohérence du système
+⸻
+
+3. Cohérence du système
 
 Ce schéma:
+	•	est compatible avec ProjectSchema 1.1.0,
+	•	permet une validation stricte par Cloud Functions,
+	•	garantit une forme documentaire stable,
+	•	rend le versioning automatique trivial,
+	•	permet à Overseer de vérifier la conformité documentaire,
+	•	permet aux agents spécialisés de modifier uniquement structured et specialized,
+	•	s’intègre entièrement au Workflow Engine,
+	•	est compatible avec le pipeline de synchronisation externe.
 
-- est compatible avec ProjectSchema 1.1.0  
-- permet validation stricte par Cloud Functions  
-- garantit que tous les documents ont une forme stable  
-- rend le versioning automatique trivial  
-- permet à Overseer de vérifier la conformité documentaire  
-- permet aux agents spécialisés de modifier uniquement specialized + structured  
-- s’intègre entièrement au Worklow Engine  
-- est compatible avec le pipeline de synchronisation externe  
+⸻
 
-Fin du Schéma universel du Document Référent (Version 1.1.0).
+Fin du document
+
+Document Metadata & Changelog
+
+Changelog:
+	•	1.1.0 (2025-12-10): Mise à jour du schéma universel, ajout compatibilité Sync, ProjectSchema 1.1.0, règles strictes pour versioning, cohérence avec Overseer et workflows.
+	•	1.0.0 (2025-12-10): Initialisation du Schéma universel du Document Référent.
+
+Breaking Changes:
+	•	Aucun depuis 1.0.0
