@@ -1,65 +1,73 @@
 
+---
+Document: Structure_Firestore
 Version: 1.0.0
 Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Création de la Structure Firestore
-Breaking Changes: Aucun depuis 1.0.0
 
-Règle de versioning:
-  • Major (X.0.0): Modification de l’architecture globale de stockage
-  • Minor (1.X.0): Ajout de nouvelles collections ou champs non disruptifs
-  • Patch (1.2.X): Ajustements rédactionnels, clarifications
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 # Structure Firestore
 
-La structure Firestore définie ici constitue la base de stockage du système multi projets, des documents référents, des workflows, des logs, des snapshots et du contexte utilisateur.  
-Elle doit être strictement respectée par l’orchestrateur et les agents.
+## Objet du document
+
+Ce document définit la structure officielle de stockage Firestore utilisée par le système Overseer.
+
+## Rôle du document dans le système
+
+Niveau: normatif et structurel.  
+Ce document décrit l’arborescence de stockage, les collections, sous-collections et conventions associées servant de base de persistance pour les projets, documents, workflows, logs, snapshots et contextes utilisateurs.  
+Il constitue une référence obligatoire pour l’orchestrateur et les processus système.  
+Il ne décrit aucune logique métier, aucun processus opérationnel et aucune règle de validation sémantique.
 
 ---
 
-# 1. Racine principale
+# Structure Firestore
 
-projects/
-userContext/
-systemLogs/
-systemSettings/
+La structure Firestore définie ici constitue la base de stockage du système multi-projets Overseer.  
+Elle doit être strictement respectée par l’orchestrateur, les agents et les processus internes.
 
 ---
 
-# 2. Collection: projects/{projectId}
+# 1. Racines principales
 
-Chaque projet possède sa propre arborescence interne.
+Les collections racines du système sont:
+
+- projects/  
+- userContext/  
+- systemLogs/  
+- systemSettings/  
+
+Aucune autre collection racine n’est autorisée.
+
+---
+
+# 2. Collection projects/{projectId}
+
+Chaque projet possède sa propre arborescence interne isolée.
 
 projects/{projectId}/
 meta/
 project.json
 documents/
-architecture.json
-ux.json
-strategy.json
-workflowDocument.json
-notes.json
 workflowEngine/
-engine.json
 logs/
-creation.json
-updates/{logId}.json
 snapshots/
-initial/
-project.json
-documents/
-workflowEngine.json
-versions/
-{snapshotId}/
+settings/
 
 ---
 
 # 3. Détail des sous-structures
 
 ## 3.1 meta/
+
 Contient les métadonnées générales du projet.
 
+Chemin:
 projects/{projectId}/meta/project.json
 
 Champs typiques:
@@ -68,13 +76,13 @@ Champs typiques:
 - createdAt  
 - createdBy  
 - status  
-- description courte  
+- description  
 
 ---
 
 ## 3.2 documents/
 
-Contient les documents référents selon le Schéma universel + module spécialisé.
+Contient les documents référents du projet.
 
 projects/{projectId}/documents/
 architecture.json
@@ -84,39 +92,43 @@ workflowDocument.json
 notes.json
 
 Chaque document respecte:
-- meta  
-- content  
-- specialized  
-- narrative  
+- le Schéma universel du Document Référent,
+- son module spécialisé associé.
 
 ---
 
 ## 3.3 workflowEngine/
 
+Contient le Workflow Engine structurel du projet.
+
+Chemin:
 projects/{projectId}/workflowEngine/engine.json
 
 Contient:
-- états  
-- transitions  
-- conditions  
-- actions  
-- état initial  
+- états déclaratifs,
+- transitions structurelles,
+- actions structurelles,
+- état initial.
+
+Aucune logique métier n’y est stockée.
 
 ---
 
 ## 3.4 logs/
 
+Contient l’historique des opérations projet.
+
 projects/{projectId}/logs/
 creation.json
 updates/{logId}.json
 
-Contient l’historique de toutes les opérations effectuées sur le projet.
+Les logs assurent la traçabilité complète.
 
 ---
 
 ## 3.5 snapshots/
 
-Structure permettant le rollback à n’importe quel état.
+Contient les snapshots permettant le rollback.
 
 projects/{projectId}/snapshots/
 initial/
@@ -134,22 +146,28 @@ agent
 
 ---
 
-# 4. Collection: userContext/
+## 3.6 settings/
 
-Stocke l’état utilisateur, notamment le projet actif.
+Contient les paramètres système propres au projet.
+
+---
+
+# 4. Collection userContext/
+
+Stocke le contexte utilisateur, notamment le projet actif.
 
 userContext/{userId}/
 currentProject.json
 
-Champs:
-- projectId
-- selectedAt
-- selectedBy
-- status
+Champs typiques:
+- projectId  
+- selectedAt  
+- selectedBy  
+- status  
 
 ---
 
-# 5. Collection: systemLogs/
+# 5. Collection systemLogs/
 
 Journalisation globale du système.
 
@@ -160,14 +178,12 @@ errors/{logId}.json
 
 ---
 
-# 6. Collection: systemSettings/
+# 6. Collection systemSettings/
 
-Configuration interne du système.
+Configuration interne globale.
 
 systemSettings/
 pipelines/
-projectEntry.json
-documentUpdate.json
 constraints/
 versioning.json
 agentRules.json
@@ -175,4 +191,26 @@ workflowRules.json
 
 ---
 
-Fin du document Structure Firestore.
+# 7. Règles structurelles invariantes
+
+Toujours vraies:
+
+- aucune écriture directe hors orchestrateur,
+- aucune collection dynamique non déclarée,
+- aucun document hors projet pour les documents référents,
+- aucune logique métier persistée en base,
+- toute écriture liée à un projectId valide,
+- toute mutation journalisée.
+
+---
+
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-09): Création du document Structure Firestore, définition de l’arborescence de stockage du système Overseer.
+
+Breaking Changes:
+  - Aucun depuis 1.0.0
