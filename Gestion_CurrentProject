@@ -1,7 +1,10 @@
 
-
 Version: 1.0.0
 Date: 2025-12-09
+PolicyVersions:
+  VersioningPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 # Gestion du currentProject
