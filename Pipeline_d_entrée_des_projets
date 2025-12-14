@@ -1,12 +1,7 @@
 
-PIPELINE D’ENTRÉE DES PROJETS
-
+Document: PIPELINE D’ENTRÉE DES PROJETS
 Version: 1.0.0
 Date: 2025-12-09
-Changelog:
-	•	1.0.0 (2025-12-09): Création du pipeline d’entrée des projets
-Breaking Changes: Aucun
-
 ⸻
 
 1. Intention du Pipeline d’entrée
@@ -163,3 +158,7 @@ L’orchestrateur:
 	•	valide les schémas
 	•	prépare workflowEngine
 	•	renvoie un statut propre à Overseer
+
+Fin de document
+---
+
