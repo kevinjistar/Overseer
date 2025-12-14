@@ -204,4 +204,4 @@ Changelog:
 Breaking Changes:
   - Intégration des Policies versionnées comme fondation obligatoire.
   - SuperiorValidationAgent remplace ValidationAgent.
-  - Séparation stricte structurel / métier dans l’ordre de constitution du système.
+  - Séparation stricte structurel / métier dans l’ordre de constitution du système
