@@ -1,27 +1,25 @@
 
 ---
 Document: Pipeline_de_mise_à_jour_des_documents
-Version: 2.0.0
-Date: 2025-12-11
-PolicyType: DocumentUpdatePipeline
+Version: 2.0.1
+Date: 2025-12-14
 
 PolicyVersions:
-  ValidationPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
-
-Changelog:
-  - 2.0.0 (2025-12-11): Refonte complète intégrant SuperiorValidationAgent, ValidationPolicy_Global, CorrectionMode, Workflow Engine v2 et Processus interne d’appel d’agents v2.
-  - 1.0.0 (2025-12-10): Version initiale.
-
-Breaking Changes:
-  - Suppression complète de l’ancienne validation unique.
-  - Intégration obligatoire de la double validation (structurelle + sémantique locale/globale).
-  - Ajout du mode correction et de ses règles restrictives.
-  - Abandon de tout déclenchement automatique de workflow.
 ---
+
+# Pipeline de mise à jour des documents
+
+## Objet du document
+Ce document définit le processus complet de mise à jour d’un document référent dans Overseer.  
+Il décrit, étape par étape, comment une modification passe de l’intention utilisateur à l’écriture finale dans Firestore, avec validation structurelle et sémantique.
+
+## Rôle du document dans le système
+Document procédural, il spécifie un pipeline opérationnel de mise à jour documentaire.  
+Il décrit le “comment” du flux, sans redéfinir les responsabilités des acteurs.
 
 1. Objet du document
 
@@ -265,4 +263,18 @@ Toujours vrais:
 • Aucun workflow automatique.  
 • Traçabilité complète via operationId et snapshotId.
 
-Fin du document.
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 2.0.1 (2025-12-14): Normalisation formelle, ajout d’une frontpage standard, déplacement des métadonnées en footer, contenu opérationnel inchangé.
+  - 2.0.0 (2025-12-11): Refonte complète intégrant SuperiorValidationAgent, ValidationPolicy_Global, CorrectionMode, Workflow Engine v2 et Processus interne d’appel d’agents v2.
+  - 1.0.0 (2025-12-10): Version initiale.
+
+Breaking Changes:
+  - Suppression complète de l’ancienne validation unique.
+  - Intégration obligatoire de la double validation (structurelle + sémantique locale/globale).
+  - Ajout du mode correction et de ses règles restrictives.
+  - Abandon de tout déclenchement automatique de workflow.
