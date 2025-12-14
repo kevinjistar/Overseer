@@ -11,15 +11,6 @@ PolicyVersions:
   VersioningPolicy: 1.0.0
   CorrectionPolicy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
-
-Changelog:
-  - 2.0.0 (2025-12-11): Refonte majeure pour alignement avec SuperiorValidationAgent, Workflow Engine v2.0.0, CorrectionMode, Policies versionnées et pipeline standard.
-  - 1.0.0 (2025-12-10): Version initiale.
-
-Breaking Changes:
-  - Overseer ne déclenche plus aucune transition workflow sans validation métier préalable.
-  - Overseer doit maintenant appliquer ValidationPolicy_Global (validation locale + globale).
-  - Overseer doit gérer explicitement correctionMode.
 ---
 
 1. Objet du document
@@ -237,3 +228,12 @@ Overseer doit toujours garantir:
 
 
 Fin du document.
+--
+Changelog:
+  - 2.0.0 (2025-12-11): Refonte majeure pour alignement avec SuperiorValidationAgent, Workflow Engine v2.0.0, CorrectionMode, Policies versionnées et pipeline standard.
+  - 1.0.0 (2025-12-10): Version initiale.
+
+Breaking Changes:
+  - Overseer ne déclenche plus aucune transition workflow sans validation métier préalable.
+  - Overseer doit maintenant appliquer ValidationPolicy_Global (validation locale + globale).
+  - Overseer doit gérer explicitement correctionMode.
