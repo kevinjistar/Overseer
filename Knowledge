@@ -3,8 +3,11 @@
 Document: Knowledge
 Version: 1.0.0
 Date: 2025-12-12
+
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
 ---
 
