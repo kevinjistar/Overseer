@@ -1,14 +1,321 @@
 
 ---
 Document: Process_interne_d_appel_d_agents
-Version: 2.0.0
-Date: 2025-12-10
+Version: 1.0.0
+Date: 2025-12-15
 
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le processus interne normatif d’appel d’agents dans Overseer, couvrant exclusivement:
+• la préparation de la systemInstruction par Overseer,  
+• l’appel d’un AgentProducteur par l’orchestrateur,  
+• la validation structurelle par l’orchestrateur,  
+• la validation sémantique locale (et globale si requise) par SuperiorValidationAgent,  
+• la décision finale d’Overseer avant toute écriture Firestore.
+
+Ce processus s’applique à toute production agentique destinée à générer ou mettre à jour un document référent.
+
+Ce document ne définit:
+• aucun schéma,  
+• aucune logique métier de contenu,  
+• aucun mécanisme d’écriture Firestore (réservé à l’orchestrateur),  
+• aucune règle de versioning autonome côté agent.
+
+---
+
+2. Acteurs et responsabilités
+
+2.1 Overseer  
+Overseer:
+• interprète l’intention utilisateur,  
+• sélectionne l’AgentProducteur,  
+• construit la systemInstruction,  
+• injecte les contraintes pertinentes issues de System_Agent_Edit_Policy,  
+• impose operationMode,  
+• déclenche la validation sémantique via SuperiorValidationAgent,  
+• décide apply, correction ou abort,  
+• ordonne explicitement toute écriture ou toute transition workflow.
+
+Overseer ne:
+• n’appelle jamais directement un agent,  
+• n’écrit jamais en base,  
+• ne modifie jamais lui-même un document.
+
+2.2 Orchestrateur  
+L’orchestrateur:
+• reçoit les ordres formels d’Overseer,  
+• valide structurellement les entrées (systemInstruction, sorties agents),  
+• appelle l’AgentProducteur,  
+• refuse tout contenu hors JSON strict lorsque requis,  
+• retourne un résultat structuré à Overseer,  
+• exécute les écritures Firestore uniquement sur ordre explicite d’Overseer.
+
+L’orchestrateur ne:
+• n’interprète aucune sémantique,  
+• n’évalue aucune logique métier,  
+• ne contacte jamais SuperiorValidationAgent,  
+• ne décide jamais d’appliquer une modification.
+
+2.3 AgentProducteur  
+Un AgentProducteur:
+• produit un candidateDocument complet au format JSON strict,  
+• n’a aucune autonomie,  
+• n’a aucun accès à Firestore,  
+• ne détermine aucun versioning,  
+• ne déclenche aucun workflow.
+
+2.4 SuperiorValidationAgent  
+SuperiorValidationAgent:
+• émet un verdict sémantique structuré,  
+• n’écrit jamais,  
+• ne modifie jamais de document,  
+• ne décide jamais apply, correction ou abort.
+
+2.5 Firestore  
+Firestore est une couche de persistance passive.
+Aucune écriture n’est autorisée hors orchestrateur.
+
+---
+
+3. Préconditions bloquantes
+
+Le processus ne peut démarrer que si:
+• un currentProject valide est chargé par Overseer,  
+• halted = false,  
+• l’operationMode est déterminé par Overseer (normal ou correction),  
+• les contraintes applicables issues de System_Agent_Edit_Policy sont disponibles pour injection.
+
+Si halted = true, tout appel agentique est interdit, sauf ordre de recovery conforme au protocole système.
+
+---
+
+4. Flux général
+
+Le processus interne d’appel d’agents suit une séquence strictement déterministe:
+
+1. Analyse initiale par Overseer  
+2. Construction de la systemInstruction par Overseer  
+3. Injection des contraintes System_Agent_Edit_Policy par Overseer  
+4. Appel de l’AgentProducteur par l’orchestrateur  
+5. Validation structurelle du candidateDocument par l’orchestrateur  
+6. Validation sémantique locale par SuperiorValidationAgent (via Overseer)  
+7. Validation sémantique globale si requise par ValidationPolicy_Global (via Overseer)  
+8. Décision finale d’Overseer  
+9. Exécution ordonnée (écriture par orchestrateur ou correction/abort)
+
+Aucune étape ne peut être sautée.
+
+---
+
+5. Étape 1, Analyse initiale d’Overseer
+
+Overseer:
+• identifie le ou les documents concernés,  
+• sélectionne l’AgentProducteur,  
+• détermine l’operationMode,  
+• vérifie l’absence d’état halted,  
+• détermine le type d’opération à exécuter (mise à jour, création contrôlée, correction).
+
+Overseer:
+• détermine le type de versioning attendu selon les règles applicables,  
+• n’autorise jamais un agent à déduire ou choisir ce type.
+
+Sortie obligatoire:
+• décision d’initier l’appel agentique,  
+• définition d’une intention métier structurée, non ambiguë.
+
+---
+
+6. Étape 2, Construction de la systemInstruction
+
+Overseer construit une systemInstruction strictement structurée et non ambiguë contenant au minimum:
+• operationId,  
+• projectId,  
+• operationMode,  
+• intention explicite,  
+• document original (si existant),  
+• schéma universel du Document Référent et module spécialisé applicable,  
+• contraintes structurelles attendues,  
+• contraintes de versioning imposées,  
+• champs ou zones autorisés à modification,  
+• exigences de sortie (JSON strict, document complet).
+
+Interdiction:
+• aucune intention utilisateur brute n’est transmise telle quelle à l’agent.
+
+---
+
+7. Étape 3, Injection de System_Agent_Edit_Policy
+
+Overseer:
+• charge la version active de System_Agent_Edit_Policy,  
+• extrait les règles pertinentes au cas d’usage,  
+• injecte ces règles dans la systemInstruction sous un bloc dédié (EditRules).
+
+Le bloc EditRules impose notamment:
+• zones modifiables,  
+• clés protégées,  
+• interdictions de création/suppression,  
+• interdictions de restructuration.
+
+Un AgentProducteur est tenu de respecter strictement ces règles.
+
+---
+
+8. Étape 4, Appel de l’AgentProducteur par l’orchestrateur
+
+L’orchestrateur:
+• reçoit la systemInstruction,  
+• valide sa conformité structurelle,  
+• refuse toute instruction invalide,  
+• appelle l’AgentProducteur sélectionné,  
+• reçoit une sortie au format JSON strict.
+
+Interdiction:
+• toute sortie contenant du texte hors JSON strict est rejetée.
+
+Sortie attendue:
+• candidateDocument complet.
+
+---
+
+9. Étape 5, Validation structurelle par l’orchestrateur
+
+L’orchestrateur valide strictement:
+• JSON parseable et strict,  
+• conformité au schéma universel du Document Référent,  
+• conformité au module spécialisé,  
+• absence de champs inconnus,  
+• conformité des métadonnées,  
+• immutabilité des clés protégées injectées,  
+• cohérence projectId,  
+• cohérence de la séquence de version (progression), sans déterminer Major, Minor ou Patch sur un plan métier.
+
+En cas d’échec:
+• l’orchestrateur renvoie une erreur structurelle à Overseer,  
+• aucune écriture n’a lieu,  
+• l’appel agentique est considéré comme non applicable.
+
+---
+
+10. Étape 6, Validation sémantique locale par SuperiorValidationAgent
+
+Overseer transmet à SuperiorValidationAgent:
+• candidateDocument,  
+• originalDocument,  
+• diff explicite,  
+• contexte projet minimal nécessaire,  
+• operationMeta incluant operationMode.
+
+SuperiorValidationAgent retourne exclusivement un verdict structuré:
+
+{
+  "verdict": "allow | warn | block",
+  "reasons": [...],
+  "impactedDocuments": [...],
+  "workflowImpact": "none | minor | major",
+  "riskLevel": "low | medium | high",
+  "recommendedFixes": [...]
+}
+
+Cette validation:
+• ne modifie rien,  
+• n’écrit rien,  
+• ne décide jamais apply, correction ou abort.
+
+---
+
+11. Étape 7, Validation sémantique globale si requise
+
+Overseer déclenche une validation sémantique globale lorsque requis par ValidationPolicy_Global, notamment si:
+• l’opération est structurante selon les critères de la policy,  
+• operationMode = "correction",  
+• le workflowImpact local est major,  
+• le riskLevel est élevé,  
+• le document est structurant.
+
+SuperiorValidationAgent reçoit alors un contexte élargi incluant l’ensemble du projet nécessaire à l’évaluation globale.
+
+Sortie:
+• verdict global de même format (allow, warn, block).
+
+---
+
+12. Étape 8, Décision finale d’Overseer
+
+Overseer combine:
+• validation structurelle (orchestrateur),  
+• verdict local (SuperiorValidationAgent),  
+• verdict global si exécuté,  
+• intention structurée,  
+• contraintes injectées,  
+• operationMode.
+
+Décisions autorisées:
+• apply,  
+• correction,  
+• abort.
+
+Règles:
+• verdict = block déclenche correction ou abort selon les contraintes du mode,  
+• en operationMode = "correction", les règles restrictives s’appliquent, et tout contournement implicite est interdit,  
+• en operationMode normal, toute exception doit être explicite et journalisée.
+
+---
+
+13. Étape 9, Exécution ordonnée par l’orchestrateur
+
+Si Overseer décide apply:
+• Overseer ordonne explicitement une écriture,  
+• l’orchestrateur exécute l’écriture Firestore, applique le versioning mécanique, met à jour meta.updatedAt, crée les snapshots requis et journalise l’opération,  
+• toute transition workflow éventuelle ne peut être exécutée que sur ordre explicite d’Overseer et reste structurelle côté orchestrateur.
+
+Si Overseer décide correction:
+• Overseer produit une nouvelle systemInstruction sous operationMode = "correction",  
+• l’appel agentique suivant est strictement correctif,  
+• aucune transition workflow n’est permise.
+
+Si Overseer décide abort:
+• aucune écriture n’a lieu,  
+• l’opération est clôturée et journalisée.
+
+---
+
+14. Conditions d’arrêt immédiat
+
+Le processus s’interrompt immédiatement si:
+• JSON invalide ou non strict,  
+• erreur structurelle (schéma, méta, champs interdits),  
+• halted = true,  
+• verdict block non contournable selon operationMode et ValidationPolicy_Global,  
+• incohérence critique détectée par Overseer rendant l’opération non sûre.
+
+---
+
+15. Invariants
+
+Toujours vrais:
+
+• Un agent ne voit jamais l’utilisateur et n’a jamais accès direct à Firestore.  
+• Un agent ne décide jamais du type de versioning et ne l’applique jamais.  
+• L’orchestrateur valide uniquement structurellement, il n’interprète aucune sémantique.  
+• SuperiorValidationAgent ne produit jamais de document et n’écrit jamais.  
+• Overseer est l’unique autorité de décision apply, correction ou abort.  
+• Aucune écriture Firestore n’a lieu sans validation structurelle et validation sémantique locale.  
+• La validation globale suit strictement ValidationPolicy_Global lorsqu’elle est requise.  
+• Toute opération est traçable via operationId, logs et snapshots lorsque requis.
+
+Fin du document
+---
+
+Document Metadata & Changelog
 
 Changelog:
   - 2.0.0 (2025-12-10): Mise à jour majeure pour intégrer SuperiorValidationAgent, la double validation sémantique, la System_Agent_Edit_Policy et le mode correction.
@@ -17,221 +324,3 @@ Changelog:
 Breaking Changes:
   - L'ancien flux d'appel agentique est remplacé par un pipeline en trois validations (structurelle, sémantique locale, sémantique globale).
   - Introductions du verdict allow/warn/block et du mode correction empêchant les transitions workflow.
----
-
-1. Objet du document
-
-Ce processus décrit la manière dont Overseer prépare, déclenche et supervise l’appel d’un AgentProducteur via l’orchestrateur, ainsi que la manière dont les validations (structurelles et sémantiques) sont réalisées avant toute mise à jour d’un document dans Firestore.
-
-Ce processus s’applique à:
-• toutes les modifications documentaires,  
-• tous les agents producteurs,  
-• tous les projets actifs,  
-• tous les modes (normal, correction).
-
-
-2. Acteurs impliqués
-
-• Overseer  
-• AgentProducteur  
-• SuperiorValidationAgent  
-• Orchestrateur (Cloud Functions)  
-• Firestore  
-
-
-3. Flux général
-
-Le processus interne d’appel d’agents suit ces étapes strictes:
-
-1. Analyse d’Overseer  
-2. Préparation de la systemInstruction  
-3. Chargement et injection de la System_Agent_Edit_Policy  
-4. Appel de l’AgentProducteur via l’orchestrateur  
-5. Validation structurelle par l’orchestrateur  
-6. Validation sémantique locale par SuperiorValidationAgent  
-7. Validation sémantique globale éventuelle (Policy)  
-8. Décision finale d’Overseer  
-9. Appel écriture orchestrateur ou passage en mode correction  
-
-
-4. Étape par étape
-
-4.1 Analyse initiale d’Overseer
-
-Overseer:
-• détermine le ou les documents impactés,  
-• choisit l’AgentProducteur,  
-• identifie le type de versioning (Major/Minor/Patch),  
-• évalue les impacts métier préliminaires,  
-• vérifie les Policies actives,  
-• calcule operationMode (normal ou correction).
-
-Sortie: décision d’initier un appel agentique.
-
-
-4.2 Préparation de la systemInstruction
-
-La systemInstruction construite par Overseer contient:
-
-• document(s) concernés  
-• schéma universel + module spécialisé  
-• contraintes de versioning  
-• Policies actives  
-• operationId, projectId  
-• operationMode  
-• date et contexte du projet  
-• intention exacte de la modification  
-
-Cette instruction est structurée et non ambiguë.
-
-
-4.3 Injection de la System_Agent_Edit_Policy
-
-Avant l’appel, Overseer:
-• charge System_Agent_Edit_Policy (version active),  
-• sélectionne les règles pertinentes,  
-• les ajoute à la systemInstruction sous un bloc “EditRules”.
-
-L’agent ne peut produire que dans ce cadre strict.
-
-
-4.4 Appel de l’AgentProducteur
-
-L’orchestrateur:
-• reçoit la systemInstruction,  
-• la valide structurellement,  
-• appelle l’AgentProducteur,  
-• reçoit un JSON strict contenant candidateDocument.
-
-Tout texte hors JSON est rejeté.
-
-
-4.5 Validation structurelle par l’orchestrateur
-
-L’orchestrateur valide:
-• schéma universel,  
-• module spécialisé,  
-• JSON strict,  
-• absence de clés inconnues,  
-• meta correcte,  
-• séquence de version (mais pas le type métier),  
-• cohérence structurelle minimale.
-
-Si échec → erreur structurelle → retour Overseer → fin du processus.
-
-
-4.6 Validation sémantique locale par SuperiorValidationAgent
-
-SuperiorValidationAgent reçoit:
-• candidateDocument,  
-• originalDocument,  
-• projectContext,  
-• diff,  
-• operationMeta.
-
-Il retourne un verdict:
-
-{
-  "verdict": "allow | warn | block",
-  "reasons": [...],
-  "impactedDocuments": [...],
-  "workflowImpact": "none | minor | major",
-  "riskLevel": "...",
-  "recommendedFixes": [...]
-}
-
-Cette validation ne modifie rien.
-
-
-4.7 Validation sémantique globale (selon Policy)
-
-Si la ValidationPolicy l’exige:
-• transitions majeures,  
-• versions Major,  
-• modifications sur documents racine,  
-• corrections,
-
-Overseer demande une seconde analyse à SuperiorValidationAgent incluant l’ensemble du projet.
-
-Sortie: verdict global éventuel.
-
-
-4.8 Décision finale d’Overseer
-
-Overseer combine:
-• verdict local,  
-• verdict global (si exécuté),  
-• intention originale,  
-• contraintes de versioning,  
-• sensibilité du mode correction.
-
-Décision:
-
-• allow → écriture  
-• warn → arbitrage Overseer  
-• block → correction ou annulation
-
-En mode correction:
-• toute incertitude → block  
-• pas de transition workflow  
-• corrections minimales uniquement
-
-
-4.9 Exécution par l’orchestrateur
-
-Si Overseer autorise:
-
-L’orchestrateur:
-• écrit le document,  
-• applique versioning mécanique,  
-• met à jour meta.updatedAt,  
-• crée snapshot selon Policy,  
-• loggue l’opération,  
-• exécute les transitions structurelles du Workflow Engine.
-
-Aucune logique métier n’est évaluée ici.
-
-
-5. Règles spécifiques
-
-5.1 Interdictions absolues
-
-Un AgentProducteur ne peut jamais:
-• modifier l’identité d’un document,  
-• décider d’un type de versioning,  
-• déclencher un workflow,  
-• écrire dans Firestore,  
-• court-circuiter SuperiorValidationAgent.
-
-5.2 En mode correction
-
-• un seul agent autorisé,  
-• aucune transition workflow,  
-• validation globale obligatoire,  
-• stabilité prioritaire.
-
-
-6. Conditions d’arrêt immédiat
-
-Le processus est interrompu si:
-• erreur structurelle,  
-• JSON invalide,  
-• verdict block non overridé,  
-• incohérence critique détectée,  
-• état halted actif.
-
-
-7. Invariants
-
-Ce processus garantit:
-
-• séquence déterministe,  
-• double validation structurée,  
-• séparation stricte métier/structurel,  
-• aucune dérive agentique,  
-• traçabilité complète,  
-• souveraineté d’Overseer,  
-• neutralité de l’orchestrateur,  
-• cohérence métier assurée par SuperiorValidationAgent.
-
-Fin du document.
