@@ -25,7 +25,7 @@ Il ne décrit pas les implémentations techniques détaillées, ni les schémas,
 
 ---
 
-1. Objet du document
+1. Objet du document (plus précis)
 
 Ce document définit le rôle, les responsabilités, les invariants et les interactions d’Overseer dans l’architecture Overseer v2.
 
@@ -242,20 +242,8 @@ Overseer doit toujours garantir:
 Fin du document
 ---
 
-Document Metadata & Changelog
-
-PolicyType: OverseerCoreSpecification
-
-PolicyVersions:
-  ValidationPolicy: 1.0.0
-  WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
-  System_Agent_Edit_Policy: 1.0.0
-
---
 Changelog:
-  - 2.0.0 (2025-12-11): Refonte majeure pour alignement avec....0.0, CorrectionMode, Policies versionnées et pipeline standard.
+  - 2.0.0 (2025-12-11): Refonte majeure, CorrectionMode, Policies versionnées et pipeline standard.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
