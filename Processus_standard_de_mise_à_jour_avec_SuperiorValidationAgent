@@ -5,15 +5,10 @@ Version: 1.0.0
 Date: 2025-12-10
 
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
-
-Changelog:
-  - 1.0.0 (2025-12-10): Création du processus standard intégrant SuperiorValidationAgent, double validation sémantique, mode correction, pipeline complet stabilisé.
-
-Breaking Changes: Aucun depuis 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 1. Objet du document
@@ -50,7 +45,7 @@ Le processus complet se déroule en neuf étapes strictement séquentielles:
 3. Instruction formelle  
 4. Production agentique  
 5. Validation structurelle  
-6. Validation sémantique (locale + globale selon Policy)  
+6. Validation sémantique (locale + globale selon ValidationPolicy_Global)  
 7. Décision Overseer  
 8. Écriture + snapshot + transitions structurelles  
 9. Synthèse utilisateur et clôture
@@ -94,7 +89,7 @@ Overseer génère une systemInstruction strictement structurée comprenant:
 • contraintes de versioning,  
 • Policies actives,  
 • date et meta opérationnelles,  
-• opérationMode = “normal” ou “correction”,  
+• operationMode = “normal” ou “correction”,  
 • operationId, projectId.
 
 Cette instruction est transmise à l’orchestrateur pour appel agentique.
@@ -153,14 +148,15 @@ Ensuite:
   - corriger via agent dédié,  
   - demander une nouvelle proposition,  
   - annuler l’opération.  
-• Si warn → Overseer arbitre.  
+• Si warn → Overseer arbitre (traçabilité renforcée obligatoire).  
 • Si allow → Overseer poursuit.
 
-Une validation globale sémantique peut être déclenchée selon ValidationPolicy:
+Une validation globale sémantique est déclenchée selon ValidationPolicy_Global, notamment pour:
 • transitions majeures,  
 • versions Major,  
 • documents racine,  
-• corrections.
+• opérations en mode correction,  
+• risques élevés ou impacts globaux détectés.
 
 
 4.7 Étape 7 — Décision finale d’Overseer
@@ -168,13 +164,15 @@ Une validation globale sémantique peut être déclenchée selon ValidationPolic
 Overseer prend la décision souveraine:
 
 • apply: l’écriture peut avoir lieu,  
-• correct: passage en mode correction,  
+• correction: nouvelle instruction correctrice à un agent correctif,  
 • abort: arrêt propre de l’opération.
 
-Si Overseer override un block, il doit:
+Si Overseer override un block en mode normal, il doit:
 • logguer la décision comme “exception”,  
 • justifier le contexte,  
-• invalider la transition workflow associée si applicable.
+• forcer une validation globale ultérieure si elle n’a pas déjà été effectuée.
+
+En operationMode = “correction”, tout override d’un block est interdit.
 
 
 4.8 Étape 8 — Écriture Firestore + snapshot + transitions structurelles
@@ -183,26 +181,28 @@ L’orchestrateur applique:
 
 • écriture atomique,  
 • mise à jour meta.updatedAt,  
-• incrément version mécanique,  
-• création snapshot selon Policy,  
+• application du versioning mécanique déterminé par Overseer,  
+• création snapshot selon Policy applicable,  
 • journalisation dans logs/{projectId}/events,  
-• exécution des transitions structurelles du Workflow Engine.
+• exécution des transitions structurelles du Workflow Engine uniquement si ordonnées explicitement par Overseer.
 
 Aucune condition métier n’est évaluée ici.
 
 En cas d’erreur structurelle:
-• rollback snapshot,  
-• état halted si nécessaire,  
-• rapport d’erreur → Overseer.
+• aucune réparation automatique n’est tentée,  
+• aucune logique métier n’est exécutée,  
+• l’erreur est renvoyée à Overseer,  
+• l’état halted peut être appliqué si la condition critique le requiert,  
+• toute restauration éventuelle passe par systemRecovery sur ordre d’Overseer.
 
 
 4.9 Étape 9 — Clôture par Overseer
 
 Overseer:
-• valide optionalement la cohérence globale post-écriture,  
+• vérifie la cohérence globale post-écriture,  
 • met à jour son contexte interne,  
 • prépare un résumé clair pour l’utilisateur,  
-• sort du mode correction le cas échéant.
+• sort du mode correction uniquement si la stabilité est confirmée (validation globale requise en mode correction).
 
 
 5. Mode Correction
@@ -224,7 +224,8 @@ Règles du mode correction:
 
 Ce processus doit toujours garantir:
 
-• aucune écriture sans double validation structurelle et sémantique,  
+• aucune écriture sans validation structurelle puis validation sémantique locale,  
+• validation globale selon ValidationPolicy_Global, obligatoire en mode correction et pour les opérations structurantes,  
 • Overseer souverain pour toutes décisions métier,  
 • orchestrateur strictement mécanique,  
 • SuperiorValidationAgent strictement vérificateur,  
@@ -232,6 +233,7 @@ Ce processus doit toujours garantir:
 • traçabilité totale,  
 • reproductibilité déterministe du pipeline,  
 • absence de logique métier côté orchestrateur,  
+• absence de transition workflow sans ordre explicite d’Overseer,  
 • contrôle anti-boucle par Policies et Overseer.
 
 
@@ -240,10 +242,19 @@ Ce processus doit toujours garantir:
 Le processus s’interrompt immédiatement si:
 
 • validation structurelle échoue,  
-• verdict block non overridé,  
-• erreur Firestore,  
+• verdict block non overridé (mode normal) ou block en mode correction,  
+• erreur Firestore structurelle,  
 • incohérence critique détectée,  
 • état halted actif.
 
 
-8. Fin du document
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+- 1.0.0 (2025-12-10): Création du processus standard intégrant SuperiorValidationAgent, double validation sémantique, mode correction, pipeline complet stabilisé.
+
+Breaking Changes: 
+- Aucun depuis 1.0.0
