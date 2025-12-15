@@ -1,7 +1,7 @@
 ---
 Document: Global_Overview
-Version: 2.0.0
-Date: 2025-12-11
+Version: 2.1.0
+Date: 2025-12-15
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -20,7 +20,7 @@ Il présente de manière unifiée et hiérarchique:
 • le rôle de chaque entité,  
 • les Policies qui gouvernent le système,  
 • les processus opérationnels majeurs,  
-• la logique fondamentale qui garantit la cohérence et l’absence de dérive.
+• la logique fondamentale garantissant la cohérence et l’absence de dérive.
 
 Toute autre documentation du projet doit être cohérente avec ce document maître.
 
@@ -28,10 +28,10 @@ Toute autre documentation du projet doit être cohérente avec ce document maît
 2. Vision fondamentale du système
 
 Overseer est un système multi-agents orchestré, conçu pour:
-• maintenir une cohérence documentaire parfaite,  
-• gérer l’évolution d’un projet complexe,  
+• maintenir une cohérence documentaire stricte,  
+• gouverner l’évolution de projets complexes,  
 • empêcher toute dérive autonome,  
-• assurer une traçabilité absolue.
+• assurer une traçabilité complète et déterministe.
 
 Il est structuré selon quatre couches:
 
@@ -40,185 +40,185 @@ Il est structuré selon quatre couches:
 3. Intelligence métier (Overseer + SuperiorValidationAgent)  
 4. Exécution structurelle (orchestrateur + Firestore)
 
-Le système suit un principe fondateur:
+Principe fondateur non négociable:
 
-**Overseer pense.  
+Overseer pense.  
 Les agents produisent.  
 L’orchestrateur exécute.  
-Firestore enregistre.**
+Firestore persiste.
 
-Aucune couche ne dépasse ses responsabilités.
+Aucune couche ne peut outrepasser son périmètre de responsabilité.
 
 
 3. Architecture générale
 
-L’architecture Overseer repose sur une séparation stricte de trois niveaux:
+L’architecture Overseer repose sur une séparation stricte de trois niveaux fonctionnels:
 
 • Niveau métier  
 • Niveau sémantique  
-• Niveau structurel
+• Niveau structurel  
 
-3.1 Niveau métier (Overseer)  
-Ce niveau porte:
+3.1 Niveau métier (Overseer)
+
+Ce niveau porte exclusivement:
 • la logique métier,  
 • les décisions,  
-• les transitions workflow,  
+• les transitions de workflow,  
 • le choix du versioning,  
 • le raisonnement global,  
 • le contrôle final.
 
-Overseer ne valide jamais un schéma et n’exécute jamais d’écriture.
+Overseer ne valide jamais un schéma et n’écrit jamais directement en base.
 
-3.2 Niveau sémantique (SuperiorValidationAgent)  
+3.2 Niveau sémantique (SuperiorValidationAgent)
+
 Ce niveau porte:
 • la cohérence locale,  
 • la cohérence globale,  
 • la détection des contradictions,  
 • l’évaluation des risques métier,  
-• les impacts workflow.
+• l’analyse d’impact sur les workflows.
 
-Il ne modifie jamais Firestore.  
-Il ne produit jamais de documents.
+Il ne modifie jamais Firestore et ne produit jamais de documents.
 
-3.3 Niveau structurel (orchestrateur)  
+3.3 Niveau structurel (orchestrateur)
+
 Ce niveau assure:
 • la validation structurelle,  
-• l’application mécanique,  
-• les snapshots,  
-• les logs,  
-• les transitions workflow structurelles.
+• l’application mécanique des écritures,  
+• la gestion des snapshots,  
+• la journalisation,  
+• l’exécution des transitions structurelles de workflow.
 
-Il ne contient aucune logique métier.  
-Il n’appelle jamais un agent sans instruction d’Overseer.
+Il ne contient aucune logique métier et n’initie aucune action sans ordre explicite d’Overseer.
 
 
 4. Rôles des entités du système
 
 4.1 Overseer  
-Le seul moteur intelligent.  
+Centre unique de décision métier.  
 Il:
 • interprète l’intention utilisateur,  
 • choisit les agents,  
-• prépare les instructions,  
+• prépare les systemInstructions,  
 • impose versioning et Policies,  
-• valide la sémantique avec SuperiorValidationAgent,  
-• autorise les écritures,  
+• déclenche les validations sémantiques,  
+• autorise ou refuse les écritures,  
 • gère correctionMode,  
-• déclenche les transitions workflow.
+• ordonne explicitement les transitions workflow.
 
 4.2 AgentsProducteurs  
-Ils produisent un document JSON complet conforme au schéma.  
-Ils n’ont aucune autonomie.  
-Ils suivent System_Agent_Edit_Policy.
+Ils produisent des documents JSON complets conformes aux schémas.  
+Ils n’ont aucune autonomie et suivent strictement System_Agent_Edit_Policy.
 
 4.3 SuperiorValidationAgent  
-Il évalue la sémantique.  
-Il retourne allow / warn / block.  
+Il évalue la cohérence sémantique.  
+Il retourne allow, warn ou block.  
 Il ne décide jamais et n’écrit jamais.
 
-4.4 Orchestrateur (Cloud Functions)  
+4.4 Orchestrateur  
 Il:
 • valide structurellement,  
 • écrit dans Firestore,  
-• applique workflow structurel.
+• applique les transitions structurelles autorisées.
 
 Il n’interprète rien.
 
 4.5 Firestore  
-Stockage passif, versionné et journalisé.
+Système de persistance passif, versionné et journalisé.
 
 
-5. Les Policies versionnées
+5. Policies versionnées
 
-Les Policies déterminent le comportement du système.
+Les Policies gouvernent l’intégralité du comportement système.
 
-Liste officielle:
+Liste canonique:
 • VersioningPolicy  
 • WorkflowPolicy  
 • ValidationPolicy_Global  
 • CorrectionMode_Policy  
 • System_Agent_Edit_Policy  
-• Policies_Versioning_Spec
+• Policies_Versioning_Spec  
 
-Les Policies:
-• ne sont pas optionnelles,  
+Elles:
+• ne sont jamais optionnelles,  
 • doivent être chargées avant Overseer,  
-• influencent le pipeline complet,  
-• sont inscrites dans meta.appliedPolicies des documents.
+• conditionnent tous les pipelines,  
+• sont inscrites dans meta.appliedPolicies.
 
 
 6. Workflow Engine v2
 
-Le Workflow Engine v2 est une matrice d’états structurelle.  
-Il ne porte aucune condition métier.  
-Toutes les décisions de transition sont prises par Overseer.
+Le Workflow Engine v2 est une matrice d’états strictement structurelle.
 
-L’orchestrateur applique uniquement la transition ordonnée:
-• état from → état to  
-• actions structurelles (snapshot, log, callAgent)
+• aucune condition métier,  
+• aucune décision autonome,  
+• aucune transition implicite.
+
+Overseer décide.  
+L’orchestrateur exécute uniquement la transition ordonnée.
 
 
-7. Pipeline global d’une mise à jour documentaire
+7. Pipeline global de mise à jour documentaire
 
-Le pipeline v2 suit 12 étapes:
+Le pipeline v2 suit la séquence stricte suivante:
 
 1. Intention utilisateur  
-2. Analyse métier par Overseer  
+2. Analyse métier Overseer  
 3. Préparation systemInstruction  
 4. Appel agent via orchestrateur  
-5. JSON produit  
+5. Production JSON  
 6. Validation structurelle  
 7. Validation sémantique locale  
-8. Validation globale selon Policy  
-9. Décision Overseer (apply / warn / block / correction)  
+8. Validation globale (si requise)  
+9. Décision Overseer  
 10. Écriture Firestore  
-11. Transition workflow (si ordonnée)  
+11. Transition workflow (si autorisée)  
 12. Vérification post-opération  
 
-Tout document mis à jour déclenche potentiellement une transition, uniquement si Overseer l’autorise.
+Aucune étape ne peut être contournée.
 
 
 8. CorrectionMode
 
-CorrectionMode est un état système destiné à restaurer une cohérence métier.
+CorrectionMode est un état système de stabilisation.
 
 En correctionMode:
-• aucune transition workflow  
-• un seul agent correctif par cycle  
-• validation globale obligatoire  
-• restrictions maximales  
-• sortie uniquement après stabilité confirmée
+• aucune transition workflow,  
+• un seul agent correctif,  
+• validation globale obligatoire,  
+• restrictions maximales,  
+• sortie uniquement après stabilisation validée.
 
 
-9. Sync externe
+9. Synchronisation externe
 
-Lors d’une sync:
-• Overseer passe en mode sync  
-• SuperiorValidationAgent analyse l’impact  
-• aucune transition workflow  
-• seules les modifications validées par Overseer sont appliquées
+Lors d’une synchronisation:
+• Overseer passe en mode sync,  
+• SuperiorValidationAgent analyse l’impact,  
+• aucune transition workflow,  
+• aucune écriture non validée.
 
 Le payload externe ne peut jamais restructurer le système.
 
 
-10. Anti-dérive et Protocole d’erreur
+10. Anti-dérive et protocole d’erreur
 
-Deux niveaux stricts:
+Deux niveaux distincts:
+• dérive structurelle → orchestrateur (arrêt immédiat),  
+• dérive métier → Overseer + SuperiorValidationAgent (correctionMode).
 
-• dérive structurelle → orchestrateur (arrêt immédiat)  
-• dérive métier → Overseer + SuperiorValidationAgent (correctionMode)
-
-halted = état critique  
-Seule systemRecovery permet de reprendre.
+halted est un état critique.  
+Seule systemRecovery peut le lever.
 
 
 11. Mécanisme d’opérations
 
 Toute opération comporte:
-• projectId  
-• operationId  
-• appliedPolicies  
-• snapshotId (si applicable)
+• projectId,  
+• operationId,  
+• appliedPolicies,  
+• snapshotId si applicable.
 
 Les opérations sont atomiques et traçables.
 
@@ -226,60 +226,65 @@ Les opérations sont atomiques et traçables.
 12. Cycle de vie complet d’un projet
 
 1. Création via mode création  
-2. Initialisation schémas + workflows + snapshots  
+2. Initialisation schémas, workflows et snapshots  
 3. Sélection d’un currentProject  
 4. Travail quotidien via pipelines  
-5. Sync externe si nécessaire  
-6. Corrections via CorrectionMode  
+5. Synchronisation externe si nécessaire  
+6. Corrections via correctionMode  
 7. Recovery si halted  
-8. Avancement du workflow métier et structurel
+8. Avancement du workflow structurel et métier
 
 
-13. Relations inter-documents et cohérence globale
+13. Cohérence inter-documents
 
-• Les schémas garantissent la cohérence structurelle.  
-• SuperiorValidationAgent garantit la cohérence sémantique.  
-• Overseer garantit la cohérence métier.
+• Schémas → cohérence structurelle  
+• SuperiorValidationAgent → cohérence sémantique  
+• Overseer → cohérence métier  
 
-Aucune cohérence n’est laissée à l’initiative d’un agent ou de l’orchestrateur.
+Aucune cohérence n’est déléguée.
 
 
-14. Invariants fondamentaux du système
+14. Invariants fondamentaux
 
 Toujours vrais:
 
 • Aucun agent n’est autonome.  
-• Overseer ne modifie jamais Firestore.  
+• Overseer n’écrit jamais en base.  
 • L’orchestrateur n’exécute aucune logique métier.  
 • SuperiorValidationAgent ne modifie jamais les données.  
-• Les workflows ne décident jamais par eux-mêmes.  
-• Aucun document ne contourne les schémas.  
-• Aucune transition ne se déclenche automatiquement.  
-• Toute écriture est validée structurellement + sémantiquement.  
+• Aucun workflow ne décide seul.  
+• Aucune transition automatique.  
+• Toute écriture est validée structurellement et sémantiquement.  
 • Toute incohérence mène à correctionMode ou halted.  
-• Les Policies gouvernent tout.  
-• La traçabilité est obligatoire.  
+• Les Policies gouvernent l’ensemble du système.  
+• La traçabilité est obligatoire.
 
 
-15. Résumé exécutif (vision synthétique)
+15. Résumé exécutif
 
-Le système Overseer est un OS multi-agents déterministe, structuré en:
+Overseer est un OS multi-agents déterministe structuré autour de:
 
-1. Règles structurelles → orchestrateur  
-2. Intelligence métier → Overseer  
-3. Analyse sémantique → SuperiorValidationAgent  
-4. Production documentaire → agents producteurs  
-5. Persistance déterministe → Firestore
+1. Structure → orchestrateur  
+2. Métier → Overseer  
+3. Sémantique → SuperiorValidationAgent  
+4. Production → agents  
+5. Persistance → Firestore  
 
-Les documents, workflows, validations, policies, corrections et synchronisations fonctionnent dans une boucle entièrement contrôlée par Overseer.
+L’ensemble fonctionne dans une boucle strictement contrôlée par Overseer.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-- 1.0.0 (2025-12-09): Création du document Gestion du currentProject
+  - 2.1.0 (2025-12-15): Correction du Changelog et des métadonnées, clarification des Breaking Changes et alignement explicite avec l’architecture Overseer v2 sans modification du corps normatif.
+  - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, Workflow Engine v2, SuperiorValidationAgent, CorrectionMode et pipelines v2.
+  - 1.0.0 (2025-12-09): Version initiale du document de vision globale.
 
 Breaking Changes:
-- Aucun depuis 1.0.0 
+  - Centralisation explicite de toute décision métier dans Overseer.
+  - Séparation stricte et non réversible entre logique métier, sémantique et structurelle.
+  - Interdiction de toute transition automatique ou décision implicite.
+  - Introduction de CorrectionMode comme mécanisme obligatoire de stabilisation.
