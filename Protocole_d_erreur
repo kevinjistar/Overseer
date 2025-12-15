@@ -1,247 +1,340 @@
-
 ---
 Document: Protocole_d_erreur
-Version: 2.0.0
-Date: 2025-12-11
-PolicyType: ErrorProtocol
+Version: 3.0.0
+Date: 2025-12-15
 
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
-
-Changelog:
-  - 2.0.0 (2025-12-11): Refonte complète alignée avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2, CorrectionMode_Policy et la séparation structurel/métier.
-  - 1.0.0 (2025-12-10): Version initiale.
-
-Breaking Changes:
-  - Clarification stricte entre erreurs structurelles (orchestrateur) et erreurs métier (Overseer + SuperiorValidationAgent).
-  - Introduction d’un protocole séquencé entre warning, correctionMode et halted.
-  - Suppression de toute réparation automatique côté orchestrateur.
 ---
 
 1. Objet du document
 
-Ce protocole définit la manière dont les erreurs sont:
-• détectées,  
-• classifiées,  
-• transmises,  
-• traitées,  
-• et résolues  
+Ce document définit le protocole normatif de gestion des erreurs dans Overseer, incluant:
+- la détection,
+- la classification,
+- la transmission,
+- le traitement,
+- la résolution,
+- la journalisation.
 
-dans le système Overseer v2.
+Le protocole est contractuel: toute divergence d’implémentation ou de process constitue une incohérence bloquante.
 
-L’objectif est d’assurer:
-• une réaction déterministe,  
-• la préservation de la cohérence,  
-• la traçabilité complète,  
-• l’absence de réparations non supervisées.
+2. Acteurs et responsabilités non transférables
 
-Aucune entité ne partage les responsabilités d’une autre:
-• orchestrateur → structurel  
-• Overseer → métier  
-• SuperiorValidationAgent → sémantique  
-• agents → aucun rôle dans l’erreur  
+2.1 Overseer
 
+Overseer:
+- décide du traitement métier,
+- interprète et applique les Policies,
+- déclenche correctionMode lorsque requis,
+- décide d’abort, retry, ou d’entrer en état halted,
+- impose l’absence de transition workflow en correctionMode,
+- exige la validation sémantique selon ValidationPolicy_Global avant toute écriture validée.
 
-2. Typologie des erreurs
+Interdictions:
+- Overseer n’exécute pas les écritures Firestore.
+- Overseer n’exécute pas de validation structurelle (format, schémas, JSON).
 
-Les erreurs sont classées en trois catégories:
-- warning  
-- error  
-- halted  
+2.2 Orchestrateur
 
-Aucune autre classification n’est autorisée.
+L’orchestrateur:
+- appelle les agents,
+- valide structurellement les entrées et sorties (JSON strict, schémas, champs, meta attendues),
+- exécute les écritures Firestore lorsque et seulement lorsque Overseer l’ordonne,
+- exécute le Workflow Engine uniquement sur ordre explicite d’Overseer et uniquement hors correctionMode,
+- crée snapshots et logs structurels selon les règles applicables.
 
+Interdictions:
+- l’orchestrateur n’interprète aucune règle métier,
+- l’orchestrateur n’essaie aucune réparation automatique,
+- l’orchestrateur ne force pas une transition workflow.
 
-3. Erreurs structurelles (orchestrateur)
+2.3 SuperiorValidationAgent
 
-Les erreurs structurelles sont détectées exclusivement par l’orchestrateur, dans les cas suivants:
-• JSON invalide ou illisible,  
-• non-conformité au schéma universel ou specialized,  
-• meta incohérentes,  
-• séquence de version invalide,  
-• transition workflow impossible (structurellement),  
-• quota structurel dépassé,  
-• projet ou document introuvable,  
-• tentative d’écriture en mode halted,  
-• violation des règles de CorrectionMode_Policy (ex: tentative de transition).
+SuperiorValidationAgent:
+- évalue la cohérence sémantique locale et, si demandé, globale,
+- retourne un verdict structuré allow, warn, block.
 
-3.1 Réaction  
-L’opération est immédiatement stoppée.  
-Aucune tentative de correction n’est effectuée.  
-L’orchestrateur renvoie un message structuré:
+Interdictions:
+- il ne modifie aucun document,
+- il n’écrit jamais en base,
+- il ne déclenche pas de transition workflow,
+- il ne décide jamais de l’action finale.
+
+2.4 Agents producteurs
+
+Les agents producteurs:
+- produisent un JSON strict conforme au schéma et aux règles injectées,
+- ne décident pas, ne valident pas, n’écrivent pas.
+
+Interdictions:
+- aucun agent ne déclenche un workflow,
+- aucun agent ne modifie Firestore,
+- aucun agent ne sort du cadre System_Agent_Edit_Policy.
+
+3. Typologie canonique des états d’erreur
+
+Les états d’erreur autorisés sont exclusivement:
+- warning
+- error
+- halted
+
+Toute autre classification est interdite.
+
+4. Définition normative des catégories d’erreurs
+
+4.1 Erreur structurelle (orchestrateur)
+
+Une erreur structurelle est détectée exclusivement par l’orchestrateur, notamment lorsque:
+- JSON invalide, non parseable ou contenant du texte hors JSON attendu,
+- non-conformité au schéma universel ou au module spécialisé,
+- champs interdits ou clés inattendues,
+- meta incohérentes ou champs protégés modifiés,
+- séquence de version invalide (format ou séquence mécanique),
+- document ou projet introuvable,
+- tentative d’écriture lorsque l’état du système est halted,
+- tentative d’exécution d’une transition non existante dans le Workflow Engine (structurel),
+- tentative de transition alors que correctionMode est actif,
+- action de transition structurellement invalide,
+- violation structurelle de System_Agent_Edit_Policy dans la sortie agent.
+
+Réaction obligatoire:
+- arrêt immédiat de l’opération en cours,
+- aucune correction automatique,
+- émission d’un message d’erreur structuré à destination d’Overseer.
+
+Format minimal attendu (orchestrateur vers Overseer):
 
 {
   "status": "error",
   "errorType": "StructuralError",
-  "operationId": "...",
-  "projectId": "...",
-  "details": "..."
+  "operationId": "string",
+  "projectId": "string",
+  "details": "string"
 }
 
-3.2 Rôle d’Overseer  
-Overseer reçoit l’erreur structurelle et décide:
-• retry (rare),  
-• correctionMode (si impact métier),  
-• abort,  
-• ou éventuellement systemRecovery (si les données sont corrompues).
+4.2 Erreur sémantique (SuperiorValidationAgent)
 
-SuperiorValidationAgent n’intervient pas dans les erreurs structurelles.
+Une erreur sémantique correspond aux verdicts warn ou block produits par SuperiorValidationAgent.
 
+Conditions typiques (non exhaustives):
+- contradiction explicite interne au document candidat,
+- contradiction inter-documents détectée sur le contexte projet,
+- menace sur un invariant métier ou une stabilité globale,
+- workflowImpact = major,
+- riskLevel = high,
+- incompatibilité sémantique avec les Policies actives.
 
-4. Erreurs sémantiques (SuperiorValidationAgent)
-
-Les erreurs sémantiques apparaissent lorsque:
-• le contenu est incohérent sur le plan métier,  
-• des contradictions sont détectées,  
-• la stabilité documentaire n’est plus assurée,  
-• workflowImpact = major,  
-• risque global = high,  
-• la cohérence stratégique ou architecturale est menacée.
-
-Elles correspondent aux verdicts:
-
-- warn  
-- block  
-
-4.1 warn  
-Contenu sémantiquement valide mais présentant un risque métier.
-
-4.2 block  
-Contenu inacceptable au regard des règles métier et des Policies.
-
-Le verdict renvoyé est de la forme:
+Format de sortie obligatoire (SuperiorValidationAgent vers Overseer):
 
 {
   "verdict": "warn | block",
-  "reasons": [...],
+  "reasons": ["string"],
   "riskLevel": "low | medium | high",
   "workflowImpact": "none | minor | major",
-  "impactedDocuments": [...],
-  "recommendedFixes": [...]
+  "impactedDocuments": ["string"],
+  "recommendedFixes": ["string"]
 }
 
+Interdictions:
+- aucun texte hors JSON,
+- aucune décision sur apply, abort ou correction.
 
-5. Erreurs métier (Overseer)
+4.3 Erreur métier (Overseer)
 
-Une erreur métier survient lorsque:
-• Overseer détecte une incohérence conceptuelle,  
-• un enchaînement illogique d’opérations,  
-• une boucle métier,  
-• une incohérence globale même après validation structurelle,  
-• une condition métier indispensable à une transition n’est pas satisfaite,  
-• une mise à jour n’est pas compatible avec WorkflowPolicy.
+Une erreur métier est détectée exclusivement par Overseer, notamment lorsque:
+- une condition métier indispensable à une transition n’est pas satisfaite,
+- une mise à jour est incohérente avec WorkflowPolicy,
+- une séquence d’opérations crée une boucle métier,
+- une incohérence globale est détectée après une opération (y compris après écriture),
+- une décision d’Overseer impose l’arrêt malgré allow (ex: risque systémique non couvert par la validation).
 
-Les erreurs métier ne sont pas détectées par l’orchestrateur.
+Réaction obligatoire:
+- Overseer déclenche correctionMode si une stabilisation est possible,
+- Overseer abort si la stabilisation n’est pas possible ou si le risque est trop élevé,
+- Overseer peut passer en halted si l’état est jugé critique ou non récupérable par correction contrôlée.
 
-5.1 Réaction  
-Overseer active le mode correction:
+5. Règles opérationnelles de classification
 
-• operationMode = "correction"  
-• un seul agent correctif autorisé  
-• aucune transition workflow  
-• validation globale obligatoire avant sortie  
+5.1 warning
 
+Définition:
+- un risque existe, l’opération peut encore être poursuivie si Overseer l’accepte explicitement.
 
-6. Classification opérationnelle
+Règles:
+- si warning provient d’un verdict warn, Overseer doit soit apply avec journalisation explicite, soit entrer en correctionMode,
+- aucun warning ne doit être “ignoré” sans trace.
 
-6.1 warning  
-Un problème existe mais n’empêche pas la progression.  
-La mise à jour peut être appliquée si Overseer l’accepte.
+5.2 error
 
-6.2 error  
-Une opération ne peut pas être poursuivie:
-• soit pour raison structurelle,  
-• soit pour raison sémantique block,  
-• soit par décision explicite d’Overseer.
+Définition:
+- l’opération ne peut pas être poursuivie.
 
-6.3 halted  
-État critique empêchant tout fonctionnement normal:
-• corruption documentaire,  
-• transitions structurelles invalides répétées,  
-• échec de correctionMode,  
-• blocage métier insurmontable,  
-• violation grave des Policies.
+Cas minimaux:
+- erreur structurelle (orchestrateur),
+- verdict block non overridé,
+- décision explicite d’Overseer d’arrêter l’opération.
 
-Seule systemRecovery peut lever halted.
+Règles:
+- une erreur structurelle arrête immédiatement, sans tentative de réparation,
+- un block déclenche correctionMode sauf abort explicite.
 
+5.3 halted
 
-7. Protocole de traitement des erreurs
+Définition:
+- état critique empêchant tout fonctionnement normal.
 
-7.1 warning  
-1. Overseer analyse reasons et riskLevel.  
-2. Overseer décide: apply ou correction.  
-3. Si apply → log obligatoire.  
-4. Si correction → mode correction activé.
+Conditions typiques (non exhaustives):
+- corruption documentaire ou incohérence globale persistante,
+- échec de correctionMode (stabilisation impossible),
+- répétition d’erreurs structurelles empêchant toute opération fiable,
+- violation grave des Policies actives,
+- impossibilité de garantir l’intégrité des écritures.
 
-7.2 error structurelle (orchestrateur)  
-1. opération stoppée,  
-2. erreur renvoyée,  
-3. Overseer décide:  
-   - correctionMode,  
-   - abort,  
-   - recovery (rare).
+Règles:
+- seules les opérations de récupération contrôlée sont autorisées,
+- aucune transition workflow n’est autorisée,
+- aucune écriture métier n’est autorisée.
 
-7.3 error sémantique block (SuperiorValidationAgent)  
-1. Overseer passe automatiquement en correctionMode  
-2. Transmission à un agent correctif  
-3. Double validation (locale + globale) obligatoire  
-4. Sortie du mode correction seulement après stabilisation.
+6. Protocole séquencé de traitement
 
-7.4 halted  
-1. toutes les opérations cessent,  
-2. seules systemRecovery et validateRecovery sont autorisées,  
-3. Overseer attend la restauration,  
-4. une fois restauré → correctionMode,  
-5. validation globale obligatoire.
+6.1 Traitement d’un warning
 
+Séquence obligatoire:
+1. Overseer reçoit les signaux (warn de validation, ou warning interne).
+2. Overseer décide explicitement:
+   - apply, ou
+   - correctionMode.
+3. Si apply:
+   - journalisation obligatoire de la décision et du risque.
+4. Si correctionMode:
+   - activation immédiate de correctionMode et blocage des transitions workflow.
 
-8. systemRecovery et erreurs
+6.2 Traitement d’une erreur structurelle
 
-Le passage en halted implique:
-• impossibilité d’appliquer des modifications supplémentaires,  
-• risque fort de corruption,  
-• nécessité d’une restauration.
+Séquence obligatoire:
+1. L’orchestrateur stoppe l’opération.
+2. L’orchestrateur retourne StructuralError à Overseer.
+3. Overseer décide explicitement:
+   - abort,
+   - retry (exceptionnel, uniquement si cause non systémique),
+   - correctionMode (si l’erreur structurelle révèle une incohérence de contenu à stabiliser),
+   - passage en halted si répétition ou corruption suspectée.
 
-Le protocole recovery est:
-1. Orchestrateur restaure depuis snapshot  
-2. Orchestrateur met correctionMode = true  
-3. Overseer exécute une validation globale  
-4. Overseer autorise ou non la reprise des opérations
+Interdiction:
+- l’orchestrateur ne doit pas transformer une erreur structurelle en correction automatique.
 
+6.3 Traitement d’une erreur sémantique block
+
+Séquence obligatoire:
+1. Overseer reçoit verdict block.
+2. Overseer active correctionMode par défaut.
+3. Overseer ordonne une correction minimaliste via un agent correctif.
+4. Validation sémantique locale et globale obligatoire selon ValidationPolicy_Global.
+5. Sortie de correctionMode uniquement si stabilité retrouvée et validation globale allow.
+
+6.4 Traitement d’un halted
+
+Séquence obligatoire:
+1. arrêt de toutes les opérations non-recovery,
+2. récupération contrôlée (systemRecovery) uniquement,
+3. après restauration, activation de correctionMode,
+4. validation globale obligatoire,
+5. reprise des opérations uniquement après décision explicite d’Overseer.
+
+7. correctionMode et erreurs
+
+7.1 Conditions d’entrée en correctionMode
+
+Overseer entre en correctionMode lorsque:
+- verdict block est reçu,
+- incohérence globale est détectée,
+- stabilisation est requise avant toute progression,
+- un incident implique un risque de dérive si l’opération continue.
+
+7.2 Contraintes obligatoires en correctionMode
+
+En correctionMode:
+- un seul agent correctif autorisé par cycle,
+- aucune transition workflow autorisée,
+- validation globale obligatoire avant sortie,
+- modifications minimales et ciblées,
+- toute incertitude doit conduire à block ou abort, jamais à apply silencieux.
+
+7.3 Conditions de sortie de correctionMode
+
+Overseer ne peut sortir de correctionMode que si:
+- la validation globale retourne allow,
+- Overseer confirme explicitement la sortie,
+- le système est jugé stable et cohérent.
+
+8. systemRecovery
+
+8.1 Définition
+
+systemRecovery est le protocole contrôlé de restauration d’un état cohérent à partir de snapshots et de logs, exécuté par l’orchestrateur sur ordre d’Overseer.
+
+8.2 Séquence minimale
+
+1. Overseer décide systemRecovery et fournit operationMeta.
+2. L’orchestrateur restaure depuis snapshot sélectionné.
+3. L’orchestrateur journalise l’opération de restauration.
+4. L’orchestrateur force l’état correctionMode actif.
+5. Overseer exécute une validation globale via SuperiorValidationAgent.
+6. Overseer décide reprise ou maintien en halted.
+
+Interdictions:
+- aucune restauration ne doit être silencieuse,
+- aucune restauration ne doit réactiver un workflow automatiquement.
 
 9. Journalisation des erreurs
 
-Toute erreur est loggée dans:
+Toute erreur doit être journalisée dans:
+
 logs/{projectId}/errors
 
-Chaque entrée contient:
-• timestamp  
-• operationId  
-• projectId  
-• errorType  
-• severity  
-• actor: orchestrator | overseer | superiorValidationAgent  
-• details  
-• stateBefore  
-• stateAfter  
-• policiesActives  
-
+Chaque entrée contient au minimum:
+- timestamp,
+- operationId,
+- projectId,
+- errorType (StructuralError | SemanticWarn | SemanticBlock | BusinessError | Halted),
+- severity (warning | error | halted),
+- actor (orchestrator | overseer | superiorValidationAgent),
+- details,
+- stateBefore,
+- stateAfter,
+- policiesActives (versions effectives).
 
 10. Invariants du protocole d’erreur
 
 Toujours vrais:
 
-• L’orchestrateur ne raisonne jamais sur le métier.  
-• SuperiorValidationAgent ne modifie jamais Firestore.  
-• Overseer est souverain pour les erreurs métier.  
-• Aucune réparation automatique côté orchestrateur.  
-• Une erreur structurelle arrête immédiatement l’opération en cours.  
-• Une erreur sémantique block déclenche correctionMode.  
-• halted ne peut être levé que par systemRecovery.  
-• Aucun workflow ne peut se déclencher en présence d’une erreur métier ou structurelle.  
-• correctionMode est l’unique voie de stabilisation avant halted métier.  
+- L’orchestrateur ne raisonne jamais sur le métier.
+- SuperiorValidationAgent ne modifie jamais Firestore.
+- Overseer est souverain pour les erreurs métier.
+- Aucune réparation automatique côté orchestrateur.
+- Une erreur structurelle arrête immédiatement l’opération en cours.
+- Une erreur sémantique block déclenche correctionMode.
+- halted ne peut être levé que par recovery contrôlée.
+- Aucun workflow ne peut se déclencher en présence d’une erreur métier ou structurelle.
+- correctionMode est l’unique voie de stabilisation avant halted métier.
 
-Fin du document.
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 3.0.0 (2025-12-15): Mise au format canonique obligatoire (header, marqueur de fin, footer), clarification et verrouillage normatif des responsabilités par acteur, normalisation stricte de la typologie warning/error/halted et des séquences de traitement, intégration explicite de correctionMode et systemRecovery comme protocoles contrôlés.
+  - 2.0.0 (2025-12-11): Refonte complète alignée avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2, CorrectionMode_Policy et la séparation structurel/métier.
+  - 1.0.0 (2025-12-10): Version initiale.
+
+Breaking Changes:
+  - Application stricte du format canonique, suppression des champs hors format et interdiction de variantes.
+  - Clarification stricte entre erreurs structurelles (orchestrateur) et erreurs métier (Overseer + SuperiorValidationAgent).
+  - Introduction d’un protocole séquencé entre warning, correctionMode et halted.
+  - Suppression de toute réparation automatique côté orchestrateur.
