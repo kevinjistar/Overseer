@@ -3,171 +3,250 @@
 Document: Process_du_Workflow_Engine
 Version: 2.0.0
 Date: 2025-12-11
+PolicyType: WorkflowProcess
 
 PolicyVersions:
-  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
 ---
 
 # Processus du Workflow Engine
 
-## Objet du document
+## 1. Objet du document
 
-Ce document décrit le processus opérationnel complet de gestion des transitions du Workflow Engine dans le système Overseer.
+Ce document décrit le **processus opérationnel complet de gestion des transitions du Workflow Engine** dans le système Overseer v2.
 
-## Rôle du document dans le système
+Il formalise de manière normative:
+- le rôle d’Overseer dans la décision métier des transitions,
+- le rôle strictement structurel de l’orchestrateur,
+- l’intervention du SuperiorValidationAgent en amont des décisions,
+- les règles de sécurité, d’anti-dérive et de correction,
+- le comportement attendu en mode normal et en mode correction.
 
-Niveau: procédural et normatif.  
-Ce document formalise la manière dont les transitions de workflow sont demandées, validées et exécutées, en précisant les rôles respectifs d’Overseer, de l’orchestrateur et du SuperiorValidationAgent.  
-Il ne définit aucune logique métier, aucune condition dynamique et ne transforme jamais le Workflow Engine en moteur décisionnel.
-
----
-
-# Processus du Workflow Engine
-
-Le Workflow Engine est une structure déclarative d’états et de transitions, exécutée exclusivement sur ordre explicite d’Overseer et appliquée mécaniquement par l’orchestrateur.
+Le Workflow Engine v2 n’est **pas** un moteur décisionnel.  
+Il est une **matrice d’états et de transitions structurelles**, exécutée exclusivement sur **ordre explicite d’Overseer**.
 
 ---
 
-# 1. Principes fondamentaux
+## 2. Rôle du document dans le système
 
-- Le Workflow Engine ne contient aucune logique métier.  
-- Aucune transition n’est déclenchée automatiquement.  
-- Toute transition est décidée par Overseer.  
-- L’orchestrateur applique uniquement des règles structurelles.  
+Niveau: **procédural et normatif**.
 
-Le Workflow Engine n’est jamais un moteur métier.
+Ce document:
+- définit **comment** une transition workflow est demandée, validée et exécutée,
+- verrouille la séparation stricte entre logique métier et exécution structurelle,
+- sert de référence contractuelle pour Overseer et l’orchestrateur,
+- garantit l’absence de déclenchement implicite ou automatique.
+
+Il ne:
+- définit aucune logique métier,
+- introduit aucune condition dynamique,
+- confère aucune autonomie au Workflow Engine ou à l’orchestrateur.
 
 ---
 
-# 2. Pré-requis à toute transition
+## 3. Principes fondamentaux
+
+### 3.1 Séparation stricte des responsabilités
+
+- Overseer décide si une transition est pertinente métier.
+- SuperiorValidationAgent valide la cohérence sémantique lorsque requis.
+- L’orchestrateur exécute mécaniquement les transitions autorisées.
+- Le Workflow Engine décrit uniquement ce qui est **structurellement possible**.
+
+### 3.2 Aucune logique métier dans le Workflow Engine
+
+Le Workflow Engine:
+- n’évalue aucune condition métier,
+- ne déclenche aucune transition,
+- n’interprète aucun contexte.
+
+Toute logique est externe et portée par Overseer.
+
+### 3.3 Aucune transition automatique
+
+Aucune transition ne peut être déclenchée par:
+- un agent,
+- une modification documentaire,
+- un événement structurel,
+- un mécanisme interne au workflow.
+
+**Seul Overseer** peut ordonner une transition.
+
+---
+
+## 4. Pré-requis à toute transition
 
 Avant toute demande de transition, Overseer doit vérifier:
 
-- la cohérence métier de l’intention,
-- la conformité avec WorkflowPolicy,
-- la validation structurelle des documents concernés,
-- la validation sémantique locale si requise,
-- la validation globale si exigée par ValidationPolicy_Global,
-- l’absence de correctionMode actif,
-- l’absence d’état halted.
+### 4.1 Conformité métier
+- cohérence de l’intention utilisateur,
+- respect du parcours métier,
+- compatibilité avec WorkflowPolicy.
 
-Aucune transition n’est permise si correctionMode = true.
+### 4.2 Validations documentaires
+- validation structurelle des documents concernés (orchestrateur),
+- validation sémantique locale (SuperiorValidationAgent),
+- validation sémantique globale si requise par ValidationPolicy_Global ou WorkflowPolicy.
+
+### 4.3 État système
+- absence de correctionMode actif,
+- absence d’état halted,
+- cohérence globale du projet.
+
+**Aucune transition n’est permise si correctionMode = true.**
 
 ---
 
-# 3. Ordre formel de transition (Overseer)
+## 5. Ordre formel de transition (Overseer)
 
 Lorsqu’une transition est jugée pertinente, Overseer émet un ordre explicite contenant:
 
 - projectId  
 - operationId  
 - transitionId  
-- policies actives  
+- PolicyVersions actives  
+
+Exemple structurel:
+
+```json
+{
+  "type": "runWorkflowTransition",
+  "projectId": "...",
+  "operationId": "...",
+  "transitionId": "string",
+  "policies": {
+    "workflow": "1.0.0",
+    "validation": "1.0.0"
+  }
+}
 
 Cet ordre est transmis à l’orchestrateur.
 
----
+⸻
 
-# 4. Vérifications structurelles par l’orchestrateur
+6. Vérifications structurelles par l’orchestrateur
 
-À réception de l’ordre, l’orchestrateur vérifie:
-
-- l’existence de la transition,
-- la correspondance avec l’état courant,
-- la validité de l’état cible,
-- la conformité structurelle des actions associées.
+À réception de l’ordre, l’orchestrateur vérifie strictement:
+	•	existence de la transition dans le Workflow Engine,
+	•	correspondance avec l’état courant (from),
+	•	validité de l’état cible (to),
+	•	validité structurelle des actions associées.
 
 Aucune logique métier n’est évaluée.
 
----
+En cas d’erreur structurelle:
+	•	la transition est refusée,
+	•	l’état reste inchangé,
+	•	une erreur est renvoyée à Overseer.
 
-# 5. Application de la transition
+⸻
+
+7. Application de la transition
 
 Si toutes les vérifications réussissent, l’orchestrateur:
+	•	met à jour l’état courant du workflow,
+	•	exécute les actions structurelles déclarées,
+	•	crée les snapshots requis selon Policy,
+	•	journalise l’opération avec operationId.
 
-- met à jour l’état du workflow,
-- exécute les actions structurelles déclarées,
-- crée les snapshots requis,
-- journalise l’opération.
+L’orchestrateur:
+	•	ne corrige rien,
+	•	ne compense rien,
+	•	n’interprète aucune conséquence métier.
 
-En cas d’erreur structurelle, la transition est refusée et l’état reste inchangé.
+⸻
 
----
+8. Rôle du SuperiorValidationAgent
 
-# 6. Rôle du SuperiorValidationAgent
+Le SuperiorValidationAgent:
+	•	n’intervient jamais pendant l’exécution d’une transition,
+	•	intervient uniquement en amont, à la demande d’Overseer.
 
-Le SuperiorValidationAgent n’intervient jamais pendant l’exécution d’une transition.
+Il est utilisé pour:
+	•	évaluer la cohérence métier d’une transition,
+	•	détecter les contradictions inter-documents,
+	•	analyser les risques globaux liés à la transition.
 
-Il intervient uniquement en amont, lorsque Overseer doit décider:
-- si la transition est cohérente métier,
-- si elle crée un risque de contradiction globale,
-- si elle est compatible avec les documents structurants.
+⸻
 
----
-
-# 7. Gestion du mode correction
+9. Gestion du mode correction
 
 Lorsque correctionMode = true:
+	•	aucune transition workflow n’est autorisée,
+	•	toute demande de transition est refusée par l’orchestrateur,
+	•	seules des opérations de stabilisation documentaire sont permises,
+	•	les actions structurelles sont limitées (log uniquement).
 
-- aucune transition workflow n’est autorisée,
-- toute demande de transition est ignorée par l’orchestrateur,
-- seules des opérations de stabilisation documentaire sont permises.
+Une transition ne peut être appliquée qu’après:
+	•	validation locale allow,
+	•	validation globale allow ou warn,
+	•	sortie explicite du mode correction par Overseer.
 
-Une transition ne peut être appliquée qu’après sortie explicite du mode correction.
+⸻
 
----
-
-# 8. Complétion et retour à Overseer
+10. Complétion et retour à Overseer
 
 Après exécution, l’orchestrateur retourne à Overseer:
+	•	l’état final du workflow,
+	•	les actions exécutées,
+	•	les identifiants de snapshot,
+	•	les logs associés,
+	•	toute erreur structurelle éventuelle.
 
-- l’état final du workflow,
-- les actions exécutées,
-- les identifiants de snapshot,
-- les logs associés,
-- toute erreur structurelle éventuelle.
+Overseer:
+	•	vérifie la cohérence métier globale,
+	•	décide des suites (nouvelle action, transition, correction ou arrêt).
 
-Overseer décide ensuite des suites à donner.
+⸻
 
----
+11. Anti-dérive et anti-boucle
 
-# 9. Anti-boucle et sécurité
+11.1 Anti-boucle structurelle
 
-Le processus impose:
+L’orchestrateur limite:
+	•	les transitions répétitives identiques,
+	•	les transitions non déclarées,
+	•	les volumes anormaux de transitions.
 
-- aucune transition répétitive non justifiée,
-- aucun aller-retour automatique d’états,
-- aucun déclenchement implicite,
-- aucune transition sans décision explicite.
+11.2 Anti-boucle métier
 
-Toute suspicion de boucle déclenche une analyse et peut mener à correctionMode.
+Overseer surveille:
+	•	les transitions sans progression,
+	•	les oscillations d’états (A → B → A),
+	•	les contradictions successives.
 
----
+En cas de suspicion:
+	•	activation de correctionMode,
+	•	demande de validation globale.
 
-# 10. Invariants du processus
+⸻
+
+12. Invariants du processus Workflow Engine v2
 
 Toujours vrais:
-
-- aucune transition automatique,
-- aucune logique métier dans le workflow,
-- aucune décision côté orchestrateur,
-- Overseer est souverain sur les transitions,
-- exécution strictement structurelle,
-- traçabilité complète via logs et snapshots.
+	•	aucune transition automatique,
+	•	aucune logique métier dans le workflow,
+	•	aucune décision côté orchestrateur,
+	•	Overseer est souverain sur les transitions,
+	•	exécution strictement structurelle,
+	•	traçabilité complète via logs et snapshots,
+	•	impossibilité de transition en mode correction,
+	•	respect strict de WorkflowPolicy.
 
 ---
-
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-11): Refonte complète du processus du Workflow Engine pour alignement avec Overseer v2, SuperiorValidationAgent et Workflow Engine v2.
-  - 1.0.0 (2025-12-10): Version initiale du processus du Workflow Engine.
+	- 2.0.0 (2025-12-11): Refonte complète du processus du Workflow Engine pour alignement avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2, ValidationPolicy_Global et CorrectionMode_Policy.
+	- 1.0.0 (2025-12-10): Version initiale du processus du Workflow Engine.
 
 Breaking Changes:
-  - Suppression de toute condition métier et de tout déclenchement automatique des transitions.
+	- Suppression de toute condition métier dans le Workflow Engine.
+	- Suppression de tout déclenchement automatique des transitions.
+	- L’orchestrateur n’évalue plus aucune logique métier et applique uniquement des transitions structurelles ordonnées par Overseer.
