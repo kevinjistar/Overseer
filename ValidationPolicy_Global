@@ -1,199 +1,238 @@
-
 ---
 Document: ValidationPolicy_Global
 Version: 1.0.0
-Date: 2025-12-10
+Date: 2025-12-11
 
 PolicyVersions:
-  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
+  VersioningPolicy: 1.0.0
   CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
 ---
 
-# Validation Policy Globale
+1. Objet de la policy
 
-## Objet du document
+La ValidationPolicy_Global définit le cadre normatif de validation sémantique appliqué à toute opération susceptible d’affecter la cohérence locale ou globale d’un projet Overseer.
 
-Ce document définit la politique globale de validation appliquée à toute modification documentaire, transition de workflow ou opération structurante dans le système Overseer.
+Elle définit strictement:
+- quand une validation sémantique doit être déclenchée,
+- à quel niveau (locale ou globale),
+- comment SuperiorValidationAgent est utilisé,
+- quelles décisions Overseer est autorisé à prendre selon les verdicts,
+- les règles impératives applicables en mode correction.
 
-## Rôle du document dans le système
+Cette policy s’applique à:
+- toute mise à jour de document référent,
+- toute opération structurante,
+- toute transition de workflow décidée par Overseer.
 
-Niveau: normatif et structurant.  
-Ce document établit les règles de validation sémantique locale et globale, les conditions de déclenchement des validations, ainsi que les effets des verdicts produits.  
-Il constitue une policy transversale gouvernant Overseer, le SuperiorValidationAgent et les processus associés.  
-Il ne décrit aucune logique métier spécifique, aucun schéma et aucun processus opérationnel détaillé.
+Elle ne définit aucune logique métier spécifique, aucun schéma et n’autorise aucune écriture directe.
 
----
 
-# Validation Policy Globale
+2. Principes généraux de validation
 
-Cette policy s’applique à toutes les opérations susceptibles d’affecter la cohérence locale ou globale d’un projet Overseer.
-
----
-
-# 1. Principes généraux de validation
+Les principes suivants sont non négociables:
 
 - Toute modification documentaire est soumise à validation.
 - Aucune écriture n’est autorisée sans validation structurelle préalable.
-- La validation sémantique est distincte de la validation structurelle.
+- La validation sémantique est strictement distincte de la validation structurelle.
+- La validation ne produit jamais d’écriture.
 - La décision finale appartient toujours à Overseer.
-- Les validations n’entraînent jamais d’écriture directe.
 
----
+Aucun composant autre qu’Overseer ne peut interpréter ou arbitrer les verdicts.
 
-# 2. Types de validation
 
-## 2.1 Validation structurelle
+3. Niveaux de validation sémantique
 
-Assurée exclusivement par l’orchestrateur.
+Deux niveaux de validation sémantique sont définis.
 
-Elle vérifie:
-- la conformité aux schémas,
-- la validité du JSON,
-- la cohérence des métadonnées,
-- la séquence de versioning,
-- la validité structurelle des transitions workflow.
+3.1 Validation sémantique locale
 
-Toute erreur structurelle bloque immédiatement l’opération.
+Assurée exclusivement par SuperiorValidationAgent.
 
----
-
-## 2.2 Validation sémantique locale
-
-Assurée par le SuperiorValidationAgent.
-
-Elle porte sur:
+Analyse:
 - le document candidat,
 - le document original,
 - le diff explicite,
 - l’intention déclarée,
-- un contexte projet minimal.
+- un sous-ensemble minimal de contexte projet.
 
 Objectif:
-- vérifier la cohérence intrinsèque de la modification.
+- vérifier la cohérence intrinsèque de la modification proposée.
 
----
+La validation locale est obligatoire pour toute opération de mise à jour, sans exception.
 
-## 2.3 Validation sémantique globale
 
-Assurée par le SuperiorValidationAgent sur ordre d’Overseer.
+3.2 Validation sémantique globale
 
-Elle porte sur:
-- l’ensemble des documents référents,
-- l’état du workflow,
+Assurée par SuperiorValidationAgent sur ordre explicite d’Overseer.
+
+Analyse:
+- l’ensemble des documents référents du projet,
+- l’état courant du workflow,
 - les interactions inter-documents,
-- les impacts systémiques.
+- les décisions structurantes déjà actées,
+- l’impact systémique global.
 
 Objectif:
-- préserver la cohérence globale du projet.
+- détecter les contradictions inter-documents,
+- préserver la cohérence globale et durable du projet.
 
----
 
-# 3. Déclenchement des validations
+4. Déclenchement des validations
 
-## 3.1 Validation locale obligatoire
+4.1 Validation locale obligatoire
 
-Une validation sémantique locale est obligatoire lorsque:
-- un document est modifié,
-- une version est incrémentée,
-- une correction est proposée,
-- une synchronisation externe est appliquée.
+Une validation sémantique locale est obligatoire dans tous les cas suivants:
+- modification d’un document référent,
+- incrément de version,
+- opération corrective,
+- synchronisation ou import externe,
+- toute opération produisant un document candidat.
 
----
+Aucune exception n’est autorisée.
 
-## 3.2 Validation globale conditionnelle
+
+4.2 Validation globale obligatoire
 
 Une validation sémantique globale est obligatoire lorsque:
-- la version est majeure,
-- le document est structurant,
-- l’impact workflow est qualifié de major,
-- le mode correction est actif,
-- une incohérence globale potentielle est détectée,
-- Overseer l’exige explicitement.
+- la version demandée est Major,
+- une transition de workflow est classée majeure par WorkflowPolicy,
+- le document est un document racine (Architecture, Strategy, System-Level),
+- l’opération est exécutée en mode correction,
+- le verdict local indique workflowImpact = major,
+- le verdict local indique riskLevel = high.
 
----
 
-# 4. Verdicts de validation
+4.3 Validation globale optionnelle
 
-Le SuperiorValidationAgent retourne exclusivement l’un des verdicts suivants:
+Une validation globale est optionnelle, à la discrétion d’Overseer, lorsque:
+- la version est Minor,
+- le document est important mais non racine,
+- workflowImpact = minor,
+- riskLevel = medium.
 
-- allow  
-- warn  
-- block  
+Overseer peut forcer une validation globale même lorsqu’elle n’est pas requise par cette policy.
 
----
 
-## 4.1 Verdict allow
+4.4 Validation globale non requise
+
+Une validation globale peut être omise lorsque toutes les conditions suivantes sont réunies:
+- la version est Patch,
+- le document n’est pas racine,
+- workflowImpact = none,
+- riskLevel = low.
+
+
+5. Verdicts de validation
+
+SuperiorValidationAgent retourne exclusivement l’un des verdicts suivants:
+- allow
+- warn
+- block
+
+Chaque verdict est accompagné de:
+- reasons,
+- impactedDocuments,
+- workflowImpact,
+- riskLevel,
+- recommendedFixes.
+
+
+6. Interprétation des verdicts
+
+6.1 Verdict allow
 
 - La modification est jugée cohérente.
-- L’opération peut être appliquée.
+- Overseer peut poursuivre le pipeline normal, sous réserve des autres Policies actives.
 
----
 
-## 4.2 Verdict warn
+6.2 Verdict warn
 
 - La modification est globalement acceptable.
-- Un risque mineur est identifié.
-- L’opération peut être appliquée avec journalisation renforcée.
+- Un risque non bloquant est identifié.
 
----
+Conséquences:
+- Overseer peut appliquer la modification,
+- la décision doit être explicitement journalisée avec le contexte de risque,
+- une validation globale ultérieure est recommandée.
 
-## 4.3 Verdict block
+
+6.3 Verdict block
 
 - Une incohérence significative est détectée.
-- L’opération est bloquée.
-- Une correction est requise ou l’opération est annulée.
 
-Un verdict block ne peut jamais être ignoré.
+Conséquences:
+- aucune écriture n’est autorisée,
+- Overseer doit soit demander une correction, soit annuler l’opération.
 
----
+Règles strictes:
+- en mode normal: override possible mais exceptionnel et explicitement journalisé,
+- en mode correction: override strictement interdit.
 
-# 5. Effets des verdicts
 
-- allow: poursuite normale du pipeline.  
-- warn: poursuite avec traçabilité renforcée et éventuelle action corrective ultérieure.  
-- block: arrêt immédiat, aucune écriture, activation possible du correctionMode.  
+7. Validation en mode correction
 
----
+Lorsque operationMode = correction:
 
-# 6. Validation en mode correction
+- validation locale obligatoire,
+- validation globale obligatoire,
+- toute proposition avec riskLevel = medium ou high est considérée comme risquée,
+- tout verdict block est non contournable,
+- aucune transition workflow ne peut être déclenchée.
 
-Lorsque correctionMode = true:
+Objectif exclusif:
+- restaurer la cohérence sans introduire de nouvelles évolutions structurelles.
 
-- toute modification exige une validation locale,
-- une validation globale est obligatoire,
-- tout doute significatif conduit à block,
-- seules des corrections minimales sont autorisées.
 
-La stabilité prévaut sur toute évolution.
+8. Rôle d’Overseer sous cette policy
 
----
+Sous ValidationPolicy_Global, Overseer doit:
 
-# 7. Rôle d’Overseer
+- déclencher systématiquement la validation locale,
+- déterminer si une validation globale est requise, optionnelle ou non requise,
+- transmettre le contexte approprié à SuperiorValidationAgent,
+- interpréter les verdicts sans en modifier la nature,
+- prendre la décision finale:
+  - apply,
+  - correction,
+  - abort.
 
-Overseer:
-- décide quand déclencher une validation,
-- choisit le type de validation requis,
-- interprète les verdicts,
-- décide de l’application, correction ou annulation.
+Toute décision risquée ou exceptionnelle doit être explicitement traçable.
 
-Overseer ne peut jamais appliquer une modification malgré un verdict block.
 
----
+9. Séparation stricte des responsabilités
 
-# 8. Invariants de la ValidationPolicy_Global
+Cette policy garantit la séparation suivante:
+
+- Orchestrateur:
+  - validation structurelle uniquement,
+  - aucune validation sémantique.
+
+- SuperiorValidationAgent:
+  - validation sémantique locale et globale,
+  - aucun rôle décisionnel,
+  - aucune écriture.
+
+- Overseer:
+  - interprétation des verdicts,
+  - décision métier finale,
+  - orchestration du pipeline.
+
+Aucune entité ne peut empiéter sur le rôle d’une autre.
+
+
+10. Invariants de la ValidationPolicy_Global
 
 Toujours vrais:
 
-- aucune écriture sans validation,
-- aucune validation structurelle côté agent,
+- aucune écriture sans validation locale,
+- validation globale obligatoire pour toute opération structurante,
+- comportement strictement renforcé en mode correction,
 - aucune validation sémantique côté orchestrateur,
-- aucun contournement d’un verdict block,
-- séparation stricte validation / décision / exécution,
-- traçabilité complète des validations.
-
----
+- aucun contournement silencieux d’un verdict block,
+- traçabilité explicite des décisions à risque ou exceptionnelles,
+- séparation absolue entre validation, décision et exécution.
 
 Fin du document
 ---
@@ -201,7 +240,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-10): Création de la Validation Policy Globale, définition des règles de validation locale et globale, des verdicts et de leurs effets systémiques.
+  - 1.0.0 (2025-12-11): Création de la policy officielle de validation globale, intégrant SuperiorValidationAgent, les niveaux de validation locale et globale, les règles de décision d’Overseer et les contraintes strictes du mode correction.
 
 Breaking Changes:
   - Aucun depuis 1.0.0
