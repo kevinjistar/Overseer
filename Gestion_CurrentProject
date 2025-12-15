@@ -1,131 +1,230 @@
 
-Version: 1.0.0
-Date: 2025-12-09
+---
+Document: Gestion_CurrentProject
+Version: 2.0.0
+Date: 2025-12-15
+
 PolicyVersions:
-  VersioningPolicy: 1.0.0
   ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
 ---
 
 # Gestion du currentProject
 
-La gestion du projet actif garantit qu’un seul projet est utilisé comme contexte de travail pour Overseer, les agents, le Workflow Engine et l’orchestrateur. Aucune action ne peut être effectuée sans qu’un projet actif soit défini.
+## 1. Objet du document
 
----
+Ce document définit les règles normatives de gestion du projet actif (currentProject) utilisé comme contexte unique par:
+- Overseer (décision métier et orchestration),
+- l’orchestrateur (écritures Firestore et exécutions structurelles),
+- les agents (production de JSON strict),
+- le Workflow Engine (état et transitions structurelles).
 
-# 1. Définition
-Le `currentProject` correspond à l’identifiant du projet actuellement sélectionné par l’utilisateur.  
-Il est stocké dans:
+Ce document encadre:
+- où currentProject est stocké,
+- qui est autorisé à le modifier,
+- quand il peut être modifié,
+- quelles contraintes bloquent ou invalident une opération,
+- quelles obligations de journalisation s’appliquent.
 
+Aucune action agentique, aucune mise à jour documentaire, aucune transition workflow ne peut être engagée sans currentProject valide.
+
+## 2. Définition
+
+Le currentProject correspond à l’identifiant du projet actuellement sélectionné pour un utilisateur donné.
+
+Il est stocké exclusivement dans:
 userContext/{userId}/currentProject.json
 
----
+Le currentProject est un pointeur de contexte, il ne contient pas de logique métier, il ne contient pas de données projet, il ne contient pas d’historique.
 
-# 2. Structure du document currentProject.json
+## 3. Responsabilités strictes
 
+### 3.1 Utilisateur
+- Peut demander la sélection d’un projectId.
+- Peut demander la désactivation du projet actif.
+
+### 3.2 Overseer
+- Interprète la demande utilisateur.
+- Vérifie les préconditions avant toute demande d’écriture.
+- Ordonne explicitement à l’orchestrateur une opération de sélection ou de désactivation.
+- Refuse toute opération si currentProject est absent ou invalide (sauf opérations explicitement définies comme hors-projet, non couvertes par ce document).
+- Injecte le projectId courant dans toute instruction agent et dans toute opération ordonnée.
+
+### 3.3 Orchestrateur
+- Est la seule couche autorisée à écrire userContext/{userId}/currentProject.json.
+- Exécute mécaniquement l’ordre d’Overseer, sans interprétation métier.
+- Écrit un JSON strict conforme à la structure définie ci-dessous.
+- Journalise chaque changement dans systemLogs/currentProjectSwitch/.
+
+### 3.4 Agents
+- Ne lisent pas Firestore.
+- Ne modifient pas currentProject.
+- Ne suggèrent pas de changement de currentProject dans leurs sorties.
+
+## 4. Structure canonique de currentProject.json
+
+Le document currentProject.json doit respecter exactement la structure suivante:
+
+```json
 {
-“projectId”: “string”,
-“selectedAt”: “datetime”,
-“selectedBy”: “string”,
-“status”: “active”
+  "projectId": "string|null",
+  "selectedAt": "string|null",
+  "selectedBy": "string|null",
+  "status": "active|none"
 }
 
----
+Contraintes:
+	•	projectId est un identifiant de projet existant lorsque status = “active”.
+	•	projectId vaut null lorsque status = “none”.
+	•	selectedAt est un timestamp ISO 8601 lorsque status = “active”, sinon null.
+	•	selectedBy identifie l’initiateur (utilisateur ou identifiant système d’Overseer) lorsque status = “active”, sinon null.
+	•	Aucun champ additionnel n’est autorisé.
 
-# 3. Règles générales
+5. Règles générales
 
-- Le système doit toujours disposer d’un `currentProject` pour exécuter une action.
-- Overseer refuse toute requête s’il n’existe pas de projet actif.
-- La sélection d’un projet met automatiquement à jour le document userContext.
-- La sélection d’un nouveau projet remplace l’ancien sans historique dans ce fichier.
-- Le journal global (logs système) conserve cependant une trace de chaque changement.
+5.1 Existence obligatoire
+	•	Overseer doit exiger un currentProject valide avant toute opération projet (appel agentique, mise à jour documentaire, transition workflow).
+	•	Si currentProject.status = “none”, Overseer doit refuser toute opération projet.
 
----
+5.2 Unicité
+	•	Un seul currentProject est autorisé par userId.
+	•	Aucun état intermédiaire n’est autorisé, la bascule doit être atomique.
 
-# 4. Sélection d’un projet
+5.3 Interdictions
+	•	Aucun agent ne peut initier ou provoquer un changement de currentProject.
+	•	Aucun changement de currentProject n’est permis comme effet secondaire d’une mise à jour documentaire.
+	•	Aucun changement de currentProject n’est permis comme conséquence d’une transition workflow.
 
-La sélection suit la procédure suivante:
+6. Sélection d’un projet
 
-1. L’utilisateur indique l’identifiant du projet à activer.
-2. Overseer vérifie l’existence du projet.
-3. Overseer demande à l’orchestrateur de définir `currentProject`.
-4. L’orchestrateur écrit le fichier:
+La sélection d’un projet actif suit strictement la procédure ci-dessous.
 
-userContext/{userId}/currentProject.json
+6.1 Préconditions de sélection (Overseer)
 
-Avec:
-- projectId
-- selectedAt = date du jour
-- selectedBy = utilisateur
-- status = "active"
+Overseer doit vérifier:
+	•	que projectId est fourni et non vide,
+	•	que projects/{projectId} existe,
+	•	qu’aucune opération non clôturée n’est en cours pour ce userId (sinon, Overseer doit annuler proprement l’opération en cours avant sélection),
+	•	que le système n’est pas halted (si un état halted existe au niveau runtime, toute sélection doit être bloquée sauf procédure de récupération définie ailleurs).
 
-5. Overseer confirme la mise à jour du contexte.
+6.2 Ordre formel (Overseer vers orchestrateur)
 
----
+Overseer doit ordonner explicitement une opération de sélection contenant au minimum:
+	•	userId,
+	•	projectId,
+	•	operationId,
+	•	selectedBy.
 
-# 5. Contraintes de cohérence
+6.3 Écriture (orchestrateur)
 
-- Aucun agent ne peut agir sur un autre projet que celui défini dans currentProject.
-- Overseer doit rappeler explicitement ce projet dans chaque transmission de tâche.
-- Le contexte doit être chargé avant tout appel d’agent.
-- Le système ne peut pas avoir plusieurs currentProject simultanés pour un même utilisateur.
-
----
-
-# 6. Désactivation du projet actif
-
-Un projet peut être désactivé selon la procédure suivante:
-
-1. L’utilisateur demande une désactivation.
-2. Overseer vérifie qu’aucune action critique n’est en cours.
-3. L’orchestrateur met à jour:
+L’orchestrateur doit écrire atomiquement:
 
 userContext/{userId}/currentProject.json
 
-En:
+avec:
+	•	projectId = projectId demandé,
+	•	selectedAt = timestamp de l’écriture,
+	•	selectedBy = valeur transmise par Overseer,
+	•	status = “active”.
 
-{
-“projectId”: null,
-“selectedAt”: null,
-“selectedBy”: null,
-“status”: “none”
-}
-
-4. Toute requête d’agent est désormais bloquée jusqu’à sélection d’un nouveau projet.
-
----
-
-# 7. Journalisation
-
-Chaque changement de projet actif doit être inscrit dans:
-
-systemLogs/currentProjectSwitch/
-
-Avec:
-- userId
-- previousProjectId
-- newProjectId
-- timestamp
-- méthode (sélection, désactivation)
-- statut
-
----
-
-# 8. Comportement attendu d’Overseer
+6.4 Post-condition (Overseer)
 
 Overseer doit:
-- vérifier l’existence du currentProject à chaque requête
-- rappeler le currentProject dans toute instruction envoyée aux agents
-- empêcher toute modification documentaire hors contexte
-- signaler à l’utilisateur si aucun projet actif n’est défini
-- empêcher un agent de changer lui-même le currentProject
-- déclencher ContextAgent pour charger les données du projet
+	•	recharger le contexte du projet sélectionné (documents référents, workflowEngine, meta projet),
+	•	invalider tout cache interne lié à l’ancien projectId,
+	•	confirmer que toutes les instructions agents ultérieures référencent ce projectId.
 
-Fin du document 
+7. Remplacement du projet actif
+
+Lorsque currentProject est déjà “active” et qu’un nouveau projectId est demandé:
+	•	l’orchestrateur remplace le document currentProject.json (écriture complète, pas de patch).
+	•	l’ancien projectId est conservé uniquement dans systemLogs/currentProjectSwitch/ (voir section 9).
+	•	Overseer doit invalider explicitement son contexte précédent avant d’accepter une nouvelle opération.
+
+8. Désactivation du projet actif
+
+La désactivation suit strictement la procédure ci-dessous.
+
+8.1 Préconditions de désactivation (Overseer)
+
+Overseer doit vérifier:
+	•	qu’aucune opération critique n’est en cours,
+	•	qu’aucune opération de correctionMode n’exige explicitement de conserver le contexte courant (si correctionMode impose verrouillage du contexte, la désactivation doit être refusée).
+
+8.2 Ordre formel (Overseer vers orchestrateur)
+
+Overseer ordonne explicitement une opération de désactivation contenant au minimum:
+	•	userId,
+	•	operationId,
+	•	selectedBy.
+
+8.3 Écriture (orchestrateur)
+
+L’orchestrateur doit écrire atomiquement:
+
+{
+  "projectId": null,
+  "selectedAt": null,
+  "selectedBy": null,
+  "status": "none"
+}
+
+8.4 Post-condition (Overseer)
+
+Overseer doit:
+	•	refuser tout appel agentique et toute opération projet tant qu’un nouveau currentProject n’a pas été sélectionné,
+	•	informer l’utilisateur qu’aucun projet actif n’est défini.
+
+9. Journalisation obligatoire
+
+Chaque changement (sélection, remplacement, désactivation) doit être journalisé dans:
+
+systemLogs/currentProjectSwitch/{logId}.json
+
+Le log doit contenir au minimum:
+	•	userId,
+	•	previousProjectId (string|null),
+	•	newProjectId (string|null),
+	•	timestamp,
+	•	method (“selection” | “replacement” | “deactivation”),
+	•	operationId.
+
+Contraintes:
+	•	La journalisation est obligatoire, aucune écriture de currentProject ne doit être considérée comme réussie sans journalisation.
+
+10. Contraintes de cohérence d’exécution
+
+10.1 Contrainte agents
+	•	Overseer doit inclure projectId (issu du currentProject) dans toute instruction agent.
+	•	L’orchestrateur doit refuser un appel agentique si projectId n’est pas présent ou ne correspond pas au currentProject actif du userId, si l’API d’appel transporte userId.
+
+10.2 Contrainte mise à jour documentaire
+	•	Toute mise à jour d’un document référent doit être rattachée à un projectId identique au currentProject actif du userId.
+
+10.3 Contrainte workflow
+	•	Aucune transition workflow ne doit être ordonnée si currentProject.status = “none”.
+
+11. Invariants
+
+Toujours vrais:
+	•	currentProject est le contexte unique de travail pour un userId.
+	•	Seul l’orchestrateur écrit userContext/{userId}/currentProject.json.
+	•	Overseer décide, ordonne et vérifie, l’orchestrateur exécute mécaniquement.
+	•	Aucun agent ne modifie currentProject, directement ou indirectement.
+	•	Aucune opération projet ne peut se produire sans currentProject valide.
+	•	Chaque changement de currentProject est journalisé dans systemLogs/currentProjectSwitch/.
+
 ---
+Fin du document
+---
+Document Metadata & Changelog
 
 Changelog:
-- 1.0.0 (2025-12-09): Création du document Gestion du currentProject 
+- 2.0.0 (2025-12-15): Refonte majeure du document de gestion du currentProject, normalisation du format canonique, explicitation des responsabilités (Overseer, orchestrateur, agents), définition normative de la structure currentProject.json, ajout des procédures strictes de sélection, remplacement, désactivation et journalisation.
+- 1.0.0 (2025-12-09): Création du document Gestion du currentProject
 
-Breaking Changes: 
-- Aucun depuis 1.0.0 
+Breaking Changes:
+- Passage d’une description générique du “système” à une attribution normative des responsabilités, toute opération de sélection et de désactivation est désormais définie comme un ordre explicite d’Overseer exécuté mécaniquement par l’orchestrateur.
+- La structure de currentProject.json est désormais canonique et fermée (aucun champ additionnel autorisé), les préconditions et post-conditions de sélection et de désactivation deviennent obligatoires
