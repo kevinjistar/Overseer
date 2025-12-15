@@ -1,7 +1,6 @@
-
 ---
 Document: Design_UX
-Version: 1.0.0
+Version: 1.1.0
 Date: 2025-12-12
 
 PolicyVersions:
@@ -13,38 +12,127 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document décrit les éléments UX d’un projet Overseer.
-Il sert de support structuré à la conception de l’expérience utilisateur.
+Ce document définit le rôle, la portée normative et les contraintes strictes du document Design_UX dans le système Overseer.
+
+Design_UX est un document de référence qualitative destiné à formaliser l’expérience utilisateur envisagée pour un projet donné.  
+Il ne constitue jamais une source de décision métier, technique ou stratégique.
+
+Ce document est normatif sur ce qu’il n’est pas autorisé à faire avec l’UX.
 
 
-2. Portée du document
+2. Positionnement systémique
 
-Le document Design_UX peut contenir:
-• écrans,
+Design_UX appartient à la couche UX et gouvernance.
+
+Il intervient:
+• après la création du projet,
+• après l’initialisation des documents référents,
+• en support de réflexion et d’analyse qualitative.
+
+Il n’intervient jamais:
+• dans la logique métier,
+• dans le versioning,
+• dans les workflows,
+• dans les décisions d’exécution.
+
+
+3. Responsabilités explicites
+
+3.1 Rôle d’Overseer
+
+Overseer:
+• peut consulter Design_UX comme signal qualitatif,
+• peut l’utiliser pour contextualiser une analyse sémantique,
+• peut le transmettre comme document de référence à SuperiorValidationAgent.
+
+Overseer ne peut jamais:
+• dériver une décision métier automatique depuis Design_UX,
+• déclencher une transition workflow sur la base de Design_UX,
+• considérer Design_UX comme une source de vérité.
+
+
+3.2 Rôle des agents producteurs
+
+Les agents:
+• ne modifient Design_UX que sur instruction explicite d’Overseer,
+• produisent toujours un document complet et structuré,
+• respectent strictement System_Agent_Edit_Policy.
+
+Les agents ne peuvent jamais:
+• interpréter Design_UX comme une instruction implicite,
+• extrapoler une intention métier,
+• restructurer globalement le document,
+• transformer Design_UX en document prescriptif.
+
+
+3.3 Rôle de l’orchestrateur
+
+L’orchestrateur:
+• valide uniquement la structure du document,
+• applique le versioning mécanique décidé par Overseer,
+• écrit et journalise.
+
+Il n’interprète jamais le contenu UX.
+
+
+4. Contenu autorisé du document Design_UX
+
+Design_UX peut contenir exclusivement:
+• descriptions d’écrans,
 • parcours utilisateurs,
 • personas,
 • pain points,
 • principes d’ergonomie,
-• contraintes UX.
+• contraintes UX explicites,
+• hypothèses d’usage.
 
-Il ne définit aucune logique métier, technique ou stratégique globale.
-
-
-3. Règles d’édition
-
-• les agents ne modifient le contenu que sur instruction explicite,
-• aucune restructuration globale du document n’est autorisée,
-• aucune déduction métier ou stratégique n’est permise,
-• aucune interaction directe avec le workflow n’est possible.
+Tout contenu doit rester:
+• descriptif,
+• qualitatif,
+• non prescriptif,
+• sans logique conditionnelle métier.
 
 
-4. Rôle dans le système
+5. Interdictions absolues
 
-• support de conception,
-• base d’analyse sémantique,
-• référence qualitative pour Overseer et SuperiorValidationAgent.
+Design_UX ne doit jamais:
+• définir des règles métier,
+• définir des règles techniques,
+• influencer le type de versioning,
+• déclencher ou conditionner un workflow,
+• servir de base à une décision automatique,
+• être utilisé comme source de validation fonctionnelle,
+• être modifié en mode correction pour des raisons métier,
+• être considéré comme prioritaire sur un document référent métier.
 
-Il ne déclenche aucune action automatique.
+Toute tentative d’usage hors de ce cadre constitue une dérive.
+
+
+6. Édition et évolution du document
+
+• Toute modification est initiée exclusivement par Overseer.
+• Aucun agent n’est autorisé à proposer une évolution spontanée.
+• Les modifications sont descriptives, jamais normatives.
+• Les évolutions ne peuvent pas introduire de nouvelles responsabilités systémiques.
+
+Le document peut évoluer par:
+• clarification,
+• ajout de sections descriptives,
+• enrichissement qualitatif.
+
+Il ne peut jamais évoluer vers un rôle décisionnel.
+
+
+7. Invariants Design_UX
+
+Toujours vrais:
+
+• Design_UX n’est jamais une source de vérité métier.
+• Design_UX ne déclenche aucune action système.
+• Design_UX n’impacte ni le versioning ni les workflows.
+• Aucun agent n’interprète Design_UX de manière autonome.
+• Overseer reste l’unique centre de décision métier.
+• Toute lecture de Design_UX est contextuelle et non prescriptive.
 
 
 Fin du document
@@ -53,7 +141,8 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 1.1.0 (2025-12-12): Renforcement normatif du document Design_UX, ajout des responsabilités explicites, des interdictions, des invariants et clarification de la portée systémique sans changement de rôle.
   - 1.0.0 (2025-12-12): Création du document Design_UX standard.
 
 Breaking Changes:
-  - Aucun, document initial.
+  - Aucun depuis 1.0.0
