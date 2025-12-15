@@ -1,8 +1,7 @@
-
 ---
 Document: Knowledge
-Version: 1.0.0
-Date: 2025-12-12
+Version: 1.1.0
+Date: 2025-12-15
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -13,39 +12,113 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document constitue une base de connaissances libre associée à un projet Overseer.
+Ce document définit le rôle, les limites et les usages autorisés du document **Knowledge** dans un projet Overseer.
 
-Il permet de conserver des informations non normatives et non exécutables.
+Le document Knowledge constitue une base de connaissances libre, non normative et non exécutable, destinée exclusivement à conserver des informations contextuelles sans valeur décisionnelle directe.
 
 
-2. Contenu autorisé
+2. Nature du document Knowledge
+
+Le document Knowledge est volontairement hors du périmètre normatif du système.
+
+Il ne constitue:
+• ni une source de vérité opérationnelle,
+• ni une référence métier,
+• ni un document décisionnel,
+• ni un document déclencheur de workflow.
+
+Il est explicitement exclu de toute logique d’exécution, de validation ou de gouvernance.
+
+
+3. Acteurs autorisés et responsabilités
+
+3.1 Utilisateur  
+L’utilisateur peut:
+• ajouter des notes libres,
+• consigner des idées exploratoires,
+• stocker des références externes,
+• documenter des hypothèses temporaires.
+
+L’utilisateur ne peut pas:
+• inscrire des règles normatives,
+• formuler des décisions définitives,
+• imposer des contraintes système via ce document.
+
+3.2 Overseer  
+Overseer peut:
+• lire le contenu du document Knowledge,
+• l’utiliser comme matériau de réflexion contextuelle,
+• ignorer totalement son contenu si jugé non pertinent.
+
+Overseer ne peut pas:
+• considérer Knowledge comme une source de vérité,
+• appliquer automatiquement une information issue de Knowledge,
+• dériver une décision métier sans validation explicite ailleurs.
+
+3.3 Agents producteurs  
+Les agents:
+• ne produisent jamais de document Knowledge,
+• ne modifient jamais directement ce document,
+• ne peuvent pas utiliser Knowledge comme base implicite pour générer un document normatif.
+
+Toute référence au contenu Knowledge doit être explicitement injectée par Overseer dans la systemInstruction, ou ignorée.
+
+
+4. Contenu autorisé
 
 Le document Knowledge peut contenir:
 • notes informelles,
 • idées exploratoires,
 • références externes,
 • décisions non structurées,
-• hypothèses temporaires.
+• hypothèses temporaires,
+• brouillons conceptuels.
 
-Aucun format strict n’est imposé.
+Aucun format strict n’est imposé volontairement.
 
-
-3. Contraintes
-
-• aucune logique métier exécutable,
-• aucune règle normative,
-• aucune dépendance workflow,
-• aucune décision automatique.
+Tout contenu visant à devenir normatif doit être migré vers un document référent approprié via un processus explicite.
 
 
-4. Rôle dans le système
+5. Contenu strictement interdit
 
+Le document Knowledge ne doit jamais contenir:
+• règles métier exécutables,
+• contraintes normatives,
+• décisions finales engageant le projet,
+• logique conditionnelle exploitable,
+• instructions implicites à destination des agents,
+• dépendances directes au workflow,
+• informations supposées vraies sans validation externe.
+
+Toute tentative d’usage détourné constitue une dérive métier.
+
+
+6. Rôle dans le système
+
+Le document Knowledge agit uniquement comme:
 • support cognitif,
-• mémoire de travail,
-• matériau d’analyse pour Overseer et SuperiorValidationAgent.
+• mémoire de travail humaine,
+• réservoir d’idées non stabilisées,
+• matériau d’analyse optionnel pour Overseer et SuperiorValidationAgent.
 
-Ce document n’est jamais une source de vérité opérationnelle.
+Il n’intervient jamais directement dans:
+• le pipeline de mise à jour documentaire,
+• le Workflow Engine,
+• le versioning,
+• la validation structurelle ou sémantique.
 
+
+7. Invariants du document Knowledge
+
+Toujours vrais:
+
+• Knowledge n’est jamais une source de vérité opérationnelle.
+• Aucun agent ne peut s’appuyer implicitement sur Knowledge.
+• Aucune décision système ne peut être prise automatiquement à partir de Knowledge.
+• Knowledge ne déclenche jamais de workflow.
+• Knowledge ne contient aucune règle normative.
+• Toute information critique doit être formalisée ailleurs.
+• L’ignorance totale du document Knowledge ne doit jamais bloquer le système.
 
 Fin du document
 ---
@@ -53,7 +126,8 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 1.1.0 (2025-12-15): Ajout des responsabilités explicites, clarification des usages interdits, formalisation des invariants et renforcement anti-dérive.
   - 1.0.0 (2025-12-12): Création du document Knowledge standard.
 
 Breaking Changes:
-  - Aucun, document initial.
+  - Aucun depuis 1.0.0
