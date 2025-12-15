@@ -1,7 +1,6 @@
-
 ---
 Document: Cahier_des_charges_new_project
-Version: 1.0.0
+Version: 1.1.0
 Date: 2025-12-12
 
 PolicyVersions:
@@ -13,49 +12,120 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit le format et le rôle du cahier des charges utilisé pour l’idéation et l’initialisation d’un nouveau projet Overseer.
+Ce document définit le cadre normatif du cahier des charges utilisé pour l’idéation et l’initialisation d’un nouveau projet Overseer.
 
-Il constitue l’entrée unique du Pipeline_d_entrée_des_projets.
+Il constitue l’unique artefact d’entrée accepté par le Pipeline_d_entrée_des_projets.  
+Aucun autre document, message ou payload ne peut remplir ce rôle.
+
+Ce document est contractuel. Toute ambiguïté est considérée comme une erreur de spécification.
 
 
 2. Rôle dans le système
 
-Le cahier des charges:
-• capture l’intention initiale de l’utilisateur,
-• structure la vision et les objectifs du projet,
-• sert de base à la création des documents référents initiaux,
-• fige les hypothèses de départ.
+Le Cahier_des_charges_new_project a les rôles exclusifs suivants:
 
-Il n’est jamais modifié automatiquement après la création du projet.
+• capter l’intention initiale explicite de l’utilisateur,  
+• définir le périmètre conceptuel initial du projet,  
+• servir de référence fondatrice immuable pour tout le cycle de vie du projet,  
+• permettre à Overseer d’initialiser les documents référents sans interprétation implicite.
 
-
-3. Contenu attendu
-
-Le document doit inclure au minimum:
-• objectif du projet,
-• périmètre fonctionnel,
-• contraintes principales,
-• hypothèses initiales,
-• risques identifiés,
-• critères de succès.
-
-Le format exact est libre mais le contenu doit être explicite et structuré.
+Ce document n’est jamais utilisé comme document opérationnel, décisionnel ou exécutable.
 
 
-4. Contraintes strictes
+3. Répartition explicite des responsabilités
 
-• aucun agent ne peut modifier ce document après création,
-• aucune mise à jour ultérieure n’est autorisée,
-• aucun workflow n’est déclenché par ce document,
-• il n’est utilisé qu’à des fins de référence fondatrice.
+3.1 Rôle de l’utilisateur
 
+L’utilisateur:
+• fournit le contenu du cahier des charges,
+• est responsable de la clarté et de l’exhaustivité initiale,
+• ne modifie plus ce document après validation de la création du projet.
+
+3.2 Rôle d’Overseer
+
+Overseer:
+• valide la présence et la conformité du cahier des charges,
+• vérifie l’absence d’ambiguïtés manifestes,
+• utilise ce document comme source de référence pour l’initialisation,
+• interdit toute modification ultérieure de ce document.
+
+Overseer n’interprète pas ce document de manière créative.  
+Toute extrapolation non explicitement contenue est interdite.
+
+3.3 Rôle de l’orchestrateur
+
+L’orchestrateur:
+• persiste le document lors de la création du projet,
+• garantit son immutabilité structurelle,
+• empêche toute écriture ultérieure,
+• journalise son utilisation initiale.
+
+L’orchestrateur n’analyse pas le contenu métier.
+
+3.4 Rôle des agents
+
+Les agents:
+• ne lisent jamais directement ce document,
+• ne le modifient jamais,
+• ne produisent aucune sortie à partir de lui sans instruction explicite d’Overseer.
+
+Toute tentative d’accès agentique direct est interdite.
+
+
+4. Contenu attendu et structure minimale obligatoire
+
+Le Cahier_des_charges_new_project doit obligatoirement contenir, de manière explicite et non ambiguë, les sections suivantes:
+
+• objectif_du_projet  
+• périmètre_fonctionnel  
+• contraintes_principales  
+• hypothèses_initiales  
+• risques_identifiés  
+• critères_de_succès  
+
+Chaque section doit contenir:
+• un texte descriptif clair,
+• aucune référence implicite,
+• aucune dépendance à un contexte externe non fourni.
+
+Le format de sérialisation peut être textuel ou structuré, mais la présence logique de chaque section est obligatoire.
+
+
+5. Contraintes strictes d’utilisation
+
+Il est strictement interdit:
+
+• de modifier ce document après création du projet,  
+• d’appliquer un quelconque versioning (Patch, Minor ou Major),  
+• d’utiliser ce document comme déclencheur de workflow,  
+• d’utiliser ce document comme cible de correctionMode,  
+• d’exécuter une transition workflow basée sur son contenu,  
+• d’utiliser ce document hors du Pipeline_d_entrée_des_projets.
+
+Toute tentative de modification ultérieure est rejetée structurellement.
+
+
+6. Invariants du Cahier_des_charges_new_project
+
+Toujours vrais:
+
+• ce document est unique par projet,  
+• ce document est immuable après création,  
+• ce document n’est jamais modifié par un agent,  
+• ce document n’est jamais versionné après 1.0.0,  
+• ce document n’a aucun impact direct sur les workflows,  
+• ce document sert uniquement de référence fondatrice,  
+• toute ambiguïté détectée doit bloquer la création du projet.
+
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 1.1.0 (2025-12-12): Renforcement normatif du cahier des charges, ajout de la répartition explicite des responsabilités, définition d’une structure minimale obligatoire, ajout d’invariants stricts et clarification des interdictions.
   - 1.0.0 (2025-12-12): Création du cahier des charges standard pour l’initialisation d’un projet.
 
 Breaking Changes:
-  - Aucun, document initial.
+  - Aucun depuis 1.0.0
