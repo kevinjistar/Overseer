@@ -1,213 +1,237 @@
-
 ---
-Version: 1.0.0
-Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Création du Process de chargement du contexte et des documents
-Breaking Changes: Aucun depuis 1.0.0
+Document: Process_de_chargement_du_contexte_et_des_documents
+Version: 2.0.0
+Date: 2025-12-15
 
-Règle de versioning:
-  • Major (X.0.0): Modification de la logique de chargement ou des responsabilités système
-  • Minor (1.X.0): Ajout d’étapes ou optimisations non disruptives
-  • Patch (1.2.X): Ajustements rédactionnels ou clarifications
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
-# Process de chargement du contexte et des documents
+1. Objet du document
 
-Ce processus décrit la procédure systémique permettant de charger le contexte projet, les documents référents et les données nécessaires avant toute exécution agentique.  
-Le chargement du contexte est obligatoire pour garantir la cohérence, éviter les dérives et permettre aux agents d’opérer sur un état exact du projet.
+Ce document définit le process normatif de chargement du contexte projet et des documents référents avant toute exécution agentique dans Overseer.
 
----
+Ce process est obligatoire. Aucun appel d'agent producteur, aucune validation sémantique, et aucune décision de mise à jour documentaire ne doit être exécuté sans un contexte chargé selon ce process.
 
-# 1. Conditions préalables
+2. Définitions
 
-Le chargement du contexte ne peut commencer que si:
+2.1 Contexte
+Le contexte est l'ensemble des données nécessaires et suffisantes pour qu'Overseer prépare une instruction, qu'un agent exécute une tâche, et que SuperiorValidationAgent rende un verdict sémantique, sans ambiguïté sur le projet ciblé.
 
-- un `currentProject` est défini
-- la sélection du projet est valide et non périmée
-- aucune opération critique n’est en cours sur ce projet
-- les documents référents attendus existent en base
+2.2 Documents référents attendus
+Les documents référents attendus sont ceux du projet actif, stockés sous projects/{projectId}/documents/, et nécessaires au fonctionnement normal du pipeline.
 
-Si l’une de ces conditions échoue, Overseer doit interrompre l’opération et demander une correction.
+2.3 currentProject
+currentProject est la référence explicite du projet actif pour un utilisateur. Il est stocké sous userContext/{userId}/currentProject.json et constitue l'unique source d'autorité de sélection.
 
----
+3. Acteurs et responsabilités
 
-# 2. Rôle des entités système
+3.1 Overseer
+Overseer:
+- refuse toute opération si aucun currentProject actif n'est défini,
+- ordonne explicitement le chargement de contexte à l'orchestrateur,
+- consomme le contexte renvoyé par l'orchestrateur pour préparer les instructions,
+- décide de poursuivre, de bloquer, ou de basculer en mode correction selon les anomalies détectées.
 
-## 2.1 Overseer
-- demande explicitement le chargement du contexte  
-- vérifie l’intégrité du currentProject  
-- transmet à l’orchestrateur la nécessité de charger le contexte
+Overseer n'effectue aucune lecture Firestore directe au titre de ce process.
 
-## 2.2 Orchestrateur
-- effectue les lectures Firestore  
-- assemble le contexte complet  
-- vérifie la cohérence entre les éléments chargés  
-- renvoie un contexte prêt à être utilisé
+3.2 Orchestrateur
+L'orchestrateur:
+- effectue toutes les lectures Firestore nécessaires au chargement,
+- assemble un contexte complet et structuré,
+- applique des validations strictement structurelles pendant le chargement,
+- renvoie à Overseer un résultat structuré (succès, warning, ou erreur structurelle).
 
-## 2.3 ContextAgent
-- nettoie, clarifie ou synthétise le contexte si nécessaire  
-- prépare les données pour l’usage agentique  
-- détecte les incohérences narratives ou structurelles légères
+L'orchestrateur n'interprète aucune logique métier pendant ce process.
 
----
+3.3 ContextAgent
+ContextAgent:
+- ne lit pas Firestore,
+- ne modifie jamais Firestore,
+- ne modifie pas le contexte source,
+- produit uniquement une synthèse ou une préparation de contexte sur la base des données explicitement fournies par Overseer ou l'orchestrateur.
 
-# 3. Étapes du processus
+ContextAgent n'est jamais un validateur sémantique. Toute validation sémantique est du ressort de SuperiorValidationAgent.
 
-## 3.1 Lecture du currentProject
+4. Préconditions et refus immédiat
 
-L’orchestrateur lit:
+4.1 Préconditions obligatoires
+Le chargement du contexte ne peut démarrer que si les conditions suivantes sont simultanément vraies:
+- un currentProject est défini avec status = "active",
+- projectId est non vide et correspond à un projet existant,
+- aucune condition de blocage structurel n'est signalée par l'orchestrateur pour ce projet (ex: état halted si présent dans le runtime système),
+- les documents référents attendus existent en base, au minimum sous forme de placeholders conformes.
 
+4.2 Refus immédiat
+Si une précondition échoue:
+- l'orchestrateur renvoie une erreur structurelle à Overseer,
+- Overseer n'ordonne aucun appel agentique,
+- Overseer déclenche le processus de correction approprié, sans tenter de contourner le chargement.
+
+5. Entrée et sortie attendues
+
+5.1 Ordre d'entrée
+Overseer envoie à l'orchestrateur un ordre formel contenant au minimum:
+{
+  "type": "loadProjectContext",
+  "userId": "string",
+  "operationId": "string",
+  "projectId": "string"
+}
+
+5.2 Sortie de l'orchestrateur
+Succès:
+{
+  "status": "contextLoaded",
+  "projectId": "string",
+  "contextQuality": "ok",
+  "context": { ... }
+}
+
+Warning:
+{
+  "status": "contextLoaded",
+  "projectId": "string",
+  "contextQuality": "warning",
+  "warnings": [ ... ],
+  "context": { ... }
+}
+
+Erreur structurelle:
+{
+  "status": "error",
+  "projectId": "string",
+  "errorType": "MissingCurrentProject | MissingProject | MissingDocuments | SchemaViolation | JsonInvalid | Halted",
+  "details": "string"
+}
+
+6. Étapes normatives du chargement
+
+6.1 Lecture du currentProject
+L'orchestrateur lit exactement:
 userContext/{userId}/currentProject.json
 
-Champs attendus:
-- projectId  
-- selectedAt  
-- selectedBy  
-- status = "active"
+Contraintes:
+- status doit être "active",
+- projectId doit être identique au projectId reçu dans l'ordre, si celui-ci est fourni.
 
-Si `status != active`, l’opération est arrêtée.
-
----
-
-## 3.2 Chargement du meta projet
-
-Lecture de:
-
+6.2 Chargement du meta projet
+L'orchestrateur charge:
 projects/{projectId}/meta/project.json
 
-Champs attendus:
-- projectId  
-- name  
-- description  
-- createdAt  
-- status  
-- autres métadonnées système
+Validation structurelle minimale:
+- présence des champs d'identité du projet,
+- cohérence du projectId,
+- absence de JSON invalide.
 
----
-
-## 3.3 Chargement des documents référents
-
-L’orchestrateur charge:
-
+6.3 Chargement des documents référents
+L'orchestrateur charge les documents référents attendus sous:
 projects/{projectId}/documents/
-architecture.json
-ux.json
-strategy.json
-workflowDocument.json
-notes.json
 
-Chaque document doit respecter:
-- Schéma universel du Document Référent  
-- module spécialisé correspondant  
-- versioning valide  
-- meta.ownerAgent correctement défini  
-- dates conformes  
+Validation structurelle obligatoire pour chaque document chargé:
+- conformité au schéma universel du Document Référent,
+- présence des zones meta, structured, specialized, narrative, links,
+- cohérence meta.projectId avec projectId,
+- absence de clés inconnues,
+- versioning structurel parseable et non vide.
 
-En cas d’incohérence structurelle → arrêt immédiat.
+Toute incohérence structurelle sur un document attendu provoque un arrêt immédiat du chargement avec erreur structurelle.
 
----
-
-## 3.4 Chargement du Workflow Engine
-
-Lecture de:
-
+6.4 Chargement du Workflow Engine
+L'orchestrateur charge:
 projects/{projectId}/workflowEngine/engine.json
 
-Champs attendus:
-- initialState  
-- liste des états  
-- transitions  
-- actions éventuelles  
+Validation structurelle obligatoire:
+- initialState présent,
+- states[] présent et non vide,
+- transitions[] présent (vide autorisé uniquement si le schéma le permet),
+- currentState, si présent, correspond à un state.id existant.
 
-L’état actuel doit être cohérent avec les logs récents.  
-En cas d’écart manifeste → état `warning`.
+Si le Workflow Engine est structurellement invalide:
+- erreur structurelle,
+- aucun contexte n'est livré à Overseer.
 
----
+6.5 Chargement du contexte étendu
+L'orchestrateur peut charger des éléments complémentaires strictement nécessaires:
+- logs sous projects/{projectId}/logs/ (lecture uniquement),
+- snapshots sous projects/{projectId}/snapshots/ (lecture uniquement),
+- paramètres système nécessaires à la préparation d'instructions (lecture uniquement).
 
-## 3.5 Chargement des informations de contexte étendu
+Règle:
+Tout ajout au contexte étendu doit être explicite dans la structure du contexte, jamais implicite.
 
-Le système peut charger les éléments complémentaires:
-
-projects/{projectId}/logs/
-projects/{projectId}/snapshots/
-systemSettings/
-
-Ces éléments servent:
-- à contextualiser le travail des agents  
-- à offrir une mémoire limitée mais utile du passé du projet  
-- à anticiper des dérives  
-- à préparer les transitions futures  
-
----
-
-## 3.6 Assemblage du contexte complet
-
-L’orchestrateur assemble un objet interne:
-
+6.6 Assemblage du contexte
+L'orchestrateur assemble un objet de contexte structuré contenant au minimum:
 {
-“project”: { … meta … },
-“documents”: {
-“architecture”: { … },
-“ux”: { … },
-“strategy”: { … },
-“workflowDocument”: { … },
-“notes”: { … }
-},
-“workflowEngine”: { … },
-“logs”: { … },
-“snapshots”: { … }
+  "project": { ... },
+  "documents": { ... },
+  "workflowEngine": { ... },
+  "logs": { ... },
+  "snapshots": { ... }
 }
 
-Ce contexte est destiné exclusivement:
-- à Overseer  
-- à ContextAgent  
-- aux agents via l’orchestrateur  
+Contraintes:
+- le contexte est destiné à Overseer et aux agents via Overseer, il n'est jamais une réponse utilisateur,
+- aucun champ n'est ajouté si sa sémantique n'est pas définie explicitement dans ce document ou dans un schéma applicable.
 
-Il n’est jamais exposé directement à l’utilisateur.
+6.7 Intervention de ContextAgent
+L'intervention de ContextAgent est optionnelle et ne peut être déclenchée que par Overseer.
+
+Si Overseer déclenche ContextAgent:
+- l'entrée de ContextAgent est une extraction contrôlée du contexte,
+- la sortie est une synthèse structurée,
+- la sortie ne remplace jamais le contexte source, elle l'accompagne.
+
+ContextAgent ne doit jamais qualifier une incohérence comme acceptable ou bloquante. Seuls Overseer et SuperiorValidationAgent portent ces décisions, selon leurs rôles.
+
+6.8 Retour à Overseer
+L'orchestrateur renvoie:
+- status,
+- projectId,
+- contextQuality,
+- context complet (et warnings éventuels).
+
+Overseer décide ensuite:
+- d'appeler ou non un agent producteur,
+- d'appeler ou non SuperiorValidationAgent,
+- de poursuivre, corriger, ou abort.
+
+7. Contraintes strictes
+
+7.1 Interdiction d'appel d'agent sans contexte
+Overseer ne doit jamais appeler un AgentProducteur si status != "contextLoaded".
+
+7.2 Rechargement obligatoire
+Le contexte doit être rechargé pour chaque nouvelle opération agentique. Une réutilisation implicite est interdite.
+
+7.3 Interdiction de cache durable
+Aucune mise en cache durable du contexte n'est autorisée. Toute optimisation éventuelle doit rester strictement interne, non observable, et ne doit jamais produire une divergence entre le projet actif et le contexte.
+
+7.4 Invalidation sur changement de projet
+Toute modification de currentProject invalide immédiatement tout contexte précédemment chargé. Overseer doit exiger un rechargement complet.
+
+8. Invariants
+
+Toujours vrais:
+- Aucun agent ne peut être appelé sans un contexte chargé par l'orchestrateur.
+- L'orchestrateur effectue les lectures Firestore, Overseer ne les effectue pas dans ce process.
+- ContextAgent ne lit pas Firestore et ne valide pas sémantiquement.
+- Toute incohérence structurelle pendant le chargement provoque un arrêt immédiat.
+- Le contexte livré est strictement rattaché à un projectId unique et explicite.
+- Le contexte n'est jamais exposé tel quel à l'utilisateur.
 
 ---
-
-## 3.7 Intervention de ContextAgent (optionnelle)
-
-ContextAgent peut:
-- synthétiser le contexte  
-- détecter des incohérences douces  
-- signaler des risques à Overseer  
-- préparer un résumé ciblé pour l’agent qui recevra la tâche  
-
-Le contexte final renvoyé à Overseer doit être propre, cohérent, et immédiatement exploitable.
-
+Fin du document
 ---
 
-## 3.8 Retour à Overseer
+Document Metadata & Changelog
 
-L’orchestrateur renvoie:
+Changelog:
+  - 2.0.0 (2025-12-15): Refonte complète au format canonique, verrouillage normatif des responsabilités (Overseer, orchestrateur, ContextAgent), suppression des règles de versioning intégrées au corps, et formalisation des entrées/sorties structurelles du chargement de contexte.
+  - 1.0.0 (2025-12-09): Création du Process de chargement du contexte et des documents
 
-{
-“status”: “contextLoaded”,
-“projectId”: “…”,
-“documents”: { … },
-“workflowEngine”: { … },
-“contextQuality”: “ok|warning”
-}
-
-Overseer peut alors:
-- poursuivre la tâche  
-- refuser une opération en cas d’anomalie  
-- demander validation par ValidationAgent  
-- renvoyer une synthèse à l’utilisateur  
-
----
-
-# 4. Contraintes strictes
-
-- Aucun agent ne peut être appelé sans contexte chargé.  
-- Toute incohérence grave met le système en état `halted`.  
-- Le contexte doit être rechargé à chaque nouvelle tâche.  
-- Aucune mise en cache durable n’est autorisée.  
-- Tout changement du currentProject invalide les données précédemment chargées.  
-
----
-
-Fin du Process de chargement du contexte et des documents.
+Breaking Changes:
+  - Le chargement de contexte est désormais spécifié comme un ordre formel avec entrée/sortie structurées, et toute mention de validation par "ValidationAgent" est remplacée par SuperiorValidationAgent via ValidationPolicy_Global.
