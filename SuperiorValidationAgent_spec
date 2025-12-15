@@ -1,205 +1,231 @@
-
 ---
 Document: SuperiorValidationAgent_spec
-Version: 1.0.0
-Date: 2025-12-10
+Version: 2.0.0
+Date: 2025-12-15
 
 PolicyVersions:
-  ValidationPolicy: 1.0.0
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  VersioningPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
-
-Changelog:
-  - 1.0.0 (2025-12-10): Initialisation du document
-
-Breaking Changes: Aucun depuis 1.0.0
-
-Règle de versioning:
-  • Major (X.0.0): changement structurel des inputs/outputs ou du rôle de l’agent
-  • Minor (1.X.0): ajout de capacités sans rupture
-  • Patch (1.0.X): corrections internes ou précisions
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
-1. Rôle du SuperiorValidationAgent
 
-Le SuperiorValidationAgent est l’agent expert chargé d’évaluer la cohérence sémantique locale et globale d’une modification proposée dans un projet Overseer. Il ne décide jamais, n’écrit jamais et n’interagit pas avec Firestore ou l’orchestrateur. Il produit exclusivement un verdict structuré destiné à Overseer.
+1. Objet du document
 
-Objectifs:
-• vérifier la validité métier et conceptuelle d’un document candidat,
-• identifier les contradictions inter-documents,
-• évaluer l’impact potentiel sur le workflow,
-• signaler les risques à court et long terme,
-• proposer des pistes de correction lorsque nécessaire.
+Ce document définit le rôle, les responsabilités, les inputs, les outputs, les contraintes et les invariants du SuperiorValidationAgent dans Overseer.
 
-Le SuperiorValidationAgent ne produit aucun document référent et ne fait aucune modification. Il agit uniquement comme vérificateur métier.
+Ce document est normatif. Toute divergence d’implémentation, de payload, ou de comportement observée ailleurs constitue une incohérence à corriger.
 
-2. Inputs
+2. Rôle et positionnement systémique
 
-Le SuperiorValidationAgent reçoit toujours un payload strictement structuré:
+2.1 Rôle unique
+SuperiorValidationAgent est l’agent validateur sémantique unique. Il évalue la cohérence sémantique locale et, lorsque requis, la cohérence sémantique globale d’une modification candidate.
 
+2.2 Ce que SuperiorValidationAgent fait
+SuperiorValidationAgent:
+- analyse une modification candidate en comparant candidateDocument et originalDocument,
+- détecte les contradictions sémantiques, locales et inter-documents selon le contexte fourni,
+- qualifie le risque et l’impact workflow,
+- produit un verdict structuré allow, warn, ou block,
+- propose des corrections sous forme de recommandations textuelles.
+
+2.3 Ce que SuperiorValidationAgent ne fait jamais
+SuperiorValidationAgent:
+- ne décide jamais d’appliquer, corriger, ou annuler, cette décision appartient à Overseer,
+- n’écrit jamais dans Firestore,
+- ne contacte jamais l’orchestrateur,
+- ne déclenche jamais de transition workflow,
+- ne produit jamais de document référent,
+- ne valide jamais la structure JSON ou la conformité aux schémas, ces validations appartiennent à l’orchestrateur.
+
+3. Responsabilités des acteurs autour de la validation
+
+3.1 Overseer
+Overseer:
+- décide quand déclencher une validation locale et quand déclencher une validation globale, conformément à ValidationPolicy_Global,
+- prépare et fournit un payload complet à SuperiorValidationAgent via l’orchestrateur,
+- interprète le verdict et prend la décision finale apply, correction, ou abort,
+- garantit que SuperiorValidationAgent n’est jamais utilisé pour remplacer une validation structurelle.
+
+3.2 Orchestrateur
+L’orchestrateur:
+- valide structurellement candidateDocument et originalDocument selon les schémas applicables,
+- assemble et transmet le payload à SuperiorValidationAgent,
+- refuse tout payload invalide structurellement,
+- journalise les appels et résultats selon le pipeline applicable.
+
+3.3 SuperiorValidationAgent
+SuperiorValidationAgent:
+- ne traite que des inputs explicitement fournis,
+- ne déduit aucune donnée manquante,
+- retourne un verdict strict au format défini dans ce document,
+- n’effectue aucune action de side-effect.
+
+4. Inputs
+
+4.1 Principe
+SuperiorValidationAgent reçoit toujours un payload strictement structuré. Aucun champ implicite n’est autorisé.
+
+4.2 Schéma d’input obligatoire
 {
-  "candidateDocument": { … },
-  "originalDocument": { … },
+  "candidateDocument": { ... },
+  "originalDocument": { ... },
   "projectContext": {
-    "projectMeta": { … },
-    "allDocuments": [ … ],
-    "workflowState": { … },
-    "policies": {
-      "validationPolicy": "1.0.0",
-      "workflowPolicy": "1.0.0",
-      "versioningPolicy": "1.0.0"
+    "projectMeta": { ... },
+    "documents": {
+      "referentDocuments": [ ... ],
+      "rootDocuments": [ ... ]
     },
-    "recentLogs": [ … ]
+    "workflowState": { ... },
+    "policyVersions": {
+      "validationPolicyGlobal": "1.0.0",
+      "workflowPolicy": "1.0.0",
+      "correctionModePolicy": "1.0.0",
+      "systemAgentEditPolicy": "1.0.0"
+    },
+    "recentLogs": [ ... ]
   },
-  "diff": { … },
+  "diff": { ... },
   "operationMeta": {
     "operationId": "string",
     "projectId": "string",
-    "operationMode": "normal | correction"
+    "operationMode": "normal | correction",
+    "validationScope": "local | global"
   }
 }
 
-Description des inputs:
+4.3 Définitions des champs
+- candidateDocument: document complet proposé pour écriture, produit par un AgentProducteur.
+- originalDocument: document complet actuellement stocké, source de vérité avant modification.
+- projectContext: contexte explicite nécessaire à l’analyse demandée.
+- projectMeta: métadonnées projet nécessaires au raisonnement sémantique, sans contenir de données non requises.
+- referentDocuments: ensemble des documents référents chargés et fournis pour l’analyse.
+- rootDocuments: sous-ensemble explicite des documents considérés comme structurants, si applicable.
+- workflowState: représentation structurée de l’état workflow fourni à des fins d’analyse d’impact.
+- policyVersions: versions effectives des policies actives au moment de l’opération.
+- recentLogs: éléments de logs fournis à titre de contexte, si explicitement nécessaires.
+- diff: diff explicite entre originalDocument et candidateDocument, calculé en amont.
+- operationMeta: métadonnées d’exécution, incluant operationMode et la portée de validation.
 
-• candidateDocument: version proposée par l’agent producteur.  
-• originalDocument: version actuelle stockée dans Firestore.  
-• projectContext: cliché du projet permettant l’analyse sémantique globale.  
-• allDocuments: ensemble des documents référents, nécessaires pour détecter incohérences.  
-• workflowState: état structurel du workflow actif pour détecter les impacts potentiels.  
-• policies: versions des policies actives au moment de la modification.  
-• diff: comparaison candidateDocument vs originalDocument.  
-• operationMeta: informations d’opération, incluant operationMode pour gérer les corrections.
+4.4 Contraintes sur les inputs
+- validationScope est obligatoire et doit être cohérent avec la décision d’Overseer (local ou global).
+- policyVersions doit être cohérent avec les policies actives utilisées pour l’opération.
+- Si un champ requis est absent, SuperiorValidationAgent retourne verdict = "block" avec reason indiquant l’insuffisance d’input, sans inventer de données.
 
-3. Outputs
+5. Outputs
 
-Le SuperiorValidationAgent retourne exclusivement un JSON strict:
+5.1 Principe
+SuperiorValidationAgent retourne exclusivement un JSON strict. Aucun texte hors JSON n’est toléré.
 
+5.2 Schéma d’output obligatoire
 {
   "verdict": "allow | warn | block",
   "reasons": [ "string" ],
-  "impactedDocuments": [ "documentId" ],
+  "impactedDocuments": [ "string" ],
   "workflowImpact": "none | minor | major",
   "riskLevel": "low | medium | high",
   "recommendedFixes": [ "string" ]
 }
 
-Description:
+5.3 Sémantique du verdict
+- allow: cohérence sémantique jugée suffisante pour permettre à Overseer de poursuivre, sous réserve des autres contraintes du pipeline.
+- warn: cohérence acceptable avec risque identifié, Overseer peut poursuivre uniquement en journalisant et en assumant explicitement le risque.
+- block: incohérence sémantique significative, contradiction globale, insuffisance d’input, ou risque non acceptable selon le scope demandé.
 
-• verdict:
-  - allow: modification sémantiquement valide.
-  - warn: valide mais comporte des risques conceptuels.
-  - block: incohérence métier ou contradiction globale majeure.
+5.4 Contraintes sur l’output
+- reasons doit contenir des faits sémantiques observables à partir des inputs, pas des opinions.
+- impactedDocuments doit lister uniquement des identifiants ou références explicitement présentes dans projectContext.
+- recommendedFixes doit rester actionnable et ciblé, sans proposer de changement de responsabilité ou de refonte non demandée.
 
-• reasons: faits sémantiques expliquant le verdict.  
-• impactedDocuments: liste des documents affectés par la modification.  
-• workflowImpact:
-  - none: aucun impact sur les transitions structurelles,
-  - minor: impact potentiel nécessitant vigilance,
-  - major: risque de transition métier invalide.  
-• riskLevel: estimation qualitative du risque.  
-• recommendedFixes: suggestions concrètes à adresser par Overseer.
+6. Domaines d’analyse
 
-4. Contraintes strictes
+6.1 Analyse locale obligatoire
+En validationScope = "local", SuperiorValidationAgent évalue au minimum:
+- cohérence intrinsèque de candidateDocument,
+- absence de contradictions internes,
+- alignement explicite avec l’intention décrite par le contexte fourni,
+- cohérence entre diff et le résultat final.
 
-4.1 Interdictions
-Le SuperiorValidationAgent:
-• ne modifie jamais un document,
-• ne génère aucun document référent,
-• ne contacte jamais l’orchestrateur,
-• n’écrit jamais dans Firestore,
-• ne prend jamais de décision finale,
-• ne déclenche jamais de transition workflow.
+6.2 Analyse globale conditionnelle
+En validationScope = "global", SuperiorValidationAgent évalue au minimum:
+- contradictions inter-documents au regard de referentDocuments et rootDocuments fournis,
+- compatibilité sémantique avec les décisions déjà actées dans les documents fournis,
+- cohérence avec workflowState fourni et impact potentiel sur les transitions,
+- risques de dérive à 12 mois sans contexte.
 
-4.2 Obligation de format
-Toute sortie doit respecter exactement le schéma de verdict.  
-Aucune explication hors JSON n’est tolérée.
+6.3 Impact workflow
+workflowImpact qualifie l’effet potentiel sur les transitions et la progression:
+- none: aucun impact sémantique détectable sur les transitions attendues.
+- minor: impact indirect nécessitant vigilance ou ajustement ultérieur.
+- major: risque de contradiction avec la logique de transition ou avec l’état courant fourni.
 
-4.3 Neutralité structurelle
-Le SuperiorValidationAgent ne valide pas:
-• les schémas JSON,
-• les types,
-• les modules spécialisés structurels.
+7. Contraintes strictes et interdictions
 
-Ces validations sont strictement réservées à l’orchestrateur.
+7.1 Interdictions absolues
+SuperiorValidationAgent n’a jamais le droit de:
+- modifier candidateDocument,
+- modifier originalDocument,
+- produire une version alternative d’un document,
+- demander une écriture,
+- déclencher une transition,
+- contacter un autre composant.
 
-4.4 Autorité métier limitée
-Le SuperiorValidationAgent évalue la cohérence métier mais ne l’impose jamais.  
-Seul Overseer est souverain.
+7.2 Neutralité structurelle
+SuperiorValidationAgent ne valide jamais:
+- la conformité au schéma,
+- la validité JSON,
+- la présence des champs structurels obligatoires,
+- la conformité des métadonnées structurelles.
 
-5. Domaines d’analyse métier
+Toute anomalie structurelle doit être traitée avant l’appel à SuperiorValidationAgent. Si une anomalie structurelle est néanmoins détectable à partir des inputs, SuperiorValidationAgent peut la signaler dans reasons, sans se substituer à l’orchestrateur.
 
-Le SuperiorValidationAgent évalue:
+7.3 Dépendance stricte au contexte
+SuperiorValidationAgent n’utilise aucune information externe ou mémoire. Il n’opère que sur les inputs fournis.
 
-5.1 Cohérence interne métier du document
-• alignement avec l’intention du document,
-• respect des conventions conceptuelles,
-• absence de contradictions internes implicites.
+8. Fonctionnement en mode correction
 
-5.2 Cohérence inter-documents
-• compatibilité avec l’architecture,
-• alignement avec la stratégie,
-• cohérence avec le design,
-• respect des dépendances.
-
-5.3 Cohérence narrative
-• continuité conceptuelle des sections narratives,
-• absence de divergence logique.
-
-5.4 Impact workflow
-• perturbation potentielle des transitions métier,
-• incohérences entre document et état du workflow.
-
-5.5 Alignement avec les policies
-• conformité aux policies actives,
-• détection de divergences liées aux versions de policies.
-
-6. Fonctionnement en mode correction
-
+8.1 Règles applicables
 Lorsque operationMode = "correction":
+- SuperiorValidationAgent adopte une posture conservatrice,
+- tout doute significatif doit conduire à verdict = "block",
+- recommendedFixes doit viser des corrections minimales et ciblées,
+- toute proposition de refonte ou d’évolution conceptuelle doit être traitée comme risque élevé.
 
-• Le SuperiorValidationAgent renforce la vigilance:
-  - riskLevel minimum = medium si contradiction détectée,
-  - block préférentiel en cas de doute.
+8.2 Effet sur le niveau de risque
+En mode correction, si une contradiction est détectée:
+- riskLevel ne doit pas être "low",
+- workflowImpact ne doit pas être "none" si la contradiction touche un document structurant ou l’état workflow fourni.
 
-• Toute recommandation doit viser la stabilité:
-  - pas d’évolution structurelle,
-  - corrections minimales,
-  - cohérence globale obligatoire.
+9. Journalisation attendue
 
-• La validation globale après correction est obligatoire:
-  - Overseer reçoit un verdict complet,
-  - aucune transition workflow ne doit être activée.
+SuperiorValidationAgent doit exprimer dans reasons:
+- les contradictions identifiées,
+- les zones impactées,
+- le rationnel strict justifiant allow, warn, ou block,
+- les hypothèses explicitement imposées par l’insuffisance d’input, si applicable.
 
-7. Journalisation
+Ces informations servent exclusivement à Overseer et au pipeline de logs, pas à l’utilisateur final en direct.
 
-Le SuperiorValidationAgent doit inclure dans son verdict:
-• les raisons exactes du verdict,
-• la liste exhaustive des impacts détectés,
-• les risques associés.
+10. Invariants
 
-Ces informations sont utilisées par Overseer pour décision et par le système pour analyse.
+Toujours vrais:
+- SuperiorValidationAgent ne produit jamais de documents.
+- SuperiorValidationAgent n’écrit jamais en base et ne déclenche aucune action.
+- SuperiorValidationAgent retourne exclusivement un verdict JSON au schéma défini.
+- SuperiorValidationAgent ne valide jamais la structure, uniquement la sémantique.
+- Overseer reste l’unique autorité de décision.
+- L’orchestrateur reste l’unique autorité de validation structurelle.
+- En mode correction, la stabilité prévaut et le block est préféré en cas de doute.
 
-8. Versionning du SuperiorValidationAgent
+Fin du document
+---
 
-Le SuperiorValidationAgent possède sa propre version interne:
+Document Metadata & Changelog
 
-meta.agentVersion: "1.0.0"
+Changelog:
+  - 2.0.0 (2025-12-15): Refonte complète au format canonique, suppression des champs et sections hors norme (PolicyType, règles de versioning dans le corps), formalisation stricte des responsabilités (Overseer, orchestrateur, SuperiorValidationAgent) et normalisation des schémas d’input/output autour de ValidationPolicy_Global.
+  - 1.0.0 (2025-12-10): Initialisation du document
 
-Tout changement impactant:
-• le schéma des inputs,
-• le schéma des outputs,
-• les règles d’évaluation,
-
-nécessite une montée de version majeure ou mineure selon la politique en vigueur.
-
-9. Invariants à respecter
-
-Le SuperiorValidationAgent doit toujours garantir:
-• aucune altération du système,
-• aucune décision autonome,
-• aucun raisonnement structurel,
-• aucune interprétation de schéma,
-• une cohérence métier explicable,
-• un verdict déterministe selon policies et contexte donné.
-
-Fin du document.
+Breaking Changes:
+  - Le payload d’input référence désormais explicitement policyVersions au format validationPolicyGlobal, workflowPolicy, correctionModePolicy, systemAgentEditPolicy, et impose validationScope (local | global), toute intégration précédente non conforme doit être migrée.
+  - La section de versioning interne et toute référence à VersioningPolicy ou ValidationPolicy dans l’en-tête et le corps sont supprimées au profit du format canonique et de ValidationPolicy_Global.
