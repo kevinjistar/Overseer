@@ -1,4 +1,3 @@
-
 ---
 Document: Cahier_des_charges_syncAgent
 Version: 1.0.0
@@ -13,48 +12,176 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit le contrat d’entrée pour toute synchronisation externe via un agent externe ou un outil tiers.
+Ce document définit de manière normative et contractuelle le **contrat d’entrée unique** pour toute synchronisation externe introduite dans le système Overseer via un agent externe ou un outil tiers.
 
-Il décrit le format attendu du payload de synchronisation.
+Il décrit:
+• le rôle exact de chaque entité impliquée,
+• le format strict du payload accepté,
+• les interdictions absolues,
+• les mécanismes de contrôle,
+• les invariants garantissant l’absence de dérive.
 
-
-2. Rôle dans le système
-
-Ce cahier des charges:
-• encadre les entrées externes,
-• limite les surfaces d’attaque,
-• empêche toute injection arbitraire,
-• permet une analyse d’impact contrôlée par Overseer.
-
-Il est utilisé exclusivement dans le cadre du Pipeline_syncExterne.
+Aucune synchronisation externe n’est autorisée hors de ce cadre.
 
 
-3. Contenu attendu du payload
+2. Portée et rôle dans le système
 
-Le payload doit inclure:
-• sourceAgent,
-• operationId,
-• projectId ciblé,
-• liste des changements proposés,
-• justification optionnelle.
+Ce cahier des charges s’applique:
+• à tout agent de synchronisation externe,
+• à tout outil tiers injectant des changements,
+• à tout projet Overseer,
+• exclusivement dans le cadre du Pipeline_syncExterne.
 
-Tout champ non explicitement déclaré est rejeté.
+Il a pour finalité de:
+• réduire la surface d’attaque externe,
+• empêcher toute écriture ou décision non supervisée,
+• garantir une analyse d’impact contrôlée,
+• préserver la souveraineté métier d’Overseer.
+
+Tout payload non conforme rend l’opération invalide.
 
 
-4. Contraintes de sécurité
+3. Répartition stricte des responsabilités
+
+3.1 Agent de synchronisation externe
+
+L’agent externe:
+• prépare le payload de synchronisation,
+• ne lit jamais Firestore,
+• n’écrit jamais Firestore,
+• ne décide jamais de l’application des changements,
+• ne déclenche aucun workflow.
+
+Il est un fournisseur de propositions, jamais un acteur décisionnel.
+
+3.2 Overseer
+
+Overseer:
+• reçoit le payload,
+• valide sa conformité au présent cahier des charges,
+• analyse l’intention et l’impact métier,
+• décide d’accepter, corriger ou rejeter la synchronisation,
+• déclenche le pipeline interne standard de mise à jour si accepté.
+
+3.3 Orchestrateur
+
+L’orchestrateur:
+• valide strictement la structure du payload,
+• rejette toute clé ou valeur non conforme,
+• ne fait aucune interprétation métier,
+• exécute uniquement les opérations explicitement ordonnées par Overseer.
+
+3.4 Agents internes
+
+Les agents internes:
+• ne consomment jamais directement un payload externe,
+• n’agissent que sur instruction explicite d’Overseer,
+• respectent System_Agent_Edit_Policy sans exception.
+
+
+4. Structure normative du payload de synchronisation
+
+Le payload doit être un JSON strict, complet et unique, de la forme suivante:
+
+{
+  "sourceAgent": "string",
+  "operationId": "string",
+  "projectId": "string",
+  "changes": [
+    {
+      "targetDocumentId": "string",
+      "changeType": "create | update | delete",
+      "proposedContent": { ... },
+      "changeDescription": "string"
+    }
+  ],
+  "justification": "string | null"
+}
+
+4.1 Description des champs
+
+• sourceAgent  
+Identifiant explicite de l’agent ou de l’outil externe émetteur.
+
+• operationId  
+Identifiant unique et traçable de l’opération de synchronisation.
+
+• projectId  
+Identifiant du projet cible.  
+Il doit correspondre à un projet existant et actif.
+
+• changes  
+Liste exhaustive des changements proposés.  
+Chaque entrée décrit une intention, jamais une exécution.
+
+• justification  
+Champ facultatif destiné à fournir un contexte métier ou fonctionnel.
+
+
+5. Interdictions absolues
+
+Il est strictement interdit pour un payload de synchronisation de:
+
+• contenir des instructions d’exécution,
+• inclure des décisions de versioning,
+• déclencher une transition workflow,
+• référencer des chemins Firestore,
+• proposer des écritures directes,
+• inclure du code exécutable,
+• contenir des champs non déclarés,
+• cibler plusieurs projets simultanément.
+
+Toute violation entraîne un rejet immédiat.
+
+
+6. Contraintes de sécurité et de validation
+
+Les règles suivantes sont obligatoires:
 
 • validation stricte du schéma,
+• rejet immédiat de tout champ inconnu,
 • aucune écriture directe autorisée,
 • toute modification passe par Overseer,
-• toute incohérence entraîne rejet ou correction contrôlée.
+• toute incohérence structurelle entraîne rejet,
+• toute incohérence métier déclenche correctionMode ou abort.
 
+Aucune réparation automatique n’est autorisée.
+
+
+7. Traitement du payload
+
+Le traitement suit obligatoirement cette séquence:
+
+1. Validation structurelle par l’orchestrateur  
+2. Transmission du payload valide à Overseer  
+3. Analyse métier et d’impact par Overseer  
+4. Décision explicite: accept, correction ou reject  
+5. Si accept → pipeline interne standard de mise à jour  
+6. Journalisation complète de l’opération  
+
+Aucune étape ne peut être sautée.
+
+
+8. Invariants du cahier des charges
+
+Toujours vrais:
+
+• Aucun système externe ne décide dans Overseer.
+• Aucun payload externe n’écrit en base.
+• Overseer reste l’unique autorité métier.
+• L’orchestrateur reste purement structurel.
+• Toute synchronisation est traçable.
+• Toute ambiguïté entraîne rejet ou correction.
+• Aucun agent externe ne contourne les pipelines internes.
+
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création du cahier des charges pour la synchronisation externe.
+  - 1.0.0 (2025-12-12): Création du cahier des charges pour la synchronisation externe, définition normative du contrat d’entrée, des responsabilités, du payload et des invariants.
 
 Breaking Changes:
   - Aucun, document initial.
