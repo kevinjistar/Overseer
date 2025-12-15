@@ -1,14 +1,12 @@
-
 ---
 Document: Overseer_boutons
 Version: 2.0.0
 Date: 2025-12-11
-PolicyType: OverseerModesAndControls
 
 PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
-  ValidationPolicy: 1.0.0
-  CorrectionPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
 ---
 
@@ -31,7 +29,7 @@ Les actions structurelles sont toujours initiées ensuite via une décision mét
 2.2 Aucun bouton n’appelle directement l’orchestrateur.  
 2.3 Aucun bouton ne déclenche une transition workflow.  
 2.4 Les boutons modifient le contexte d’interprétation et de préparation des instructions.  
-2.5 En CorrectionMode, certains boutons deviennent inopérants.  
+2.5 En correctionMode, certains boutons deviennent inopérants.  
 2.6 La logique bouton → état Overseer → décision est strictement séquentielle.
 
 
@@ -42,7 +40,7 @@ Les boutons suivants sont les seuls autorisés.
 • Mode Normal  
 • Mode Création de Projet  
 • Mode Sync Externe  
-• Mode Correction (CorrectionMode)  
+• Mode Correction (correctionMode)  
 • Sélection Projet Actif (CurrentProject Select)
 
 
@@ -55,7 +53,7 @@ Effets sur Overseer:
 • active toutes les capacités métier,  
 • autorise les transitions workflow (sous validation),  
 • autorise la mise à jour documentaire,  
-• désactive Sync et CorrectionMode.
+• désactive Sync et correctionMode.
 
 Interdictions:
 • aucune transition automatique (toujours interdit).  
@@ -68,7 +66,7 @@ Effets sur Overseer:
 • place Overseer dans un mode de préparation pour la création d’un projet,  
 • active l’usage obligatoire de Pipeline_d’entrée_des_projets,  
 • désactive transitions workflow et Sync,  
-• impose ValidationPolicy renforcée pour documents initiaux.
+• impose ValidationPolicy_Global renforcée pour documents initiaux.
 
 Ce bouton n’écrit rien.  
 C’est Overseer, après compréhension des instructions de création, qui déclenche ensuite un pipeline officiel.
@@ -88,7 +86,7 @@ Interdictions:
 • aucune transition workflow.
 
 
-4.4 Bouton: Mode Correction (CorrectionMode)
+4.4 Bouton: Mode Correction (correctionMode)
 
 Effets sur Overseer:
 • operationMode = "correction",  
@@ -100,11 +98,11 @@ Effets sur Overseer:
 • Sync interdit,  
 • agents producteurs deviennent agents correctifs.
 
-Entrée dans CorrectionMode:
+Entrée dans correctionMode:
 • bouton explicite, ou  
 • déclenché automatiquement par Overseer après une dérive métier.
 
-Sortie du CorrectionMode:
+Sortie du correctionMode:
 • validation globale strictement allow,  
 • confirmation explicite d’Overseer,  
 • transition automatique vers Mode Normal.
@@ -120,19 +118,19 @@ Effets sur Overseer:
 
 Constraints:
 • si une opération est en cours → annulée proprement,  
-• si CorrectionMode est activé → sortie interdite jusqu’à stabilisation,  
+• si correctionMode est activé → sortie interdite jusqu’à stabilisation,  
 • Overseer ne peut traiter aucune action sans currentProject valide.
 
 
 5. Interaction entre les boutons et les Policies
 
-5.1 ValidationPolicy  
+5.1 ValidationPolicy_Global  
 Détermine si l’activation d’un mode exige une validation globale (cas du Mode Sync et du Mode Correction).
 
 5.2 WorkflowPolicy  
 Détermine les transitions possibles en Mode Normal uniquement.
 
-5.3 CorrectionPolicy  
+5.3 CorrectionMode_Policy  
 Détermine les restrictions appliquées en Mode Correction.
 
 5.4 System_Agent_Edit_Policy  
@@ -146,7 +144,7 @@ Détermine le comportement des agents appelés après activation d’un mode.
 • Aucun bouton ne déclenche un workflow.  
 • Les boutons modifient uniquement l’état interne cognitif d’Overseer.  
 • Toute action métier ou structurelle découle d’une décision explicite après interprétation.  
-• CorrectionMode est prioritaire sur tous les autres modes.  
+• correctionMode est prioritaire sur tous les autres modes.  
 • Mode Sync et Mode Correction sont mutuellement exclusifs.
 
 
@@ -183,11 +181,13 @@ Toujours vrais:
 • Les modes ne modifient jamais Firestore par eux-mêmes.  
 • Aucun mode ne modifie les schémas.  
 • Aucun mode ne contourne les Policies.  
-• CorrectionMode implique restrictions maximales.  
+• correctionMode implique restrictions maximales.  
 • Mode Normal est l’état par défaut et stable du système.
 
-Fin du document.
+Fin du document
 ---
+
+Document Metadata & Changelog
 
 Changelog:
   - 2.0.0 (2025-12-11): Ajout du bouton CorrectionMode, alignement complet avec Overseer_spec v2, Workflow Engine v2 et le pipeline de mise à jour. Clarification du fait que les boutons n’exécutent jamais d’action structurelle.
