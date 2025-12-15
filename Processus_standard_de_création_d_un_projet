@@ -1,156 +1,237 @@
 
+---
+Document: Processus_standard_de_creation_d_un_projet
 Version: 1.0.0
-Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Création du Processus standard de création d’un projet
-Breaking Changes: Aucun depuis 1.0.0
+Date: 2025-12-11
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le processus normatif, strict et non ambigu de création d’un nouveau projet dans le système Overseer.
+
+Il décrit exclusivement:
+- la séquence obligatoire des opérations,
+- les responsabilités explicites de chaque composant,
+- les invariants structurels et métier,
+- les conditions d’activation d’un projet.
+
+Ce processus est contractuel.  
+Aucune création de projet ne peut exister hors de ce cadre.
 
 ---
 
-# Processus standard de création d’un projet
+2. Acteurs et responsabilités
 
-Ce processus décrit la séquence complète permettant d’introduire un nouveau projet dans le système.
+2.1 Utilisateur  
+- Fournit l’intention initiale de création.
+- Ne crée jamais directement un projet.
+
+2.2 Overseer  
+- Interprète l’intention utilisateur.
+- Décide de lancer ou non le processus de création.
+- Gouverne toutes les décisions métier.
+- Ordonne explicitement chaque étape.
+- Ne crée jamais directement de données Firestore.
+
+2.3 Orchestrateur  
+- Exécute exclusivement des opérations structurelles.
+- Crée les structures Firestore ordonnées par Overseer.
+- Applique les schémas et écritures atomiques.
+- Ne prend aucune décision métier.
+
+2.4 Agents  
+- Peuvent être sollicités par Overseer pour produire du contenu initial.
+- Ne créent jamais de projet par eux-mêmes.
 
 ---
 
-# 1. Définition initiale du projet
-Le système reçoit:
-- un nom de projet
-- une description courte
-- un cahier des charges ou un résumé du concept
-- l’identité de l’utilisateur créateur
+3. Déclenchement du processus
 
-Le système attribue:
-- un projectId unique
-- une date de création
+Le processus débute uniquement lorsque:
+- un utilisateur exprime une intention explicite de création,
+- Overseer valide la cohérence de cette intention,
+- aucun état halted n’est actif,
+- aucun projet n’est en cours de création concurrente.
+
+Aucun déclenchement automatique n’est autorisé.
 
 ---
 
-# 2. Création de la structure Firestore
+4. Étape 1 — Définition initiale du projet (Overseer)
 
-Le système initialise l’arborescence suivante:
+Overseer collecte et valide les informations minimales suivantes:
+- nom du projet,
+- description courte,
+- périmètre ou concept initial,
+- identité de l’utilisateur créateur.
+
+Overseer:
+- valide la complétude minimale,
+- refuse toute donnée ambiguë ou contradictoire,
+- génère un projectId unique,
+- fixe la date de création.
+
+Aucune écriture Firestore n’a lieu à ce stade.
+
+---
+
+5. Étape 2 — Création de la structure Firestore (Orchestrateur)
+
+Sur ordre explicite d’Overseer, l’orchestrateur initialise strictement l’arborescence suivante:
 
 projects/{projectId}/
-meta/
-project.json
-documents/
-architecture.json
-ux.json
-strategy.json
-workflowDocument.json
-notes.json
-workflowEngine/
-engine.json
-logs/
-creation.json
-snapshots/
-initial/
+  meta/
+    project.json
+  documents/
+    architecture.json
+    ux.json
+    strategy.json
+    workflowDocument.json
+    notes.json
+  workflowEngine/
+    engine.json
+  logs/
+    creation.json
+  snapshots/
+    initial/
 
-Les fichiers créés respectent les schémas correspondants:
-- Schéma universel du Document Référent
-- Modules spécialisés
-- Workflow Engine Schema
+Aucune autre structure n’est autorisée.
+
+Toutes les écritures sont atomiques et traçables.
 
 ---
 
-# 3. Initialisation des documents référents
+6. Étape 3 — Initialisation des documents référents
 
-Chaque document initial contient:
-- le schéma universel complet
-- son module spécialisé
-- les métadonnées système
-- version: "1.0.0"
-- status: "active"
-- ownerAgent: "SystemInit"
-- createdAt: date du jour
-- updatedAt: date du jour
+Pour chaque document référent initial, l’orchestrateur écrit un document conforme:
+- au Schéma universel du Document Référent,
+- à son module spécialisé associé.
+
+Chaque document initial contient obligatoirement:
+- version: "1.0.0",
+- status: "active",
+- ownerAgent: "SystemInit",
+- createdAt: date de création,
+- updatedAt: date de création,
 - changelog:
-  - "1.0.0 (date du jour): Initialisation du document"
+  - "1.0.0 (date): Initialisation du document".
+
+Aucun contenu métier n’est inféré automatiquement.
 
 ---
 
-# 4. Initialisation du Workflow Engine
+7. Étape 4 — Initialisation du Workflow Engine
 
-Le système crée un moteur minimal conforme au Workflow Engine Schema:
+L’orchestrateur initialise un Workflow Engine minimal strictement conforme au Workflow Engine Schema actif.
 
-initialState: "draft"
-states:
-	•	id: "draft"
-	label: "Brouillon"
-	•	id: "active"
-	label: "Actif"
-transitions:
-	•	from: "draft"
-	to: "active"
-	conditions: []
-	actions: []
+État initial obligatoire:
+- initialState: "draft"
 
----
+États déclarés:
+- draft
+- active
 
-# 5. Enregistrement du contexte projet
+Transitions autorisées:
+- draft → active
 
-Le système enregistre:
-- le projectId
-- la date de création
-- l’état initial
-- les documents associés
-
-Le projet devient éligible comme `currentProject`.
+Aucune condition métier n’est définie dans le workflow.
 
 ---
 
-# 6. Création des snapshots initiaux
+8. Étape 5 — Enregistrement du contexte projet
 
-Le système génère un snapshot complet:
+L’orchestrateur enregistre:
+- les métadonnées projet,
+- l’état initial,
+- les références des documents créés,
+- l’état du workflow.
 
-projects/{projectId}/snapshots/initial/
-
-Contenu:
-- meta initial
-- documents référents initiaux
-- workflow engine initial
-- log de création
+Le projet n’est pas encore actif comme contexte utilisateur.
 
 ---
 
-# 7. Vérification système
+9. Étape 6 — Création du snapshot initial
 
-Le système valide:
-- conformité des schémas
-- cohérence interne
-- présence des attributs obligatoires
-- versioning correct
-- absence de données manquantes
-- validité des liens
+L’orchestrateur crée obligatoirement un snapshot initial complet contenant:
+- meta projet,
+- documents référents initiaux,
+- workflow engine initial,
+- log de création.
 
-En cas d’échec, le projet n’est pas activé.
+Ce snapshot est immuable.
 
 ---
 
-# 8. Log de création
+10. Étape 7 — Vérification structurelle finale
 
-Création du fichier:
+L’orchestrateur valide strictement:
+- conformité des schémas,
+- présence de toutes les structures requises,
+- cohérence des références internes,
+- validité du versioning,
+- absence de données manquantes.
 
+En cas d’échec:
+- le projet est marqué invalide,
+- aucune activation n’est permise,
+- Overseer est notifié.
+
+---
+
+11. Étape 8 — Journalisation de la création
+
+L’orchestrateur écrit:
 projects/{projectId}/logs/creation.json
 
-Contenu:
-- projectId
-- date
-- utilisateur créateur
-- statut de création
-- schémas utilisés
-- versions des modules
+Contenu obligatoire:
+- projectId,
+- date,
+- utilisateur créateur,
+- statut de création,
+- schémas utilisés,
+- versions actives des Policies.
 
 ---
 
-# 9. Activation du projet (optionnel)
+12. Étape 9 — Activation du projet (décision Overseer)
 
-Si demandé, le système active le projet:
+L’activation du projet comme currentProject est:
+- une décision explicite d’Overseer,
+- optionnelle,
+- impossible si une incohérence est détectée.
 
+Écriture cible:
 userContext/{userId}/currentProject
 
-Les agents utilisent alors ce projet comme contexte standard.
+Aucune activation automatique n’est autorisée.
 
---
+---
 
-Fin du Processus standard de création d’un projet.
+13. Invariants du processus
+
+Toujours vrais:
+
+- Aucun projet n’est créé sans décision explicite d’Overseer.
+- Aucune écriture Firestore hors orchestrateur.
+- Aucune logique métier dans l’orchestrateur.
+- Aucun agent ne crée de projet.
+- Aucun projet actif sans snapshot initial valide.
+- Toute création est traçable et reproductible.
+- Toute dérive déclenche un refus ou une correction.
+
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-11): Refonte complète du Processus standard de création d’un projet selon le format canonique Overseer, clarification stricte des responsabilités et des invariants.
+
+Breaking Changes:
+  - Aucun depuis 1.0.0
