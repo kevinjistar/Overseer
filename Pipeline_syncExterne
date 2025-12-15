@@ -1,15 +1,14 @@
 
 ---
+Document: Pipeline_syncExterne
 Version: 1.0.0
 Date: 2025-12-09
-Changelog:
-  - 1.0.0 (2025-12-09): Création du Pipeline complet de Synchronisation Externe
-Breaking Changes: Aucun depuis 1.0.0
 
-Règle de versioning:
-  • Major (X.0.0): Modification structurelle du pipeline  
-  • Minor (1.X.0): Ajout d’étapes ou amélioration de logique  
-  • Patch (1.2.X): Clarifications rédactionnelles  
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
 # Pipeline Complet de Synchronisation Externe
@@ -180,5 +179,12 @@ Contenant:
 - erreurs éventuelles  
 
 ---
+Fin du document
+---
 
-Fin du Pipeline complet de Synchronisation Externe.
+Document Metadata & Changelog
+
+Changelog:   
+- 1.0.0 (2025-12-09): Création du Pipeline complet de Synchronisation Externe 
+Breaking Changes:  
+- Aucun depuis 1.0.0
