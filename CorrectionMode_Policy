@@ -1,8 +1,7 @@
-
 ---
 Document: CorrectionMode_Policy
-Version: 1.0.1
-Date: 2025-12-11
+Version: 2.0.0
+Date: 2025-12-12
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -42,11 +41,12 @@ Seul Overseer peut le faire, selon les conditions métier et structurelles.
 Lorsque correctionMode = true, le système garantit:
 
 • aucune transition workflow permise,  
-• aucun appel agentique non supervisé,  
+• aucun appel agentique hors pipeline de correction supervisé par Overseer,  
 • aucune évolution structurelle,  
 • aucune mise à jour majeure ou mineure,  
 • corrections minimales uniquement,  
-• un seul agent autorisé: SuperiorValidationAgent ou un CorrectiveAgent dédié,  
+• un seul AgentProducteur correctif autorisé par cycle,  
+• SuperiorValidationAgent est obligatoire pour validation (locale et globale) mais ne produit jamais de documents,  
 • validation globale obligatoire après chaque proposition de correction,  
 • impossibilité d’override des verdicts "block".  
 
@@ -61,7 +61,7 @@ En mode correction, Overseer:
 - doit demander validation globale après chaque correction candidate.
 
 4.2 Restrictions pour les agents  
-• Seul un agent correctif peut agir (SuperiorValidationAgent ou CorrectiveAgent).  
+• Seul un AgentProducteur correctif peut produire un candidateDocument.  
 • Les modifications doivent être minimales, ciblées et justifiées.  
 • Aucune refonte documentaire n’est permise.  
 • Aucun changement conceptuel, stratégique ou architectural.
@@ -70,7 +70,7 @@ En mode correction, Overseer:
 L’orchestrateur doit:
 - refuser toute transition workflow,
 - exécuter uniquement: log, patch, snapshot,
-- refuser les actions structurelles complexes non autorisées en mode correction.
+- refuser toute action structurelle non explicitement autorisée en mode correction.
 
 4.4 Conditions de sortie  
 Overseer peut désactiver le mode correction uniquement si:
@@ -86,7 +86,7 @@ Un log dédié doit être créé, marquant la clôture du cycle de correction.
 5. Pipeline correctionMode
 
 1. Overseer détecte une incohérence et active correctionMode.  
-2. Appel de l’agent dédié avec instruction de correction.  
+2. Appel d’un AgentProducteur correctif avec instruction de correction.  
 3. L’orchestrateur valide structurellement le candidateDocument.  
 4. SuperiorValidationAgent effectue la validation locale.  
 5. Validation globale obligatoire.  
@@ -119,8 +119,9 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 2.0.0 (2025-12-12): Correction normative des responsabilités en correctionMode, restriction explicite à un AgentProducteur correctif (SuperiorValidationAgent reste strictement validateur), alignement des garanties et du pipeline avec l’interdiction de production documentaire par SuperiorValidationAgent.
   - 1.0.1 (2025-12-11): Normalisation de l’en-tête, alignement terminologique et déplacement des métadonnées en bas du document sans modification des règles.
   - 1.0.0 (2025-12-11): Création de la policy correctionMode, définissant les règles, contraintes et restrictions du mode correction dans Overseer.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0.
+  - SuperiorValidationAgent ne peut plus être listé comme agent correctif producteur en correctionMode, il est strictement limité au rôle de validation locale et globale.
