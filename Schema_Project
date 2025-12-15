@@ -1,14 +1,83 @@
 
 ---
+Document: Schema_Project
 Version: 1.1.0
-Date: 2025-12-09
-Changelog:
-  - 1.1.0 (2025-12-09): Mise à jour complète du Schéma Projet, ajout versioning, logs système, états workflows, compatibilité Sync
-  - 1.0.0 (2025-12-09): Création du schéma initial
-Breaking Changes: Aucun depuis 1.0.0
+Date: 2025-12-15
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
 ---
 
-# Schéma Projet (Concept)
+1. Objet du document
+
+Ce document définit le schéma normatif du Projet (ProjectSchema) utilisé par Overseer et l’orchestrateur.
+
+Ce document:
+• fixe la structure minimale et stable d’un Projet,  
+• définit les champs obligatoires, leur rôle, et les contraintes structurelles associées,  
+• sert de référence unique pour la validation structurelle côté orchestrateur,  
+• ne définit aucune logique métier, aucune règle de décision, aucun pipeline opérationnel.
+
+Ce schéma s’applique aux objets Projet persistés dans Firestore au sein de projects/{projectId}/meta/project.json et à tout objet Projet équivalent manipulé par le système.
+
+---
+
+2. Définition du Projet
+
+Un Projet est un conteneur structuré regroupant:
+• des métadonnées projet (meta),  
+• des documents référents (documents),  
+• un état workflow structurel (workflows),  
+• des paramètres structurels (settings),  
+• un état de synchronisation externe (sync),  
+• des logs structurés (logs).
+
+Un Projet n’est pas:
+• un document référent (il les contient),  
+• une Policy,  
+• un workflow métier autonome.
+
+---
+
+3. Responsabilités et interdictions
+
+3.1 Overseer  
+Overseer:
+• décide des opérations métier relatives au projet,  
+• ordonne les mutations via l’orchestrateur,  
+• n’écrit jamais directement en base,  
+• ne modifie jamais un Projet sans passer par un pipeline officiel.
+
+3.2 Orchestrateur  
+L’orchestrateur:
+• est la seule couche autorisée à écrire en base,  
+• valide la conformité structurelle au présent schéma lors des écritures,  
+• n’interprète aucune logique métier,  
+• refuse toute mutation non conforme.
+
+3.3 Agents  
+Les agents:
+• ne créent pas, ne modifient pas et ne patchent pas la structure d’un Projet en base,  
+• ne décident jamais la structure d’un Projet,  
+• ne déduisent aucun champ, aucune valeur, aucune compatibilité.
+
+Toute production agentique, si elle existe dans un pipeline, reste un artefact intermédiaire soumis à validation structurelle par l’orchestrateur et décision finale par Overseer.
+
+3.4 Interdictions structurelles  
+Il est interdit de:
+• supprimer un bloc racine requis (meta, documents, workflows, settings, sync, logs),  
+• ajouter un bloc racine non déclaré,  
+• modifier le sens d’un champ par renommage implicite,  
+• rendre optionnel un champ requis par ce schéma.
+
+---
+
+4. Structure conceptuelle normative
+
+Structure conceptuelle (référence de lecture, non exécutable):
 
 Projet {
   meta {
@@ -53,11 +122,66 @@ Projet {
   }
 }
 
-Un Projet est un conteneur complet regroupant documents référents, workflows, paramètres système, historique et état de synchronisation.
+Notes normatives:
+• Document[] référence des documents conformes au Schéma universel du Document Référent (référence externe),  
+• Workflow[] référence des objets conformes au WorkflowSchema (référence externe),  
+• LogEntry et SyncEntry sont des objets structurés locaux au présent schéma.
 
 ---
 
-# JSON Schema — ProjectSchema (Version 1.1.0)
+5. Contraintes structurelles par bloc
+
+5.1 meta  
+Rôle: gouvernance, traçabilité, versioning du Projet.
+
+Contraintes:
+• meta.id est l’identifiant stable du Projet, il ne doit pas être modifié par une mise à jour,  
+• meta.createdAt ne doit pas être modifié après création,  
+• meta.version est obligatoire et suit un format X.Y.Z,  
+• meta.status est limité à active ou archived.
+
+5.2 documents  
+Rôle: pointeurs vers les documents référents versionnés du projet.
+
+Contraintes:
+• les clés autorisées sont strictement: architecture, ux, strategy, workflow, notes,  
+• chaque entrée est un tableau, y compris si une seule version existe,  
+• chaque item doit référencer un DocumentSchema résoluble et validable.
+
+5.3 workflows  
+Rôle: état workflow structurel.
+
+Contraintes:
+• systemWorkflows et projectWorkflows sont obligatoires,  
+• activeWorkflow, si présent, est un identifiant, sa validité sémantique n’est pas évaluée ici.
+
+5.4 settings  
+Rôle: contraintes structurelles projet.
+
+Contraintes:
+• agentsAllowed est obligatoire et liste des identifiants d’agents autorisés par politique locale,  
+• versioning est obligatoire et borné à auto dans ce schéma,  
+• constraints est optionnel et liste des identifiants de contraintes déclaratives.
+
+5.5 sync  
+Rôle: état de synchronisation externe, structure uniquement.
+
+Contraintes:
+• lastExternalSyncAt, lastExternalSource, lastSyncPayload sont requis,  
+• aucune interprétation métier du payload n’est définie ici.
+
+5.6 logs  
+Rôle: traces structurelles.
+
+Contraintes:
+• events et syncHistory sont des tableaux d’objets structurés,  
+• la sémantique des logs est hors périmètre, seule la structure est normative ici.
+
+---
+
+6. JSON Schema normatif
+
+JSON Schema de référence, destiné à la validation structurelle.
 
 {
   "title": "ProjectSchema",
@@ -158,3 +282,33 @@ Un Projet est un conteneur complet regroupant documents référents, workflows, 
     }
   }
 }
+
+Contraintes de référence:
+• DocumentSchema et WorkflowSchema sont des références externes qui doivent être résolues par le validateur structurel utilisé,  
+• aucune substitution implicite de ces références n’est autorisée.
+
+---
+
+7. Invariants
+
+Toujours vrais:
+
+• Un Projet contient exactement les blocs racine définis par ce schéma, aucun autre bloc racine n’est autorisé.  
+• meta.id et meta.createdAt sont immuables après création.  
+• meta.version existe toujours et suit un format X.Y.Z.  
+• documents contient uniquement les catégories déclarées (architecture, ux, strategy, workflow, notes).  
+• Aucun agent ne modifie un Projet en base.  
+• Toute écriture de Projet passe par l’orchestrateur et doit être validée structurellement.  
+• Le présent schéma ne définit aucune logique métier et ne peut pas être interprété comme tel.
+
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.1.0 (2025-12-09): Mise à jour complète du Schéma Projet, ajout versioning, logs système, états workflows, compatibilité Sync
+  - 1.0.0 (2025-12-09): Création du schéma initial
+Breaking Changes: 
+  - Aucun depuis 1.0.0
