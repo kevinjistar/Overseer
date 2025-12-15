@@ -1,0 +1,311 @@
+
+---
+Document: Pipeline_d_entrée_des_projets
+Version: 1.0.0
+Date: 2025-12-15
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le pipeline normatif et obligatoire d’entrée d’un projet dans Overseer.
+
+Ce pipeline décrit, de manière contractuelle:
+• quelles opérations sont requises pour qu’un projet soit considéré comme introduit,  
+• qui exécute chaque opération (Overseer, orchestrateur),  
+• ce qui est interdit tant que le pipeline n’est pas terminé,  
+• les préconditions d’activation du projet comme currentProject.
+
+Ce pipeline est obligatoire pour:
+• la création d’un nouveau projet,  
+• l’import d’un projet existant,  
+• la duplication d’un projet modèle.
+
+Un projet qui n’a pas été introduit via ce pipeline est considéré comme inexploitable. Aucun agent ne peut être appelé sur un projet inexploitable.
+
+---
+
+2. Acteurs et responsabilités
+
+2.1 Utilisateur  
+L’utilisateur:
+• exprime une intention d’entrée (création, import, duplication),  
+• fournit les informations initiales requises.
+
+L’utilisateur ne:
+• n’écrit jamais en base,  
+• ne crée jamais un projectId,  
+• n’active jamais un projet directement.
+
+2.2 Overseer  
+Overseer:
+• reçoit l’intention utilisateur,  
+• vérifie la complétude minimale des entrées,  
+• ordonne explicitement à l’orchestrateur l’exécution des opérations structurelles,  
+• bloque toute action agentique tant que le pipeline n’est pas clôturé,  
+• valide que les sorties structurelles requises existent,  
+• décide l’activation du currentProject.
+
+Overseer ne:
+• ne crée jamais la structure Firestore,  
+• n’écrit jamais directement en base,  
+• ne génère jamais directement les documents initiaux.
+
+2.3 Orchestrateur  
+L’orchestrateur:
+• est la seule couche autorisée à écrire dans Firestore,  
+• exécute exclusivement des opérations structurelles ordonnées par Overseer,  
+• crée la structure projet, les documents initiaux, le workflow engine minimal, les snapshots initiaux et les logs initiaux,  
+• retourne un statut structuré à Overseer.
+
+L’orchestrateur ne:
+• ne décide jamais si un projet doit être créé, importé ou dupliqué,  
+• n’interprète jamais l’intention métier,  
+• n’appelle jamais de LLM.
+
+2.4 Agents  
+Les agents:
+• ne sont jamais impliqués dans l’entrée d’un projet,  
+• ne peuvent pas être appelés tant que le pipeline n’est pas clôturé,  
+• ne peuvent pas créer ou initialiser un projet.
+
+---
+
+3. Définitions opérationnelles
+
+3.1 Projet exploitable  
+Un projet est exploitable si, et seulement si:
+• la structure Firestore minimale est créée,  
+• les documents référents initiaux existent et sont structurellement valides,  
+• un workflow engine minimal existe,  
+• un snapshot initial existe,  
+• un log de création existe,  
+• Overseer a explicitement marqué le projet comme currentProject si l’utilisateur l’a demandé.
+
+3.2 Clôture du pipeline  
+Le pipeline est clôturé uniquement lorsque Overseer a confirmé que toutes les sorties requises existent et sont conformes.
+
+---
+
+4. Préconditions bloquantes
+
+Le pipeline ne peut pas démarrer si:
+• halted = true,  
+• correctionMode = true, sauf si l’entrée du projet est explicitement ordonnée comme action de stabilisation (cas exceptionnel, documenté et journalisé),  
+• l’identifiant utilisateur n’est pas disponible pour l’écriture de userContext, si l’activation currentProject est demandée.
+
+---
+
+5. Entrées requises
+
+5.1 Entrées minimales fournies par l’utilisateur
+Selon le mode d’entrée:
+• création: name, description (au minimum),  
+• import: source déclarée et payload d’import structuré,  
+• duplication: projectId source ou templateId.
+
+5.2 Entrées générées et gouvernées par le système
+• projectId: généré de façon déterministe côté orchestrateur sur ordre d’Overseer,  
+• createdAt: généré à l’écriture,  
+• status initial: défini à la création selon le schéma projet.
+
+Interdiction:
+• aucun agent, aucun utilisateur, aucun composant autre que l’orchestrateur n’écrit ces valeurs en base.
+
+---
+
+6. Sorties requises
+
+À la fin du pipeline, les artefacts suivants doivent exister en base:
+
+6.1 Structure projet minimale
+projects/{projectId}/
+meta/
+documents/
+workflowEngine/
+logs/
+settings/
+
+6.2 Document projet (métadonnées)
+projects/{projectId}/meta/project.json conforme à Schema_Project.
+
+6.3 Documents référents initiaux
+projects/{projectId}/documents/
+architecture.json
+ux.json
+strategy.json
+workflowDocument.json
+notes.json
+
+Chaque document:
+• respecte le Schéma universel du Document Référent et son module spécialisé,  
+• est complet, au format JSON strict,  
+• possède une meta conforme et initialisée.
+
+6.4 Workflow Engine minimal
+projects/{projectId}/workflowEngine/engine.json conforme au schéma workflow en vigueur.
+
+6.5 Snapshots initiaux
+Au minimum:
+• snapshot du meta projet,  
+• snapshot des documents référents initiaux,  
+• snapshot du workflow engine initial.
+
+6.6 Logs initiaux
+Au minimum:
+• logs/creation ou équivalent déclaré,  
+• un événement global de création conforme aux conventions de journalisation.
+
+6.7 Activation du currentProject (optionnel)
+Si l’utilisateur l’a explicitement demandé:
+userContext/{userId}/currentProject.json est écrit et pointe vers projectId.
+
+---
+
+7. Étapes normatives du pipeline
+
+7.1 Étape 1, Réception et cadrage de la demande (Overseer)
+Overseer:
+• identifie le mode d’entrée (création, import, duplication),  
+• vérifie la complétude minimale,  
+• interdit tout appel agentique,  
+• génère un operationId et prépare l’ordre structurel pour l’orchestrateur.
+
+Interdiction:
+• Overseer ne déclenche aucune écriture sans ordre explicite, et ne délègue aucune décision au niveau orchestrateur.
+
+7.2 Étape 2, Création de la structure Firestore (orchestrateur)
+Sur ordre explicite d’Overseer, l’orchestrateur:
+• crée projects/{projectId}/ et les sous-collections autorisées,  
+• écrit projects/{projectId}/meta/project.json conforme à Schema_Project.
+
+Interdiction:
+• aucune collection racine additionnelle n’est créée.
+
+7.3 Étape 3, Création des documents référents initiaux (orchestrateur)
+Sur ordre explicite d’Overseer, l’orchestrateur crée les documents initiaux:
+• architecture.json, ux.json, strategy.json, workflowDocument.json, notes.json.
+
+Exigences:
+• documents complets, JSON strict, structure conforme,  
+• aucune dépendance à une production agentique,  
+• aucune zone manquante requise par le schéma.
+
+7.4 Étape 4, Initialisation normative des métadonnées documentaires (orchestrateur)
+Chaque document initial est créé avec:
+• version: "1.0.0",  
+• status: "active",  
+• ownerAgent: "SystemInit",  
+• createdAt: date d’écriture,  
+• updatedAt: date d’écriture,  
+• changelog initial conforme aux conventions internes du document.
+
+Interdiction:
+• aucun autre composant ne peut définir ownerAgent pour ces écritures initiales.
+
+7.5 Étape 5, Création d’un Workflow Engine minimal (orchestrateur)
+Sur ordre explicite d’Overseer, l’orchestrateur écrit un workflow engine minimal conforme, incluant au minimum:
+• un état initial,  
+• au moins deux états,  
+• au moins une transition valide.
+
+Interdiction:
+• aucune condition métier n’est persistée dans le workflow engine.
+
+7.6 Étape 6, Snapshot initial obligatoire (orchestrateur)
+Sur ordre explicite d’Overseer, l’orchestrateur crée les snapshots initiaux requis.
+
+Exigences:
+• snapshots complets,  
+• contenus structurés,  
+• traçables (date, operationId, reason).
+
+Interdiction:
+• aucune entrée de projet n’est considérée clôturée sans snapshot initial.
+
+7.7 Étape 7, Vérification de clôture (Overseer)
+Overseer vérifie explicitement:
+• existence de la structure minimale,  
+• conformité structurelle des documents initiaux,  
+• existence du workflow engine minimal,  
+• existence des snapshots initiaux,  
+• existence des logs initiaux.
+
+Overseer:
+• refuse la clôture si un seul artefact requis manque.
+
+7.8 Étape 8, Activation du projet comme currentProject (Overseer puis orchestrateur)
+Si activation demandée:
+• Overseer ordonne l’écriture de userContext/{userId}/currentProject.json,  
+• l’orchestrateur exécute l’écriture.
+
+Contraintes:
+• si une opération est en cours, elle doit être annulée proprement avant bascule,  
+• si halted = true, l’activation est interdite.
+
+7.9 Étape 9, Journalisation finale (orchestrateur, sur ordre d’Overseer)
+Overseer ordonne une écriture de log structurée de création contenant au minimum:
+• projectId,  
+• date,  
+• mode d’entrée (création, import, duplication),  
+• version initiale des artefacts,  
+• statut final du pipeline (success ou error).
+
+---
+
+8. Conditions d’échec et comportement attendu
+
+8.1 Échec structurel détecté par l’orchestrateur
+Si l’orchestrateur détecte une non-conformité structurelle:
+• aucune étape suivante n’est exécutée,  
+• un statut d’erreur structuré est renvoyé à Overseer,  
+• aucune clôture n’est possible.
+
+8.2 Échec de vérification détecté par Overseer
+Si Overseer détecte un artefact manquant ou incohérent:
+• le projet est marqué comme inexploitable,  
+• le projet n’est pas activé comme currentProject,  
+• aucune action agentique n’est autorisée sur ce projet.
+
+---
+
+9. Règles immuables
+
+Les règles suivantes sont non négociables:
+
+1. Aucun projet n’est exploitable tant que le pipeline n’est pas clôturé par Overseer.  
+2. Aucun agent n’est appelé tant que le snapshot initial n’existe pas.  
+3. Le versioning initial des documents référents est toujours "1.0.0".  
+4. ownerAgent = "SystemInit" pour l’initialisation des documents référents.  
+5. Le workflow engine minimal existe avant toute action agentique.  
+6. Le currentProject est défini uniquement via une activation explicite, écrite par l’orchestrateur sur ordre d’Overseer.  
+7. Aucun composant autre que l’orchestrateur n’écrit dans Firestore.
+
+---
+
+10. Invariants
+
+Toujours vrais:
+
+• L’entrée d’un projet ne dépend d’aucune production agentique.  
+• Overseer décide, l’orchestrateur exécute, les agents sont inactifs durant ce pipeline.  
+• Aucune écriture Firestore n’a lieu sans ordre explicite d’Overseer.  
+• Le pipeline interdit tout travail “hors contexte”, aucun appel agentique sans currentProject exploitable.  
+• L’existence des documents référents initiaux, du workflow engine minimal, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.
+
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-09): Document initial.
+
+Breaking Changes:
+  - Aucun.
