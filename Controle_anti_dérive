@@ -1,8 +1,7 @@
-
 ---
 Document: Controle_anti_dérive
-Version: 2.0.1
-Date: 2025-12-11
+Version: 2.0.2
+Date: 2025-12-12
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -13,176 +12,178 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit les mécanismes de détection et de gestion des dérives dans Overseer.
+Ce document définit les mécanismes normatifs de détection, de qualification et de traitement des dérives dans le système Overseer.
 
-L’anti-dérive couvre deux domaines strictement séparés:
-• dérive structurelle (détectée par l’orchestrateur),  
-• dérive métier (détectée par Overseer et SuperiorValidationAgent).
+La dérive est strictement segmentée en deux catégories non recouvrantes:
+• dérive structurelle,  
+• dérive métier.
 
-Aucune entité ne peut corriger automatiquement une dérive.  
-Toute correction passe par Overseer et obéit strictement à CorrectionMode_Policy.
+Aucune entité ne dispose d’un droit de correction automatique.  
+Toute action corrective est initiée, encadrée et validée par Overseer conformément à CorrectionMode_Policy.
 
 
 2. Définitions
 
-2.1 Dérive structurelle  
-Toute anomalie liée à la structure technique du système:
-• JSON invalide ou corrompu,  
-• schéma non respecté,  
-• transition workflow structurellement impossible,  
-• dépassement des quotas structurels (ex: trop de transitions par minute),  
-• incohérence meta détectée par l’orchestrateur,  
-• boucle structurelle (répétition mécanique d’une même transition).
+2.1 Dérive structurelle
 
-2.2 Dérive métier  
-Toute incohérence conceptuelle ou stratégique:
-• documents contradictoires,  
-• boucle métier (actions répétées sans progression),  
+Une dérive structurelle correspond à toute anomalie relevant de la structure technique ou mécanique du système, incluant notamment:
+• JSON invalide, incomplet ou corrompu,  
+• non-respect d’un schéma universel ou spécialisé,  
+• transition de workflow structurellement impossible,  
+• incohérence des métadonnées détectée par l’orchestrateur,  
+• dépassement d’un quota structurel défini par WorkflowPolicy,  
+• répétition mécanique d’opérations identiques sans changement d’état (boucle structurelle).
+
+Une dérive structurelle est détectée exclusivement par l’orchestrateur.
+
+2.2 Dérive métier
+
+Une dérive métier correspond à toute incohérence conceptuelle, stratégique ou sémantique, incluant notamment:
+• contradictions entre documents référents,  
+• boucle métier sans progression validée,  
 • transitions métier incohérentes,  
-• modifications qui dégradent la cohérence globale,  
-• corrections successives qui n’améliorent pas l’état,  
-• risques détectés par SuperiorValidationAgent.
+• dégradation de la cohérence globale du projet,  
+• corrections successives sans amélioration de l’état,  
+• risques élevés signalés par SuperiorValidationAgent.
 
-La dérive métier n’est jamais détectée par l’orchestrateur.
+Une dérive métier n’est jamais détectée par l’orchestrateur.
 
 
-3. Acteurs impliqués
+3. Acteurs impliqués et responsabilités
 
-• Orchestrateur: détection structurelle uniquement, jamais métier.  
-• Overseer: analyse métier, décisions et orchestration des corrections.  
-• SuperiorValidationAgent: détection sémantique locale et globale.  
-• Agents producteurs: ne détectent jamais les dérives.  
-• Firestore: stockage passif.
+• Orchestrateur: détecte uniquement les dérives structurelles, n’analyse jamais le métier.  
+• Overseer: analyse les dérives métier, décide des actions correctives et pilote correctionMode.  
+• SuperiorValidationAgent: détecte et qualifie les incohérences sémantiques locales et globales.  
+• Agents producteurs: ne détectent, n’analysent et ne corrigent jamais les dérives.  
+• Firestore: stockage passif sans rôle actif.
 
 
 4. Mécanismes de détection
 
-4.1 Détection structurelle (orchestrateur)  
-Déclenchée lorsque:
-• validateDocument échoue,  
-• runWorkflowTransition détecte une transition invalide,  
-• updateDocument rencontre un meta illégal,  
-• un document viole le schéma,  
-• un quota structurel est dépassé (WorkflowPolicy),  
-• des opérations concurrentes anormales sont détectées.
+4.1 Détection structurelle
 
-L’orchestrateur ne tente jamais de réparer.
+La détection structurelle est déclenchée lorsque:
+• une validation de document échoue,  
+• une transition de workflow est structurellement invalide,  
+• une écriture viole le schéma ou les métadonnées,  
+• un quota structurel est dépassé,  
+• des opérations concurrentes anormales sont observées.
 
-4.2 Détection métier (Overseer et SuperiorValidationAgent)
+L’orchestrateur:
+• interrompt immédiatement l’opération,  
+• ne tente aucune réparation,  
+• remonte une erreur structurelle à Overseer.
 
-Déclenchée lorsque:
-• verdict local ou global = block,  
-• contradictions inter-documents détectées,  
+4.2 Détection métier
+
+La détection métier est déclenchée lorsque:
+• un verdict sémantique local ou global est block,  
+• un verdict warn est associé à un risque élevé,  
 • workflowImpact = major,  
-• risque global élevé,  
-• opérations successives sans progression,  
-• incohérences narratives majeures,  
-• processus cyclique ou ambigu détecté par Overseer.
+• des incohérences narratives majeures sont détectées,  
+• une absence de progression est constatée malgré des modifications successives.
 
-Overseer décide ensuite de l’entrée en correctionMode.
+Overseer décide explicitement de l’entrée en correctionMode.
 
 
 5. États anti-dérive
 
 5.1 État normal  
-Aucun problème structurel ni métier détecté.
+Aucune dérive détectée.
 
 5.2 État warning  
-Un risque mineur a été détecté:
-• anomalie structurelle légère,  
-• verdict warn,  
-• progression encore possible.
-
-L’opération peut continuer mais est journalisée.
+Risque limité détecté sans blocage immédiat.  
+L’opération peut se poursuivre sous contrôle et journalisation.
 
 5.3 État correction (correctionMode)  
-Activé par Overseer lorsqu’une dérive métier sérieuse est identifiée:
-• modifications limitées,  
-• transitions workflow interdites,  
-• agent correctif unique autorisé,  
-• validation globale obligatoire à la fin.
+État transitoire de stabilisation activé par Overseer:
+• un seul agent correctif autorisé,  
+• aucune transition de workflow permise,  
+• modifications strictement ciblées,  
+• validation globale obligatoire avant sortie.
 
 5.4 État halted  
-Réservé aux cas critiques:
-• violation structurelle majeure,  
-• corruption grave du projet,  
+État critique empêchant toute poursuite normale du système:
+• corruption structurelle majeure,  
 • impossibilité de restaurer une cohérence métier minimale.
 
-Seul systemRecovery peut sortir de l’état halted.
+Seule la procédure systemRecovery permet une sortie de cet état.
 
 
-6. Protocole de réaction aux dérives
+6. Protocole de réaction
 
-6.1 Réaction à une dérive structurelle (orchestrateur)
-1. L’opération est immédiatement stoppée.  
-2. Une erreur structurelle détaillée est renvoyée à Overseer.  
-3. Aucun snapshot n’est appliqué.  
-4. Aucun correctif n’est tenté.  
-5. Overseer décide: abandon, retry contrôlé ou passage en correctionMode.
+6.1 Réaction à une dérive structurelle
 
-6.2 Réaction à une dérive métier (Overseer)
-1. Overseer identifie la dérive (via SuperiorValidationAgent ou logique interne).  
-2. Overseer active correctionMode.  
-3. Overseer génère une instruction correctrice minimale.  
-4. L’agent correctif produit un document strict.  
-5. L’orchestrateur valide structurellement et écrit.  
-6. Overseer déclenche une validation globale.  
-7. Si stable, sortie de correctionMode.  
-8. Sinon, nouvelle correction ou passage à halted.
+1. Arrêt immédiat de l’opération par l’orchestrateur.  
+2. Transmission d’une erreur structurelle détaillée à Overseer.  
+3. Aucune tentative de correction automatique.  
+4. Décision d’Overseer: abandon, retry contrôlé ou correctionMode.
 
-6.3 Passage en halted  
-Le passage à halted intervient uniquement lorsque:
-• correctionMode ne parvient pas à restaurer la cohérence,  
-• ou une anomalie structurelle empêche toute poursuite du système.
+6.2 Réaction à une dérive métier
+
+1. Identification de la dérive par Overseer.  
+2. Activation explicite de correctionMode.  
+3. Production d’une instruction correctrice minimale.  
+4. Production d’un document strict par un agent correctif.  
+5. Validation structurelle par l’orchestrateur.  
+6. Validation sémantique globale.  
+7. Sortie de correctionMode uniquement si la stabilité est confirmée.
+
+6.3 Passage à halted
+
+Le passage à halted intervient uniquement si:
+• correctionMode échoue à restaurer la cohérence,  
+• ou une dérive structurelle bloque toute continuation.
 
 
 7. Gestion des boucles
 
-7.1 Boucles structurelles (orchestrateur)
-Détection:
-• transitions répétitives identiques au-delà des limites définies,  
-• opérations identiques consécutives sans modification d’état.
+7.1 Boucles structurelles
+
+Détection par l’orchestrateur:
+• répétition mécanique d’opérations identiques,  
+• transitions répétitives sans évolution d’état.
 
 Réaction:
 • arrêt immédiat,  
-• erreur structurelle renvoyée à Overseer.
+• erreur structurelle transmise à Overseer.
 
-7.2 Boucles métier (Overseer)
-Détection:
-• modifications conceptuelles en aller-retour,  
-• contradictions récurrentes après correction,  
-• absence de progression validée par SuperiorValidationAgent.
+7.2 Boucles métier
+
+Détection par Overseer:
+• alternance répétée de corrections contradictoires,  
+• absence de progression validée,  
+• instabilité conceptuelle persistante.
 
 Réaction:
 • correctionMode obligatoire,  
-• analyse globale,  
-• warning ou block selon la gravité.
+• analyse globale renforcée,  
+• warning ou block selon gravité.
 
 Aucune boucle n’est autorisée dans le système.
 
 
-8. Gestion du workflow et dérive
+8. Workflow et anti-dérive
 
-• Toute transition automatique est interdite.  
-• Overseer valide la cohérence métier puis ordonne explicitement une transition.  
-• L’orchestrateur n’applique qu’une transition structurellement valide.  
-• Toute transition susceptible de provoquer une boucle métier est bloquée via SuperiorValidationAgent.  
+• Aucune transition n’est déclenchée sans décision explicite d’Overseer.  
+• L’orchestrateur exécute uniquement des transitions structurellement valides.  
+• Toute transition susceptible d’induire une dérive métier est bloquée via SuperiorValidationAgent.
 
 
-9. Journalisation anti-dérive
+9. Journalisation
 
 Tous les événements anti-dérive sont journalisés dans:
 logs/{projectId}/driftEvents
 
 Chaque entrée contient:
-• timestamp  
-• operationId  
-• type: structural | semantic | correction | halted  
-• source: orchestrator | overseer | validationAgent  
-• details  
-• policies actives  
-• stateBefore  
-• stateAfter  
+• timestamp,  
+• operationId,  
+• type: structural | semantic | correction | halted,  
+• source: orchestrator | overseer | superiorValidationAgent,  
+• details,  
+• policies actives,  
+• stateBefore,  
+• stateAfter.
 
 
 10. Invariants anti-dérive
@@ -190,13 +191,13 @@ Chaque entrée contient:
 Toujours vrais:
 
 • Aucune réparation automatique côté orchestrateur.  
-• Toute dérive métier passe par correctionMode avant halted.  
+• Toute dérive métier impose correctionMode avant halted.  
 • Toute dérive structurelle stoppe immédiatement l’opération.  
 • Aucune transition workflow sans validation métier d’Overseer.  
-• SuperiorValidationAgent n’écrit jamais en base et ne corrige jamais.  
-• Overseer est souverain mais ne peut jamais overrider un block en correctionMode.  
-• halted est un état critique nécessitant systemRecovery uniquement.  
-• correctionMode est un état temporaire de stabilisation.  
+• SuperiorValidationAgent ne corrige jamais et n’écrit jamais en base.  
+• Overseer ne peut jamais forcer une sortie de correctionMode en présence d’un block.  
+• halted ne peut être levé que par systemRecovery.  
+• correctionMode est strictement temporaire.
 
 Fin du document
 ---
@@ -204,12 +205,10 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.1 (2025-12-11): Normalisation de l’en-tête, alignement des noms de policies, correction terminologique et clarification sans modification des invariants.
+  - 2.0.2 (2025-12-12): Clarification normative sans changement de responsabilités, explicitation des interdictions et alignement strict avec CorrectionMode_Policy.
+  - 2.0.1 (2025-12-11): Normalisation de l’en-tête, alignement des noms de policies, correction terminologique.
   - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2 et CorrectionMode_Policy.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Distinction explicite entre dérives structurelles et dérives métier.
-  - SuperiorValidationAgent remplace l’ancien ValidationAgent.
-  - Les transitions workflow ne peuvent jamais être détectées comme dérive côté orchestrateur.
-  - Introduction d’un protocole formel correctionMode avant toute mise à l’état halted pour dérive métier.
+  - Aucun depuis 2.0.0
