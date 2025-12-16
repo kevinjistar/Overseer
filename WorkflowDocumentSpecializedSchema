@@ -1,11 +1,27 @@
-
 ---
-Version: 1.1.0
-Date: 2025-12-10
-Changelog:
-  - 1.1.0 (2025-12-10): Mise à jour pour alignement complet avec WorkflowEngineSchema 1.1.0 et UniversalDocumentSchema 1.1.0
-  - 1.0.0 (2025-12-10): Initialisation du module spécialisé Workflow Document
-Breaking Changes: Aucun depuis 1.0.0
+Document: WorkflowDocumentSpecializedSchema
+Version: 1.1.1
+Date: 2025-12-16
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+# WorkflowDocumentSpecializedSchema
+
+## Objet du document
+
+Ce document définit le module spécialisé "Workflow Document" utilisé pour étendre UniversalDocumentSchema via la clé `specialized`.
+
+## Rôle du document dans le système
+
+Niveau: normatif et structurel.  
+Ce document sert de référence de structure pour les documents de type workflow (métier ou opérationnel) et leurs composants (states, transitions, rules, integrations, validations).  
+Il ne définit pas de logique métier d’exécution, ne déclenche aucune transition, et ne remplace pas le Workflow Engine.
+
 ---
 
 # WorkflowDocumentSpecializedSchema
@@ -72,3 +88,15 @@ specialized:
       field: string
       rule: string
       message: string
+
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Version: 1.1.0
+Date: 2025-12-10
+Changelog:
+  - 1.1.0 (2025-12-10): Mise à jour pour alignement complet avec WorkflowEngineSchema 1.1.0 et UniversalDocumentSchema 1.1.0
+  - 1.0.0 (2025-12-10): Initialisation du module spécialisé Workflow Document
+Breaking Changes: Aucun depuis 1.0.0
