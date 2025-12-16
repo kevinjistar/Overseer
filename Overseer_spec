@@ -238,9 +238,10 @@ Overseer doit toujours garantir:
 • prévention des dérives,  
 • stabilité du système avant d’autoriser toute écriture.
 
-
+---
 Fin du document
 ---
+Document Metadata & Changelog
 
 Changelog:
   - 2.0.0 (2025-12-11): Refonte majeure, CorrectionMode, Policies versionnées et pipeline standard.
