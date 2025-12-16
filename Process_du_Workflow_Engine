@@ -3,7 +3,6 @@
 Document: Process_du_Workflow_Engine
 Version: 2.0.0
 Date: 2025-12-11
-PolicyType: WorkflowProcess
 
 PolicyVersions:
   WorkflowPolicy: 1.0.0
