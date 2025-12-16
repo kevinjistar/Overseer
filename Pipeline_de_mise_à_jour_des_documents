@@ -1,318 +1,279 @@
-
 ---
-Document: Policies_Versioning_Spec
-Version: 1.1.0
-Date: 2025-12-12
+Document: Pipeline_de_mise_à_jour_des_documents
+Version: 2.0.1
+Date: 2025-12-14
 
 PolicyVersions:
-  VersioningPolicy: 1.0.0
   ValidationPolicy_Global: 1.0.0
   WorkflowPolicy: 1.0.0
   CorrectionMode_Policy: 1.0.0
   System_Agent_Edit_Policy: 1.0.0
 ---
 
-# Spécification des Policies de Versioning
+# Pipeline de mise à jour des documents
 
-## 1. Objet du document
+## Objet du document
+Ce document définit le processus complet de mise à jour d’un document référent dans Overseer.  
+Il décrit, étape par étape, comment une modification passe de l’intention utilisateur à l’écriture finale dans Firestore, avec validation structurelle et sémantique.
 
-Ce document définit de manière normative et canonique:
+## Rôle du document dans le système
+Document procédural, il spécifie un pipeline opérationnel de mise à jour documentaire.  
+Il décrit le “comment” du flux, sans redéfinir les responsabilités des acteurs.
 
-• le modèle de versioning applicable à **tous les artefacts du système Overseer**,  
-• le versioning des **Policies**,  
-• le versioning des **documents de spécification**,  
-• le versioning des **documents référents en base**,  
-• les règles de compatibilité, de progression, de migration et de traçabilité,  
-• les contraintes applicables en mode correction,  
-• la manière dont Overseer, SuperiorValidationAgent et l’orchestrateur utilisent ces règles.
+1. Objet du document
 
-Ce document est **référentiel**.  
-Toute divergence dans un autre document constitue une incohérence à corriger.
+Ce pipeline définit le processus complet de mise à jour d’un document référent dans Overseer.  
+Il décrit, étape par étape, comment une modification passe:
 
-Les agents ne consultent jamais ce document directement.  
-Overseer en est l’unique interprète et injecteur.
+• De l’intention utilisateur  
+• À la production agentique  
+• À la validation structurelle  
+• À la validation sémantique (locale + globale)  
+• À la décision métier d’Overseer  
+• À l’écriture finale dans Firestore  
+• Aux transitions workflow structurelles validées  
 
----
+Ce pipeline garantit:
+• absence de dérive,  
+• cohérence globale,  
+• contrôle absolu de la logique métier,  
+• traçabilité totale.
 
-## 2. Définitions fondamentales
 
-### 2.1 Policy
+2. Préconditions à toute mise à jour documentaire
 
-Une Policy est un document référent système contenant:
-• des règles normatives explicites,  
-• une version indépendante,  
-• un périmètre d’application clair,  
-• des invariants,  
-• une gouvernance d’évolution.
+2.1 Projet actif  
+Un currentProject valide doit être défini.
 
-Une Policy ne modifie jamais directement le système.  
-Elle gouverne les décisions d’Overseer et contraint structurellement l’orchestrateur.
+2.2 État système  
+• correctionMode = false  
+• halted = false  
 
-### 2.2 Document de spécification
+2.3 Intégrité précédente  
+• snapshot valide disponible  
+• absence d’erreurs structurelles actives  
 
-Un document de spécification décrit une partie du système Overseer:
-• architecture,  
-• pipeline,  
-• processus,  
-• rôle,  
-• schéma,  
-• policy.
-
-Chaque document de spécification possède **sa propre ligne de version indépendante**.
-
-### 2.3 Artefact versionnable
-
-Sont considérés comme artefacts versionnables:
-• Policies,  
-• documents de spécification,  
-• documents référents projet,  
-• schémas,  
-• workflows,  
-• snapshots.
-
-Le versioning est **obligatoire** pour tout artefact versionnable.
-
----
-
-## 3. Principe central du versioning
-
-### 3.1 Format unique
-
-Tout versioning suit strictement le format:
-
-X.Y.Z
-
-• X = Major  
-• Y = Minor  
-• Z = Patch  
-
-Aucune autre convention n’est autorisée.
-
-### 3.2 Indépendance absolue des versions
-
-Chaque artefact évolue selon **sa propre ligne de version**.  
-Il n’existe **aucune version globale du système Overseer**.
-
-La cohérence globale est assurée par:
-• les schémas,  
-• les Policies,  
-• les PolicyVersions déclarées,  
-• l’injection explicite des règles par Overseer.
-
----
-
-## 4. Policies officielles reconnues
-
-Les seules Policies reconnues par le système sont:
-
+2.4 Chargement des Policies  
+Overseer doit charger:
+• ValidationPolicy_Global  
 • VersioningPolicy  
 • WorkflowPolicy  
-• ValidationPolicy_Global  
 • CorrectionMode_Policy  
 • System_Agent_Edit_Policy  
 
-Toute Policy non listée ici est **ignorée par le système** et constitue une erreur de gouvernance.
 
----
+3. Étape 1 — Intention utilisateur
 
-## 5. Sémantique Major / Minor / Patch pour les Policies
+L’utilisateur exprime une demande.  
+Overseer:
+• analyse l’intention,  
+• identifie le document concerné,  
+• détermine si une mise à jour documentaire est nécessaire,  
+• évalue le type de versioning (Major/Minor/Patch),  
+• vérifie compatibilité avec les Policies.
 
-### 5.1 Major (X+1.0.0)
+Sortie: décision de démarrer le pipeline documentaire.
 
-Une montée de version Major correspond à:
-• modification d’un invariant,  
-• changement de comportement métier,  
-• évolution incompatible,  
-• modification des règles de sécurité ou de correction,  
-• changement de format ou de structure attendue.
 
-Effets:
-• migration explicite requise,  
-• documents existants potentiellement incompatibles,  
-• validation globale obligatoire.
+4. Étape 2 — Préparation du contexte par Overseer
 
-### 5.2 Minor (X.Y+1.0)
+Overseer:
+• charge le document original,  
+• charge les schémas (universel + specialized),  
+• charge System_Agent_Edit_Policy (extrait pertinent),  
+• définit operationMode (normal ou correction),  
+• génère operationId,  
+• assemble une systemInstruction complète.
 
-Correspond à:
-• ajout de règles non disruptives,  
-• extension compatible,  
-• nouveaux cas supportés,  
-• renforcement sans rupture.
+systemInstruction =  
+• document original  
+• schémas  
+• EditRules  
+• Policies actives  
+• intention explicite  
+• type de versioning imposé  
+• operationMode  
+• meta opérationnelle  
 
-Effets:
-• compatibilité descendante maintenue,  
-• application automatique par Overseer après activation.
 
-### 5.3 Patch (X.Y.Z+1)
+5. Étape 3 — Appel de l’AgentProducteur
 
-Correspond à:
-• correction interne,  
-• clarification rédactionnelle,  
-• précision sans impact comportemental réel.
+L’orchestrateur reçoit systemInstruction et:
+• valide structurellement l’instruction,  
+• appelle l’AgentProducteur,  
+• reçoit un JSON strict contenant candidateDocument.
 
-Effets:
-• aucune migration requise.
+Aucun texte libre n’est accepté.  
+Un document complet est requis.
 
----
 
-## 6. Sémantique Major / Minor / Patch pour les documents de spécification
+6. Étape 4 — Validation structurelle par l’orchestrateur
 
-### 6.1 Major
+L’orchestrateur vérifie:
+• conformité au Schema_Document_Référent,  
+• conformité au module specialized,  
+• types et structure valides,  
+• absence de champs inconnus,  
+• meta conforme,  
+• version séquentielle correcte (pas le type métier),  
+• JSON strict uniquement.
 
-Un document doit incrémenter sa Major si la modification:
-• change le rôle ou la responsabilité d’un acteur,  
-• modifie un invariant architectural,  
-• modifie un pipeline officiel,  
-• change l’interprétation correcte du document,  
-• introduit ou supprime une capacité structurante.
+En cas d’échec → erreur structurelle → pipeline interrompu → retour Overseer.
 
-Règle absolue:
-Un changement d’interprétation **n’est jamais un Patch**.
 
-### 6.2 Minor
+7. Étape 5 — Validation sémantique locale (obligatoire)
 
-Une Minor correspond à:
-• ajout de précision importante,  
-• extension d’un processus existant,  
-• ajout de cas sans invalider les précédents,  
-• renforcement normatif sans rupture.
+Overseer envoie au SuperiorValidationAgent:
+• originalDocument  
+• candidateDocument  
+• diff  
+• projectContext minimal  
+• operationMeta  
 
-### 6.3 Patch
+Le SuperiorValidationAgent retourne un verdict local:
 
-Un Patch correspond uniquement à:
-• correction rédactionnelle,  
-• clarification sans impact opérationnel,  
-• amélioration de lisibilité sans changement de sens.
+{
+  "verdict": "allow | warn | block",
+  "reasons": [...],
+  "impactedDocuments": [...],
+  "workflowImpact": "none | minor | major",
+  "riskLevel": "low | medium | high",
+  "recommendedFixes": [...]
+}
 
-### 6.4 Principe de prudence
+block → Overseer doit corriger ou annuler.  
+override possible uniquement en mode normal (marqué comme exception).  
+En correctionMode → override interdit.
 
-En cas de doute:
-• Minor prévaut sur Patch,  
-• Major prévaut sur Minor.
 
----
+8. Étape 6 — Validation sémantique globale (si requise)
 
-## 7. Règles de progression des versions
+Selon ValidationPolicy_Global:
+• version Major,  
+• documents racine,  
+• workflowImpact = major,  
+• mode correction,  
+• risque global élevé,  
 
-• aucune version ne peut être décrémentée,  
-• Major impose X+1.0.0,  
-• Minor impose X.Y+1.0,  
-• Patch impose X.Y.Z+1.
+→ validation globale OBLIGATOIRE.
 
-Toute violation entraîne un **rejet structurel immédiat**.
+SuperiorValidationAgent reçoit un contexte élargi:
+• tous les documents du projet,  
+• workflowState,  
+• Policies,  
+• logs récents.
 
----
+block → correction ou abandon.  
+warn → arbitrage Overseer.  
+allow → continuer.
 
-## 8. Versioning et snapshots
 
-• toute version Major déclenche un snapshot obligatoire,  
-• toute version Minor peut déclencher un snapshot selon Policy,  
-• les versions Patch suivent la politique de rétention définie.
+9. Étape 7 — Décision finale d’Overseer
 
-Les snapshots sont:
-• créés exclusivement par l’orchestrateur,  
-• jamais par un agent,  
-• jamais par Overseer.
+Overseer combine:
+• validation structurelle,  
+• validation locale,  
+• validation globale (si effectuée),  
+• type de versioning,  
+• Policies,  
+• état du projet,  
+• operationMode.
 
----
+Décisions possibles:
 
-## 9. Versioning en mode correction
+• apply (appliquer)  
+• warn & apply (application avec risque, log obligatoire)  
+• correction (nouvelle instruction à un agent correctif)  
+• abort (arrêt de l’opération)
 
-Lorsque correctionMode = true:
+En mode correction:
+• seules les décisions correction ou abort sont permises si risque élevé.
 
-• seules les versions Patch sont autorisées,  
-• toute Major ou Minor est interdite,  
-• la stabilité prévaut sur l’évolutivité,  
-• toute tentative contraire est bloquée.
 
----
+10. Étape 8 — Écriture finale par l’orchestrateur
 
-## 10. Déclaration des PolicyVersions
+Si Overseer autorise:
 
-### 10.1 Dans les documents de spécification
+L’orchestrateur:
+• écrit le document dans Firestore,  
+• applique version mécanique (X.Y.Z),  
+• met à jour meta.updatedAt,  
+• ajoute appliedPolicies,  
+• crée snapshot selon Policy,  
+• loggue l’événement.
 
-Chaque document de spécification doit déclarer explicitement:
+Aucune logique métier n’est exécutée ici.  
+L’orchestrateur suit un protocole strictement structurel.
 
-PolicyVersions:
-  versioningPolicy: "X.Y.Z"
-  validationPolicy: "X.Y.Z"
-  workflowPolicy: "X.Y.Z"
-  correctionPolicy: "X.Y.Z"
-  agentEditPolicy: "X.Y.Z"
 
-### 10.2 Dans les documents référents (en base)
+11. Étape 9 — Exécution des transitions workflow structurelles
 
-Chaque document référent doit contenir:
+Après écriture:
+• Overseer évalue si une transition métier est pertinente.  
+• S’il en décide ainsi, il envoie un ordre `runWorkflowTransition`.
 
-meta.appliedPolicies:
-  versioningPolicy: "X.Y.Z"
-  validationPolicy: "X.Y.Z"
-  workflowPolicy: "X.Y.Z"
-  correctionPolicy: "X.Y.Z"
-  agentEditPolicy: "X.Y.Z"
+L’orchestrateur:
+• vérifie l’existence structurelle de la transition,  
+• applique la transition,  
+• exécute les actions structurelles,  
+• loggue l’état final.
 
-Ces valeurs représentent **le cadre logique exact** lors de la dernière écriture validée.
+Aucune condition métier n’est évaluée côté orchestrateur.
 
----
 
-## 11. Injection obligatoire dans les instructions agents
+12. Étape 10 — Vérification post-opération par Overseer
 
-Les agents ne lisent aucun document.
+Overseer:
+• vérifie cohérence globale du projet,  
+• détecte contradictions métier,  
+• active correctionMode si nécessaire,  
+• met à jour son contexte interne,  
+• prépare un rapport utilisateur.
 
-Overseer doit injecter dans chaque instruction:
 
-instructionMeta:
-  policyVersions:
-    versioningPolicy: "X.Y.Z"
-    validationPolicy: "X.Y.Z"
-    workflowPolicy: "X.Y.Z"
-    correctionPolicy: "X.Y.Z"
-    agentEditPolicy: "X.Y.Z"
+13. Résumé du pipeline v2 (essence)
 
-L’orchestrateur vérifie uniquement la présence et la conformité structurelle de ces champs.
+1. Intention utilisateur  
+2. Contexte + policies  
+3. Instruction agent  
+4. Production JSON  
+5. Validation structurelle (orchestrateur)  
+6. Validation locale (SuperiorValidationAgent)  
+7. Validation globale si requise  
+8. Décision Overseer  
+9. Écriture Firestore + snapshot  
+10. Transition workflow structurelle (si ordonnée)  
+11. Vérification finale  
+12. Rapport utilisateur
 
----
 
-## 12. Migrations
-
-Une migration est requise lorsque:
-• une Policy Major évolue,  
-• un document Major modifie un invariant.
-
-Procédure:
-1. Détection par Overseer  
-2. Passage éventuel en correctionMode  
-3. Mise à jour contrôlée via agents producteurs  
-4. Validation par SuperiorValidationAgent  
-5. Écriture par l’orchestrateur  
-6. Snapshot avant et après
-
-Aucune migration implicite n’est autorisée.
-
----
-
-## 13. Invariants du versioning
+14. Invariants du pipeline de mise à jour
 
 Toujours vrais:
 
-• versioning obligatoire pour tout artefact,  
-• indépendance totale des lignes de version,  
-• aucune décision de versioning côté agent,  
-• application mécanique par l’orchestrateur,  
-• compatibilité déterminée par PolicyVersions,  
-• aucune écriture sans version valide,  
-• correctionMode verrouille toute évolution non corrective,  
-• toute incompatibilité majeure bloque l’opération.
+• Aucun agent ne modifie Firestore.  
+• Aucun agent ne déduit la logique métier.  
+• Overseer ne modifie jamais un document lui-même.  
+• Orchestrateur n’exécute jamais une transition non ordonnée par Overseer.  
+• SuperiorValidationAgent valide toujours la sémantique locale.  
+• La validation globale suit strictement ValidationPolicy_Global.  
+• Le mode correction désactive toute évolution structurelle non nécessaire.  
+• Aucune écriture sans snapshot cohérent.  
+• Aucun workflow automatique.  
+• Traçabilité complète via operationId et snapshotId.
 
----
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-12): Fusion normative des deux versions, réintégration des invariants de versioning global des artefacts, clarification des règles applicables aux documents de spécification et alignement strict avec Overseer v2.
-  - 1.0.0 (2025-12-10): Création de la spécification des policies de versioning.
+  - 2.0.1 (2025-12-14): Normalisation formelle, ajout d’une frontpage standard, déplacement des métadonnées en footer, contenu opérationnel inchangé.
+  - 2.0.0 (2025-12-11): Refonte complète intégrant SuperiorValidationAgent, ValidationPolicy_Global, CorrectionMode, Workflow Engine v2 et Processus interne d’appel d’agents v2.
+  - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun.
+  - Suppression complète de l’ancienne validation unique.
+  - Intégration obligatoire de la double validation (structurelle + sémantique locale/globale).
+  - Ajout du mode correction et de ses règles restrictives.
+  - Abandon de tout déclenchement automatique de workflow.
