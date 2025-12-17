@@ -1,8 +1,7 @@
-
 ---
 Document: Architecture
-Version: 1.0.0
-Date: 2025-12-12
+Version: 1.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -114,6 +113,9 @@ Ils sont gouvernés exclusivement par System_Agent_Edit_Policy et pilotés par O
 
 Le Workflow Engine est une structure déclarative d’états et de transitions.
 
+workflowEngine/engine.json est l’unique état courant et exécutable.
+Les Workflow Documents sont des artefacts descriptifs, non exécutifs, non porteurs d’état.
+
 • aucune condition métier n’est évaluée dans le workflow,
 • aucune transition n’est déclenchée automatiquement,
 • toute transition est décidée par Overseer,
@@ -131,15 +133,18 @@ Toujours vrais:
 • aucune écriture hors orchestrateur,
 • aucune validation sémantique structurelle,
 • aucune transition implicite,
+• aucun état exécutable n’est stocké dans un document workflow,
 • toute incohérence déclenche correction ou arrêt contrôlé.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 1.1.0 (2025-12-17): Renforcement des invariants, workflowEngine défini comme unique état exécutable, clarification du statut non exécutif des Workflow Documents.
   - 1.0.0 (2025-12-12): Création du document d’architecture, définition des couches, responsabilités et invariants fondamentaux.
 
 Breaking Changes:
-  - Aucun, document initial.
+  - Aucun depuis 1.0.0
