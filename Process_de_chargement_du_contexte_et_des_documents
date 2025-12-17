@@ -1,7 +1,7 @@
 ---
 Document: Process_de_chargement_du_contexte_et_des_documents
-Version: 2.0.0
-Date: 2025-12-15
+Version: 2.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -62,8 +62,9 @@ ContextAgent n'est jamais un validateur sémantique. Toute validation sémantiqu
 Le chargement du contexte ne peut démarrer que si les conditions suivantes sont simultanément vraies:
 - un currentProject est défini avec status = "active",
 - projectId est non vide et correspond à un projet existant,
-- aucune condition de blocage structurel n'est signalée par l'orchestrateur pour ce projet (ex: état halted si présent dans le runtime système),
-- les documents référents attendus existent en base, au minimum sous forme de placeholders conformes.
+- aucune condition de blocage structurel n'est signalée par l'orchestrateur pour ce projet, y compris un état halted si présent dans le runtime système,
+- les documents référents attendus existent en base, au minimum sous forme de placeholders conformes,
+- workflowEngine/engine.json existe et est lisible, sinon arrêt immédiat.
 
 4.2 Refus immédiat
 Si une précondition échoue:
@@ -138,11 +139,20 @@ Validation structurelle obligatoire pour chaque document chargé:
 - absence de clés inconnues,
 - versioning structurel parseable et non vide.
 
+Règle normative:
+- Le document workflow est chargé uniquement à des fins descriptives, il ne peut pas être interprété comme état courant.
+
 Toute incohérence structurelle sur un document attendu provoque un arrêt immédiat du chargement avec erreur structurelle.
 
 6.4 Chargement du Workflow Engine
-L'orchestrateur charge:
+Étape obligatoire.
+
+L'orchestrateur charge exclusivement:
 projects/{projectId}/workflowEngine/engine.json
+
+Interdictions:
+- Toute alternative du type "charger l'état depuis un document workflow" est interdite.
+- Le Workflow Engine n'est jamais reconstruit à partir d'un document workflow.
 
 Validation structurelle obligatoire:
 - initialState présent,
@@ -174,6 +184,7 @@ L'orchestrateur assemble un objet de contexte structuré contenant au minimum:
 }
 
 Contraintes:
+- workflowEngine est chargé depuis projects/{projectId}/workflowEngine/engine.json et contient l'état courant,
 - le contexte est destiné à Overseer et aux agents via Overseer, il n'est jamais une réponse utilisateur,
 - aucun champ n'est ajouté si sa sémantique n'est pas définie explicitement dans ce document ou dans un schéma applicable.
 
@@ -213,6 +224,9 @@ Aucune mise en cache durable du contexte n'est autorisée. Toute optimisation é
 7.4 Invalidation sur changement de projet
 Toute modification de currentProject invalide immédiatement tout contexte précédemment chargé. Overseer doit exiger un rechargement complet.
 
+7.5 Interdiction d'inférence d'état depuis un document workflow
+Il est interdit de reconstruire, inférer, ou corriger currentState à partir d’un document workflow.
+
 8. Invariants
 
 Toujours vrais:
@@ -222,6 +236,7 @@ Toujours vrais:
 - Toute incohérence structurelle pendant le chargement provoque un arrêt immédiat.
 - Le contexte livré est strictement rattaché à un projectId unique et explicite.
 - Le contexte n'est jamais exposé tel quel à l'utilisateur.
+- workflowEngine/engine.json est l'unique source de vérité pour l'état courant et les transitions.
 
 ---
 Fin du document
@@ -230,8 +245,10 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 2.1.0 (2025-12-17): Workflow Engine chargé comme source de vérité unique, interdiction d’inférer l’état depuis un document workflow, clarification du statut descriptif des Workflow Documents.
   - 2.0.0 (2025-12-15): Refonte complète au format canonique, verrouillage normatif des responsabilités (Overseer, orchestrateur, ContextAgent), suppression des règles de versioning intégrées au corps, et formalisation des entrées/sorties structurelles du chargement de contexte.
   - 1.0.0 (2025-12-09): Création du Process de chargement du contexte et des documents
 
 Breaking Changes:
+  - Aucun depuis 2.0.0
   - Le chargement de contexte est désormais spécifié comme un ordre formel avec entrée/sortie structurées, et toute mention de validation par "ValidationAgent" est remplacée par SuperiorValidationAgent via ValidationPolicy_Global.
