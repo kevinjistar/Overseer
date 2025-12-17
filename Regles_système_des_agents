@@ -1,8 +1,7 @@
-
 ---
 Document: Règles_système_des_agents
-Version: 2.0.0
-Date: 2025-12-15
+Version: 2.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -25,14 +24,13 @@ Ce document définit:
 • ce que Overseer doit imposer et contrôler,  
 • les invariants anti-dérive.
 
----
 
 2. Portée et classification des agents
 
 2.1 Agents soumis à ces règles  
 Ces règles s’appliquent à tout agent producteur de documents référents, incluant:
 • AgentProducteur (mode normal),  
-• agent correctif (mode correction),  
+• CorrectiveAgent (mode correction),  
 • tout agent générant un document candidat destiné à une écriture en base via l’orchestrateur.
 
 2.2 Agents non soumis à ces règles (sauf mention explicite)  
@@ -46,7 +44,6 @@ SuperiorValidationAgent n’est pas un agent producteur et n’est pas soumis au
 2.3 Interdiction de typologies implicites  
 Aucun autre type d’agent n’est reconnu par le système en dehors des catégories explicitement mentionnées dans les spécifications. Un agent non catégorisé est traité comme non autorisé.
 
----
 
 3. Principes non négociables
 
@@ -68,7 +65,6 @@ Un agent ne:
 3.4 Couplage de sécurité avec l’orchestrateur  
 Toute sortie agent est considérée non fiable tant qu’elle n’a pas été validée structurellement par l’orchestrateur. L’orchestrateur est responsable du rejet structurel. Overseer est responsable de la décision métier et de la validation sémantique via SuperiorValidationAgent.
 
----
 
 4. Responsabilités par acteur
 
@@ -115,7 +111,6 @@ Les agents producteurs ne doivent jamais:
 • ajouter des champs,  
 • modifier des clés protégées.
 
----
 
 5. Inputs obligatoires dans la systemInstruction (Overseer → agent)
 
@@ -132,7 +127,6 @@ Un agent producteur doit recevoir, dans la systemInstruction:
 Interdiction:
 • un agent ne doit pas être appelé si la systemInstruction ne contient pas explicitement ces éléments.
 
----
 
 6. Obligations structurelles de production
 
@@ -163,7 +157,6 @@ Sauf instruction explicite différente dans le schéma transmis, un document ré
 Interdiction:
 • inventer un champ narrative ou transformer links en objet.
 
----
 
 7. Clés protégées et contraintes d’immutabilité
 
@@ -188,7 +181,6 @@ Règle stricte:
 Interdiction:
 • un agent ne doit pas incrémenter, décrémenter ou réécrire meta.version.
 
----
 
 8. Interdictions absolues
 
@@ -208,7 +200,6 @@ Un agent producteur ne peut en aucun cas:
 • ajouter du contenu hors périmètre explicite,  
 • interpréter une intention implicite.
 
----
 
 9. Règles sémantiques minimales de production
 
@@ -221,37 +212,47 @@ Un agent producteur doit:
 Interdiction:
 • transformer le document pour l’améliorer, le rationaliser, le réécrire, ou le rendre plus cohérent globalement. La cohérence globale est traitée par SuperiorValidationAgent et Overseer.
 
----
 
 10. Règles spécifiques au mode correction
 
 Lorsque operationMode = "correction":
 
 10.1 Nature de la production  
-L’agent correctif doit:
+CorrectiveAgent doit:
 • appliquer des modifications minimales et ciblées,  
 • produire une correction strictement nécessaire,  
 • éviter toute modification de structure,  
 • éviter tout effet secondaire.
 
 10.2 Interdictions renforcées  
-En mode correction, l’agent ne doit jamais:
+En mode correction, CorrectiveAgent ne doit jamais:
 • élargir le périmètre de correction,  
 • introduire une amélioration qui n’est pas explicitement exigée,  
 • réorganiser des sections,  
 • modifier des champs non mentionnés dans l’instruction.
 
 10.3 Relation aux recommandations de validation  
-Si l’instruction inclut des correctifs recommandés issus d’un verdict de SuperiorValidationAgent, l’agent:
+Si l’instruction inclut des correctifs recommandés issus d’un verdict de SuperiorValidationAgent, CorrectiveAgent:
 • applique uniquement ces correctifs ou la portion explicitement retenue par Overseer,  
 • n’interprète pas le verdict,  
 • ne priorise pas lui-même les corrections.
 
----
 
-11. Conditions de rejet obligatoires
+11. Règles spécifiques aux agents correctifs
 
-11.1 Rejet structurel (orchestrateur)  
+11.1 Agent correctif unique  
+Seul CorrectiveAgent peut être appelé en operationMode = "correction" pour produire un document.
+
+11.2 Interdiction de production par SuperiorValidationAgent  
+SuperiorValidationAgent ne peut jamais être appelé comme agent producteur.
+
+11.3 Interdiction de nomenclature obsolète  
+Tout champ meta.ownerAgent ou toute journalisation logs.actor utilisant "ValidationAgent" est invalide.
+
+
+12. Conditions de rejet obligatoires
+
+12.1 Rejet structurel (orchestrateur)  
 Le document candidat doit être rejeté si:
 • JSON invalide ou non strict,  
 • champs inconnus,  
@@ -259,15 +260,14 @@ Le document candidat doit être rejeté si:
 • modification d’une clé protégée,  
 • absence d’un bloc requis.
 
-11.2 Rejet métier (Overseer, via SuperiorValidationAgent)  
+12.2 Rejet métier (Overseer, via SuperiorValidationAgent)  
 Le document candidat doit être traité comme non applicable si:
 • verdict block non contournable selon les règles en vigueur,  
 • incohérence sémantique identifiée,  
 • risque incompatible avec le mode correction.
 
----
 
-12. Invariants
+13. Invariants
 
 Toujours vrais:
 
@@ -280,16 +280,16 @@ Toujours vrais:
 • SuperiorValidationAgent ne produit jamais de documents,  
 • Overseer reste l’unique autorité de décision métier.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 2.1.0 (2025-12-17): Normalisation de la nomenclature (ValidationAgent supprimé), règles explicites pour CorrectiveAgent en mode correction, verrouillage du rôle non producteur de SuperiorValidationAgent, ajout d’une interdiction rendant invalide tout meta.ownerAgent ou logs.actor utilisant "ValidationAgent".
   - 2.0.0 (2025-12-11): Refonte complète pour alignement avec SuperiorValidationAgent, Workflow Engine v2.0.0, Processus standard de mise à jour, CorrectionMode et l’architecture tripartite Overseer/Orchestrateur/Agents.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Interdiction explicite des refactorings structurels par les agents producteurs.
-  - Obligation de produire l’intégralité du document complet, jamais un diff.
-  - Intégration systématique de System_Agent_Edit_Policy via Overseer.
+  - Aucun depuis 2.0.0.
