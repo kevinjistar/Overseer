@@ -1,7 +1,7 @@
 ---
-Document: Pipeline_de_mise_à_jour_des_documents
-Version: 2.0.1
-Date: 2025-12-14
+Document: Pipeline_de_mise_a_jour_des_documents
+Version: 2.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -56,7 +56,6 @@ Un currentProject valide doit être défini.
 2.4 Chargement des Policies  
 Overseer doit charger:
 • ValidationPolicy_Global  
-• VersioningPolicy  
 • WorkflowPolicy  
 • CorrectionMode_Policy  
 • System_Agent_Edit_Policy  
@@ -190,7 +189,33 @@ En mode correction:
 • seules les décisions correction ou abort sont permises si risque élevé.
 
 
-10. Étape 8 — Écriture finale par l’orchestrateur
+10. Bloc normatif — CorrectionMode
+
+Ce bloc s’applique lorsque, et seulement lorsque, Overseer active operationMode = "correction".
+
+10.1 Déclencheur
+Si verdict = block (local ou global) retourné par SuperiorValidationAgent, Overseer doit exécuter l’une des deux options suivantes, sans exception:
+• activer correctionMode et déclencher le chemin correctif décrit ci-dessous,  
+• abort explicite de l’opération.
+
+10.2 Chemin correctif obligatoire (si correctionMode activé)
+Séquence normative:
+1. Overseer active correctionMode.  
+2. Overseer construit une instruction de correction minimale à partir des recommendedFixes retournées par SuperiorValidationAgent.  
+3. Overseer sélectionne CorrectiveAgent comme unique agent producteur autorisé en correctionMode.  
+4. L’orchestrateur appelle CorrectiveAgent.  
+5. L’orchestrateur valide structurellement le candidateDocument produit par CorrectiveAgent.  
+6. SuperiorValidationAgent valide la correction (locale, puis globale obligatoire).  
+7. Overseer décide apply ou reject.  
+8. Si apply, l’orchestrateur applique un PATCH uniquement, sans transition workflow, puis log et snapshot si Policy l’exige.  
+
+10.3 Interdictions en correctionMode
+• SuperiorValidationAgent ne peut jamais être appelé comme agent producteur.  
+• Aucune transition workflow ne peut être exécutée pendant correctionMode.  
+• Aucune mise à jour Minor ou Major n’est autorisée, seul PATCH est autorisé.  
+
+
+11. Étape 8 — Écriture finale par l’orchestrateur
 
 Si Overseer autorise:
 
@@ -206,7 +231,7 @@ Aucune logique métier n’est exécutée ici.
 L’orchestrateur suit un protocole strictement structurel.
 
 
-11. Étape 9 — Exécution des transitions workflow structurelles
+12. Étape 9 — Exécution des transitions workflow structurelles
 
 Après écriture:
 • Overseer évalue si une transition métier est pertinente.  
@@ -220,8 +245,11 @@ L’orchestrateur:
 
 Aucune condition métier n’est évaluée côté orchestrateur.
 
+Interdiction:
+• aucune transition workflow ne peut être exécutée si correctionMode = true.
 
-12. Étape 10 — Vérification post-opération par Overseer
+
+13. Étape 10 — Vérification post-opération par Overseer
 
 Overseer:
 • vérifie cohérence globale du projet,  
@@ -231,7 +259,7 @@ Overseer:
 • prépare un rapport utilisateur.
 
 
-13. Résumé du pipeline v2 (essence)
+14. Résumé du pipeline v2 (essence)
 
 1. Intention utilisateur  
 2. Contexte + policies  
@@ -247,7 +275,7 @@ Overseer:
 12. Rapport utilisateur
 
 
-14. Invariants du pipeline de mise à jour
+15. Invariants du pipeline de mise à jour
 
 Toujours vrais:
 
@@ -260,7 +288,9 @@ Toujours vrais:
 • Le mode correction désactive toute évolution structurelle non nécessaire.  
 • Aucune écriture sans snapshot cohérent.  
 • Aucun workflow automatique.  
-• Traçabilité complète via operationId et snapshotId.
+• Traçabilité complète via operationId et snapshotId.  
+• En correctionMode, CorrectiveAgent est l’unique agent autorisé à produire un document candidat de correction.  
+• En correctionMode, SuperiorValidationAgent est strictement diagnostiqueur et validateur, jamais producteur.  
 
 Fin du document
 ---
@@ -268,6 +298,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 2.1.0 (2025-12-17): Ajout explicite du chemin CorrectionMode avec CorrectiveAgent (agent producteur unique en correction), normalisation terminologique (ValidationAgent supprimé), clarification des interdictions associées.
   - 2.0.1 (2025-12-14): Normalisation formelle, ajout d’une frontpage standard, déplacement des métadonnées en footer, contenu opérationnel inchangé.
   - 2.0.0 (2025-12-11): Refonte complète intégrant SuperiorValidationAgent, ValidationPolicy_Global, CorrectionMode, Workflow Engine v2 et Processus interne d’appel d’agents v2.
   - 1.0.0 (2025-12-10): Version initiale.
