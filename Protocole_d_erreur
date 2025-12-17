@@ -1,7 +1,7 @@
 ---
 Document: Protocole_d_erreur
-Version: 3.0.0
-Date: 2025-12-15
+Version: 3.0.1
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -292,6 +292,22 @@ Interdictions:
 
 9. Journalisation des erreurs
 
+9.1 Nomenclature officielle des acteurs (liste exacte)
+
+Les seuls acteurs reconnus pour la journalisation sont:
+- overseer
+- orchestrator
+- superiorValidationAgent
+- correctiveAgent
+- systemInit
+- syncAgent
+
+9.2 Règle d’invalidité d’actor non reconnu
+
+Tout actor non reconnu par la nomenclature officielle est invalide et doit être rejeté structurellement par l’orchestrateur.
+
+9.3 Emplacement et schéma minimal
+
 Toute erreur doit être journalisée dans:
 
 logs/{projectId}/errors
@@ -302,7 +318,7 @@ Chaque entrée contient au minimum:
 - projectId,
 - errorType (StructuralError | SemanticWarn | SemanticBlock | BusinessError | Halted),
 - severity (warning | error | halted),
-- actor (orchestrator | overseer | superiorValidationAgent),
+- actor (overseer | orchestrator | superiorValidationAgent | correctiveAgent | systemInit | syncAgent),
 - details,
 - stateBefore,
 - stateAfter,
@@ -322,19 +338,16 @@ Toujours vrais:
 - Aucun workflow ne peut se déclencher en présence d’une erreur métier ou structurelle.
 - correctionMode est l’unique voie de stabilisation avant halted métier.
 
----
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 3.0.1 (2025-12-17): Normalisation des acteurs (ValidationAgent supprimé), ajout de la règle d’invalidité d’actor non reconnu, liste officielle d’acteurs ajoutée.
   - 3.0.0 (2025-12-15): Mise au format canonique obligatoire (header, marqueur de fin, footer), clarification et verrouillage normatif des responsabilités par acteur, normalisation stricte de la typologie warning/error/halted et des séquences de traitement, intégration explicite de correctionMode et systemRecovery comme protocoles contrôlés.
   - 2.0.0 (2025-12-11): Refonte complète alignée avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2, CorrectionMode_Policy et la séparation structurel/métier.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Application stricte du format canonique, suppression des champs hors format et interdiction de variantes.
-  - Clarification stricte entre erreurs structurelles (orchestrateur) et erreurs métier (Overseer + SuperiorValidationAgent).
-  - Introduction d’un protocole séquencé entre warning, correctionMode et halted.
-  - Suppression de toute réparation automatique côté orchestrateur.
+  - Aucun depuis 3.0.0.
