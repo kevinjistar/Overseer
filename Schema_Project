@@ -307,6 +307,7 @@ Toujours vrais:
 • Le présent schéma ne définit aucune logique métier et ne peut pas être interprété comme tel.  
 • Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un document workflow.
 
+---
 Fin du document
 ---
 
