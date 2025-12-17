@@ -1,8 +1,7 @@
-
 ---
 Document: Schema_Project
-Version: 1.1.0
-Date: 2025-12-15
+Version: 2.0.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -30,10 +29,15 @@ Ce schéma s’applique aux objets Projet persistés dans Firestore au sein de p
 Un Projet est un conteneur structuré regroupant:
 • des métadonnées projet (meta),  
 • des documents référents (documents),  
-• un état workflow structurel (workflows),  
+• un workflowEngine exécutable portant l’état courant (workflowEngine),  
 • des paramètres structurels (settings),  
 • un état de synchronisation externe (sync),  
 • des logs structurés (logs).
+
+Règles normatives:
+• workflowEngine est l’unique porteur d’état courant exécutable, snapshotable, restaurable.  
+• Les documents de type “Workflow Document” ne portent jamais l’état courant, ils sont des descripteurs uniquement.  
+• Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un document workflow.
 
 Un Projet n’est pas:
 • un document référent (il les contient),  
@@ -56,22 +60,25 @@ L’orchestrateur:
 • est la seule couche autorisée à écrire en base,  
 • valide la conformité structurelle au présent schéma lors des écritures,  
 • n’interprète aucune logique métier,  
-• refuse toute mutation non conforme.
+• refuse toute mutation non conforme,  
+• charge l’état courant et exécute les transitions uniquement depuis workflowEngine/engine.json, sur ordre explicite d’Overseer.
 
 3.3 Agents  
 Les agents:
 • ne créent pas, ne modifient pas et ne patchent pas la structure d’un Projet en base,  
 • ne décident jamais la structure d’un Projet,  
-• ne déduisent aucun champ, aucune valeur, aucune compatibilité.
+• ne déduisent aucun champ, aucune valeur, aucune compatibilité,  
+• ne lisent pas et ne déduisent pas l’état courant depuis un document workflow.
 
 Toute production agentique, si elle existe dans un pipeline, reste un artefact intermédiaire soumis à validation structurelle par l’orchestrateur et décision finale par Overseer.
 
 3.4 Interdictions structurelles  
 Il est interdit de:
-• supprimer un bloc racine requis (meta, documents, workflows, settings, sync, logs),  
+• supprimer un bloc racine requis (meta, documents, workflowEngine, settings, sync, logs),  
 • ajouter un bloc racine non déclaré,  
 • modifier le sens d’un champ par renommage implicite,  
-• rendre optionnel un champ requis par ce schéma.
+• rendre optionnel un champ requis par ce schéma,  
+• introduire un porteur d’état courant hors workflowEngine.
 
 ---
 
@@ -98,10 +105,10 @@ Projet {
     notes: Document[]
   }
 
-  workflows {
-    systemWorkflows: Workflow[]
-    projectWorkflows: Workflow[]
-    activeWorkflow
+  workflowEngine {
+    engineId
+    currentState
+    engineRef
   }
 
   settings {
@@ -124,8 +131,9 @@ Projet {
 
 Notes normatives:
 • Document[] référence des documents conformes au Schéma universel du Document Référent (référence externe),  
-• Workflow[] référence des objets conformes au WorkflowSchema (référence externe),  
-• LogEntry et SyncEntry sont des objets structurés locaux au présent schéma.
+• les documents sous documents.workflow ne définissent jamais l’état courant, ils sont non exécutifs,  
+• LogEntry et SyncEntry sont des objets structurés locaux au présent schéma,  
+• workflowEngine est l’unique porteur d’état courant, toute transition se fait depuis workflowEngine/engine.json.
 
 ---
 
@@ -146,14 +154,17 @@ Rôle: pointeurs vers les documents référents versionnés du projet.
 Contraintes:
 • les clés autorisées sont strictement: architecture, ux, strategy, workflow, notes,  
 • chaque entrée est un tableau, y compris si une seule version existe,  
-• chaque item doit référencer un DocumentSchema résoluble et validable.
+• chaque item doit référencer un DocumentSchema résoluble et validable,  
+• les documents sous documents.workflow ne définissent jamais l’état courant, ils sont non exécutifs.
 
-5.3 workflows  
-Rôle: état workflow structurel.
+5.3 workflowEngine  
+Rôle: état exécutable unique du workflow projet.
 
 Contraintes:
-• systemWorkflows et projectWorkflows sont obligatoires,  
-• activeWorkflow, si présent, est un identifiant, sa validité sémantique n’est pas évaluée ici.
+• workflowEngine.engineId est obligatoire et identifie de manière stable l’engine,  
+• workflowEngine.currentState est obligatoire et porte l’état courant unique,  
+• workflowEngine.engineRef est obligatoire et référence l’engine exécutable,  
+• aucun champ d’état courant ne doit exister ailleurs dans le Projet.
 
 5.4 settings  
 Rôle: contraintes structurelles projet.
@@ -186,7 +197,7 @@ JSON Schema de référence, destiné à la validation structurelle.
 {
   "title": "ProjectSchema",
   "type": "object",
-  "required": ["meta", "documents", "workflows", "settings", "sync", "logs"],
+  "required": ["meta", "documents", "workflowEngine", "settings", "sync", "logs"],
   "properties": {
     "meta": {
       "type": "object",
@@ -213,21 +224,13 @@ JSON Schema de référence, destiné à la validation structurelle.
       }
     },
 
-    "workflows": {
+    "workflowEngine": {
       "type": "object",
-      "required": ["systemWorkflows", "projectWorkflows"],
+      "required": ["engineId", "currentState", "engineRef"],
       "properties": {
-        "systemWorkflows": {
-          "type": "array",
-          "items": { "$ref": "WorkflowSchema" }
-        },
-        "projectWorkflows": {
-          "type": "array",
-          "items": { "$ref": "WorkflowSchema" }
-        },
-        "activeWorkflow": {
-          "type": "string"
-        }
+        "engineId": { "type": "string" },
+        "currentState": { "type": "string" },
+        "engineRef": { "type": "string" }
       }
     },
 
@@ -297,18 +300,23 @@ Toujours vrais:
 • meta.id et meta.createdAt sont immuables après création.  
 • meta.version existe toujours et suit un format X.Y.Z.  
 • documents contient uniquement les catégories déclarées (architecture, ux, strategy, workflow, notes).  
+• workflowEngine est l’unique porteur d’état courant exécutable, snapshotable, restaurable.  
+• Les documents sous documents.workflow ne portent jamais l’état courant, ils sont non exécutifs.  
 • Aucun agent ne modifie un Projet en base.  
 • Toute écriture de Projet passe par l’orchestrateur et doit être validée structurellement.  
-• Le présent schéma ne définit aucune logique métier et ne peut pas être interprété comme tel.
+• Le présent schéma ne définit aucune logique métier et ne peut pas être interprété comme tel.  
+• Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un document workflow.
 
----
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 2.0.0 (2025-12-17): Alignement normatif sur workflowEngine comme unique état exécutable, suppression de toute représentation d’état parallèle via workflows, clarification du statut non exécutif des Workflow Documents.
   - 1.1.0 (2025-12-09): Mise à jour complète du Schéma Projet, ajout versioning, logs système, états workflows, compatibilité Sync
   - 1.0.0 (2025-12-09): Création du schéma initial
+
 Breaking Changes: 
-  - Aucun depuis 1.0.0
+  - Toute lecture de l’état courant via workflows ou via un document workflow est désormais invalide.
+  - Suppression de la section workflows conceptuelle en tant que porteur d’état.
