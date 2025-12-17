@@ -1,7 +1,7 @@
 ---
 Document: SuperiorValidationAgent_spec
-Version: 2.0.0
-Date: 2025-12-15
+Version: 2.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -27,7 +27,7 @@ SuperiorValidationAgent:
 - détecte les contradictions sémantiques, locales et inter-documents selon le contexte fourni,
 - qualifie le risque et l’impact workflow,
 - produit un verdict structuré allow, warn, ou block,
-- propose des corrections sous forme de recommandations textuelles.
+- propose des recommandations de correction sous forme de textes, jamais sous forme de document.
 
 2.3 Ce que SuperiorValidationAgent ne fait jamais
 SuperiorValidationAgent:
@@ -136,6 +136,7 @@ SuperiorValidationAgent retourne exclusivement un JSON strict. Aucun texte hors 
 - reasons doit contenir des faits sémantiques observables à partir des inputs, pas des opinions.
 - impactedDocuments doit lister uniquement des identifiants ou références explicitement présentes dans projectContext.
 - recommendedFixes doit rester actionnable et ciblé, sans proposer de changement de responsabilité ou de refonte non demandée.
+- recommendedFixes reste une liste de recommandations textuelles, jamais un document, jamais une version alternative, jamais un patch, jamais un diff.
 
 6. Domaines d’analyse
 
@@ -216,16 +217,18 @@ Toujours vrais:
 - Overseer reste l’unique autorité de décision.
 - L’orchestrateur reste l’unique autorité de validation structurelle.
 - En mode correction, la stabilité prévaut et le block est préféré en cas de doute.
+- En CorrectionMode, SuperiorValidationAgent ne produit jamais de document candidat modifié et ne remplace jamais un agent producteur.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 2.1.0 (2025-12-17): Ajout d’un invariant explicite interdisant toute production de document par SuperiorValidationAgent, y compris en CorrectionMode, clarification du statut des recommendedFixes.
   - 2.0.0 (2025-12-15): Refonte complète au format canonique, suppression des champs et sections hors norme (PolicyType, règles de versioning dans le corps), formalisation stricte des responsabilités (Overseer, orchestrateur, SuperiorValidationAgent) et normalisation des schémas d’input/output autour de ValidationPolicy_Global.
   - 1.0.0 (2025-12-10): Initialisation du document
 
 Breaking Changes:
-  - Le payload d’input référence désormais explicitement policyVersions au format validationPolicyGlobal, workflowPolicy, correctionModePolicy, systemAgentEditPolicy, et impose validationScope (local | global), toute intégration précédente non conforme doit être migrée.
-  - La section de versioning interne et toute référence à VersioningPolicy ou ValidationPolicy dans l’en-tête et le corps sont supprimées au profit du format canonique et de ValidationPolicy_Global.
+  - Aucun depuis 2.0.0.
