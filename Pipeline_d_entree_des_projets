@@ -1,8 +1,7 @@
-
 ---
-Document: Pipeline_d_entrée_des_projets
-Version: 1.0.0
-Date: 2025-12-15
+Document: Pipeline_d_entree_des_projets
+Version: 1.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -60,7 +59,7 @@ Overseer ne:
 L’orchestrateur:
 • est la seule couche autorisée à écrire dans Firestore,  
 • exécute exclusivement des opérations structurelles ordonnées par Overseer,  
-• crée la structure projet, les documents initiaux, le workflow engine minimal, les snapshots initiaux et les logs initiaux,  
+• crée la structure projet, les documents initiaux, le workflowEngine minimal, les snapshots initiaux et les logs initiaux,  
 • retourne un statut structuré à Overseer.
 
 L’orchestrateur ne:
@@ -82,7 +81,7 @@ Les agents:
 Un projet est exploitable si, et seulement si:
 • la structure Firestore minimale est créée,  
 • les documents référents initiaux existent et sont structurellement valides,  
-• un workflow engine minimal existe,  
+• workflowEngine/engine.json existe, est prêt et initialisé, et porte l’état courant via currentState,  
 • un snapshot initial existe,  
 • un log de création existe,  
 • Overseer a explicitement marqué le projet comme currentProject si l’utilisateur l’a demandé.
@@ -147,8 +146,11 @@ Chaque document:
 • est complet, au format JSON strict,  
 • possède une meta conforme et initialisée.
 
+Règle normative:
+• workflowDocument.json est un document descriptif, il ne porte jamais l’état courant et ne peut pas être interprété comme moteur d’état.
+
 6.4 Workflow Engine minimal
-projects/{projectId}/workflowEngine/engine.json conforme au schéma workflow en vigueur.
+projects/{projectId}/workflowEngine/engine.json conforme au schéma workflow en vigueur, et contenant currentState.
 
 6.5 Snapshots initiaux
 Au minimum:
@@ -196,6 +198,9 @@ Exigences:
 • aucune dépendance à une production agentique,  
 • aucune zone manquante requise par le schéma.
 
+Règle normative:
+• workflowDocument.json est strictement descriptif et ne porte jamais l’état courant.
+
 7.4 Étape 4, Initialisation normative des métadonnées documentaires (orchestrateur)
 Chaque document initial est créé avec:
 • version: "1.0.0",  
@@ -208,14 +213,22 @@ Chaque document initial est créé avec:
 Interdiction:
 • aucun autre composant ne peut définir ownerAgent pour ces écritures initiales.
 
-7.5 Étape 5, Création d’un Workflow Engine minimal (orchestrateur)
-Sur ordre explicite d’Overseer, l’orchestrateur écrit un workflow engine minimal conforme, incluant au minimum:
-• un état initial,  
+7.5 Étape 5, Création du Workflow Engine par défaut (orchestrateur)
+Sur ordre explicite d’Overseer, l’orchestrateur écrit dans:
+projects/{projectId}/workflowEngine/engine.json
+
+Le workflowEngine écrit est minimal, conforme, et inclut au minimum:
+• initialState,  
+• currentState,  
 • au moins deux états,  
 • au moins une transition valide.
 
+Règles normatives:
+• currentState est écrit dans workflowEngine/engine.json et porte l’état courant unique.  
+• Il est interdit d’utiliser workflowDocument.json comme porteur d’état courant ou comme moteur d’état.
+
 Interdiction:
-• aucune condition métier n’est persistée dans le workflow engine.
+• aucune condition métier n’est persistée dans le workflowEngine.
 
 7.6 Étape 6, Snapshot initial obligatoire (orchestrateur)
 Sur ordre explicite d’Overseer, l’orchestrateur crée les snapshots initiaux requis.
@@ -232,7 +245,7 @@ Interdiction:
 Overseer vérifie explicitement:
 • existence de la structure minimale,  
 • conformité structurelle des documents initiaux,  
-• existence du workflow engine minimal,  
+• existence de workflowEngine/engine.json, et présence de currentState,  
 • existence des snapshots initiaux,  
 • existence des logs initiaux.
 
@@ -282,7 +295,7 @@ Les règles suivantes sont non négociables:
 2. Aucun agent n’est appelé tant que le snapshot initial n’existe pas.  
 3. Le versioning initial des documents référents est toujours "1.0.0".  
 4. ownerAgent = "SystemInit" pour l’initialisation des documents référents.  
-5. Le workflow engine minimal existe avant toute action agentique.  
+5. workflowEngine/engine.json existe, est prêt et initialisé, et porte currentState avant toute action d’agent.  
 6. Le currentProject est défini uniquement via une activation explicite, écrite par l’orchestrateur sur ordre d’Overseer.  
 7. Aucun composant autre que l’orchestrateur n’écrit dans Firestore.
 
@@ -296,7 +309,8 @@ Toujours vrais:
 • Overseer décide, l’orchestrateur exécute, les agents sont inactifs durant ce pipeline.  
 • Aucune écriture Firestore n’a lieu sans ordre explicite d’Overseer.  
 • Le pipeline interdit tout travail “hors contexte”, aucun appel agentique sans currentProject exploitable.  
-• L’existence des documents référents initiaux, du workflow engine minimal, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.
+• L’existence des documents référents initiaux, de workflowEngine/engine.json prêt et initialisé, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.  
+• workflowDocument.json est descriptif et ne porte jamais l’état courant.
 
 ---
 Fin du document
@@ -305,7 +319,8 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 1.1.0 (2025-12-17): Alignement du pipeline sur workflowEngine comme unique état exécutable, interdiction d’un état porté par un document workflow.
   - 1.0.0 (2025-12-09): Document initial.
 
 Breaking Changes:
-  - Aucun.
+  - workflowEngine/engine.json doit inclure currentState, toute entrée de projet sans currentState est non conforme.
