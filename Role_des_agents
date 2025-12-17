@@ -1,8 +1,7 @@
-
 ---
 Document: Role_des_agents
-Version: 1.0.0
-Date: 2025-12-15
+Version: 1.1.0
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -43,13 +42,16 @@ Toute autonomie implicite est interdite.
 
 3. Classification officielle des agents
 
-Il existe exactement deux familles d’agents.
+Il existe exactement trois familles d’agents.
 
 3.1 AgentsProducteurs  
 Produisent un document candidat complet au format JSON strict.
 
 3.2 AgentsValidateurs  
 Émettent un verdict sémantique structuré (allow, warn, block) sans produire de document.
+
+3.3 AgentsCorrectifs  
+Produisent un document candidat de correction uniquement lorsque operationMode = "correction".
 
 Aucune autre famille n’est autorisée.
 Aucun agent hybride n’est autorisé.
@@ -128,8 +130,7 @@ Lorsque operationMode = "correction" est injecté par Overseer:
 • seuls des ajustements minimaux et strictement correctifs sont autorisés,  
 • aucune créativité n’est autorisée,  
 • aucune restructuration n’est autorisée,  
-• aucune extension non demandée n’est autorisée,  
-• un AgentProducteur agit comme agent correctif sous contraintes renforcées.
+• aucune extension non demandée n’est autorisée.
 
 Toute proposition dépassant la correction demandée est interdite.
 
@@ -146,9 +147,9 @@ Tout autre agent validateur est interdit.
 SuperiorValidationAgent:
 • n’écrit jamais en base,  
 • ne modifie jamais de document,  
+• ne produit jamais de candidateDocument, y compris en CorrectionMode,  
 • ne déclenche jamais de workflow,  
-• ne déclenche jamais de correction,  
-• ne produit pas de candidateDocument.
+• ne déclenche jamais de correction.
 
 Il retourne uniquement un verdict structuré.
 
@@ -184,7 +185,36 @@ Aucun autre format n’est autorisé.
 Aucun texte libre hors structure n’est autorisé.
 
 
-6. Rôles interdits à tous les agents
+6. AgentsCorrectifs
+
+6.1 AgentCorrectif officiel
+
+Il n’existe qu’un seul AgentCorrectif officiel:
+• CorrectiveAgent
+
+Tout autre agent correctif est interdit.
+
+CorrectiveAgent:
+• produit un candidateDocument strictement correctif uniquement lorsque operationMode = "correction",  
+• n’écrit jamais en base (toute écriture est effectuée par l’orchestrateur),  
+• ne déclenche jamais de workflow,  
+• ne décide jamais d’appliquer une correction.
+
+6.2 Contraintes renforcées
+
+En operationMode = "correction", CorrectiveAgent:
+• applique des modifications minimales, ciblées et strictement nécessaires,  
+• n’introduit aucune évolution conceptuelle, stratégique ou architecturale,  
+• ne restructure jamais globalement un document,  
+• n’étend jamais le périmètre de l’instruction,  
+• ne propose jamais une refonte,  
+• retourne un JSON strict complet sans texte libre.
+
+CorrectiveAgent est appelé uniquement sur instruction explicite d’Overseer.
+La validation sémantique de toute correction est effectuée par SuperiorValidationAgent.
+
+
+7. Rôles interdits à tous les agents
 
 Les agents ne peuvent en aucun cas:
 • modifier Firestore,  
@@ -203,9 +233,9 @@ Les agents ne peuvent en aucun cas:
 Toute tentative est rejetée, ignorée ou bloquée selon les contrôles structurels et les règles d’édition injectées.
 
 
-7. Supervision des agents
+8. Supervision des agents
 
-7.1 Rôle d’Overseer
+8.1 Rôle d’Overseer
 
 Overseer:
 • sélectionne l’agent,  
@@ -220,7 +250,7 @@ Overseer est l’unique autorité métier.
 Aucun agent n’est autonome.
 
 
-7.2 Rôle de l’orchestrateur
+8.2 Rôle de l’orchestrateur
 
 L’orchestrateur:
 • appelle les agents sur ordre explicite d’Overseer,  
@@ -228,13 +258,12 @@ L’orchestrateur:
 • valide structurellement (schéma, types, champs, méta, conformité),  
 • refuse tout contenu illégal ou non conforme,  
 • journalise l’opération,  
-• n’interprète aucune sémantique,  
-• ne contacte jamais SuperiorValidationAgent.
+• n’interprète aucune sémantique.
 
 L’orchestrateur ne décide jamais d’appliquer une modification.
 
 
-8. Invariants du rôle des agents
+9. Invariants du rôle des agents
 
 Toujours vrais:
 
@@ -243,21 +272,19 @@ Toujours vrais:
 • Un agent ne décide jamais du métier.  
 • Un agent renvoie toujours un JSON complet lorsque requis.  
 • Un agent n’ajoute jamais de champs non autorisés.  
-• SuperiorValidationAgent ne produit jamais de documents.  
+• SuperiorValidationAgent ne produit jamais de documents, y compris en CorrectionMode.  
+• CorrectiveAgent est le seul agent autorisé à produire une correction en operationMode = "correction".  
 • Aucun agent ne peut modifier le système lui-même.  
 • Overseer reste l’unique autorité métier.
 
----
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-11): Refonte complète pour intégration du SuperiorValidationAgent, séparation stricte métier/structurel, harmonisation avec Overseer_spec v2, CorrectionMode_Policy et Workflow Engine v2.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.1.0 (2025-12-17): Ajout explicite du CorrectiveAgent comme agent correctif distinct, verrouillage du non-rôle modificateur du SuperiorValidationAgent en CorrectionMode, extension de la classification officielle avec la famille AgentsCorrectifs.
+  - 1.0.0 (2025-12-15): Version initiale.
 
 Breaking Changes:
-  - Suppression de l’ancien ValidationAgent au profit du SuperiorValidationAgent.
-  - Distinction explicite entre AgentsProducteurs et AgentsValidateurs.
-  - Interdiction totale de toute logique métier ou structurelle exécutée directement par un agent.
+  - Aucun depuis 1.0.0.
