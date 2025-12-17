@@ -1,7 +1,7 @@
 ---
 Document: Controle_anti_derive
-Version: 2.0.2
-Date: 2025-12-12
+Version: 2.0.3
+Date: 2025-12-17
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -172,18 +172,26 @@ Aucune boucle n’est autorisée dans le système.
 
 9. Journalisation
 
+9.1 Emplacement
+
 Tous les événements anti-dérive sont journalisés dans:
 logs/{projectId}/driftEvents
+
+9.2 Schéma minimal
 
 Chaque entrée contient:
 • timestamp,  
 • operationId,  
 • type: structural | semantic | correction | halted,  
-• source: orchestrator | overseer | superiorValidationAgent,  
+• source: orchestrator | overseer | superiorValidationAgent | correctiveAgent,  
 • details,  
 • policies actives,  
 • stateBefore,  
 • stateAfter.
+
+9.3 Règle d’invalidité
+
+Toute valeur source non listée est invalide.
 
 
 10. Invariants anti-dérive
@@ -199,16 +207,18 @@ Toujours vrais:
 • halted ne peut être levé que par systemRecovery.  
 • correctionMode est strictement temporaire.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 2.0.3 (2025-12-17): Normalisation terminologique (ValidationAgent supprimé), extension de la liste source pour inclure correctiveAgent, ajout d’une règle d’invalidité des valeurs non reconnues.
   - 2.0.2 (2025-12-12): Clarification normative sans changement de responsabilités, explicitation des interdictions et alignement strict avec CorrectionMode_Policy.
   - 2.0.1 (2025-12-11): Normalisation de l’en-tête, alignement des noms de policies, correction terminologique.
   - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2 et CorrectionMode_Policy.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun depuis 2.0.0
+  - Aucun depuis 2.0.1
