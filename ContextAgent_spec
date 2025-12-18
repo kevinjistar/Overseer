@@ -1,0 +1,568 @@
+-----
+Document: ContextAgent_spec
+Version: 1.1.0
+Date: 2025-12-18
+
+PolicyVersions:
+
+ValidationPolicy_Global: 1.0.0
+WorkflowPolicy: 1.0.0
+CorrectionMode_Policy: 1.0.0
+System_Agent_Edit_Policy: 1.0.0
+----
+
+# ContextAgent_spec
+
+## 1) Positionnement exact dans l’architecture
+
+ContextAgent est un AgentTransformateur, non producteur et non validateur, placé entre:
+• l’Orchestrateur (qui charge le contexte brut),
+• Overseer (qui consomme soit le brut, soit brut + transformation ContextAgent).
+
+Règle normative:
+• ContextAgent ne remplace jamais le contexte brut; il ne fait qu’ajouter une couche de lecture.
+• Le contexte brut chargé par l’Orchestrateur reste la référence intégrale consommable par Overseer.
+
+-----
+
+## 2) Finalité opérationnelle
+
+ContextAgent existe pour:
+
+1. Réduire le coût cognitif d’Overseer lorsque le contexte est volumineux.
+1. Réduire les erreurs d’aiguillage (mauvais document, mauvais invariant) dues à la surcharge d’informations.
+1. Améliorer la traçabilité des points saillants (décisions, contraintes, risques) en pointant explicitement les sources.
+
+ContextAgent n’a pas pour but:
+• de nettoyer le projet,
+• de corriger,
+• d’interpréter le métier,
+• de résoudre des contradictions.
+
+-----
+
+## 3) Autorité et responsabilité
+
+Règles normatives:
+• Overseer décide si ContextAgent est appelé et fixe le purpose de transformation.
+• ContextAgent exécute une transformation déterministe sous contraintes, sans initiative de périmètre.
+• L’Orchestrateur est responsable de la conformité structurelle du payload entrant et du retour structuré à Overseer.
+
+Interdictions:
+• ContextAgent n’a aucune autorité sur la vérité métier.
+• ContextAgent n’a aucune autorité sur la vérité structurelle.
+• ContextAgent n’a aucune autorité sur le workflowEngine.
+• ContextAgent n’a aucune autorité sur le versioning.
+• ContextAgent n’a aucune autorité sur les transitions.
+• ContextAgent ne rend aucun verdict allow, warn, block.
+
+-----
+
+## 4) Déclenchement
+
+ContextAgent est appelé uniquement si Overseer l’ordonne explicitement.
+
+Motifs normatifs minimaux autorisés:
+• contextQuality = “warning”
+• documentsCount > 50
+• payloadSizeEstimate > 64000
+• operationCritical = true (validation globale ou correctionMode)
+• userRequestRelayed = true (demande utilisateur explicitement relayée par Overseer)
+
+Interdictions:
+• déclenchement par l’Orchestrateur,
+• déclenchement implicite,
+• déclenchement par défaut.
+
+-----
+
+## 5) Entrées attendues
+
+ContextAgent reçoit un objet déjà chargé par l’Orchestrateur. Il ne fait aucune lecture additionnelle.
+
+Exigences normatives:
+• Le payload d’entrée doit contenir workflowEngine provenant de projects/{projectId}/workflowEngine/engine.json.
+• ContextAgent ne doit jamais tenter de reconstruire ni de compléter workflowEngine par inférence.
+
+Entrées minimales recommandées:
+• projectMeta (id, name, status, timestamps)
+• documents[] (au minimum: documentId, type, meta.version, lastUpdatedAt, sectionsKey si fournies)
+• workflowEngine (au minimum: engineId, currentState, statesCount, transitionsCount; ou states[] et transitions[] si fournis)
+• recentLogs[] (fenêtre bornée à 20 entrées maximum)
+
+Compteurs obligatoires:
+• documentsCount
+• logsCount
+• payloadSizeEstimate (unité: octets, méthode de calcul: taille du JSON sérialisé du contexte brut avant transmission à ContextAgent, utilisation: comparaison avec constraints.maxOutputBytes pour détection de risque de dépassement)
+
+-----
+
+## 6) Input et Output
+
+### 6.1 Schéma JSON, input minimal (normatif)
+
+```json
+{
+  "title": "ContextAgentInput",
+  "type": "object",
+  "required": [
+    "type",
+    "purpose",
+    "projectId",
+    "operationId",
+    "projectMeta",
+    "documents",
+    "workflowEngine",
+    "recentLogs",
+    "documentsCount",
+    "logsCount",
+    "payloadSizeEstimate",
+    "constraints"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "type": "string", "enum": ["contextAgentTransform"] },
+    "purpose": { "type": "string" },
+    "projectId": { "type": "string" },
+    "operationId": { "type": "string" },
+
+    "projectMeta": {
+      "type": "object",
+      "required": ["id", "name", "status", "createdAt", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "archived"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["documentId", "type", "version", "lastUpdatedAt"],
+        "additionalProperties": false,
+        "properties": {
+          "documentId": { "type": "string" },
+          "type": { "type": "string" },
+          "version": { "type": "string" },
+          "lastUpdatedAt": { "type": "string" },
+          "sectionsKey": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+
+    "workflowEngine": {
+      "type": "object",
+      "required": ["engineId", "currentState"],
+      "additionalProperties": true,
+      "properties": {
+        "engineId": { "type": "string" },
+        "currentState": { "type": "string" },
+        "statesCount": { "type": "integer", "minimum": 0 },
+        "transitionsCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "recentLogs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["operationId", "timestamp", "action"],
+        "additionalProperties": true,
+        "properties": {
+          "operationId": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "action": { "type": "string" }
+        }
+      },
+      "maxItems": 20
+    },
+
+    "documentsCount": { "type": "integer", "minimum": 0 },
+    "logsCount": { "type": "integer", "minimum": 0 },
+    "payloadSizeEstimate": { "type": "integer", "minimum": 0 },
+
+    "constraints": {
+      "type": "object",
+      "required": ["maxSummaryLength", "maxOutputBytes", "maxDocumentsToSummarize", "maxLogsToUse"],
+      "additionalProperties": false,
+      "properties": {
+        "maxSummaryLength": { "type": "integer", "minimum": 1 },
+        "maxOutputBytes": { "type": "integer", "minimum": 1 },
+        "maxDocumentsToSummarize": { "type": "integer", "minimum": 0 },
+        "maxLogsToUse": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "synthesisRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiredCategories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["projectSummary", "activeInvariants", "keyDecisions", "documentIndex", "riskSignals", "detectedAnomalies"]
+          },
+          "description": "Catégories obligatoires à produire. Si absent, toutes les catégories sont considérées comme requises."
+        }
+      }
+    }
+  }
+}
+```
+
+### 6.2 Schéma JSON, output strict (normatif)
+
+```json
+{
+  "title": "ContextAgentOutput",
+  "type": "object",
+  "required": ["status", "operationId", "projectId", "informationLoss"],
+  "additionalProperties": false,
+  "properties": {
+    "status": { "type": "string", "enum": ["ok", "error"] },
+    "operationId": { "type": "string" },
+    "projectId": { "type": "string" },
+
+    "informationLoss": { "type": "boolean" },
+
+    "projectSummary": { "type": "string" },
+
+    "activeInvariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string" },
+          "ref": { "type": "string" }
+        }
+      }
+    },
+
+    "keyDecisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string" },
+          "ref": { "type": "string" }
+        }
+      }
+    },
+
+    "documentIndex": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["documentId", "type", "version", "lastUpdatedAt"],
+        "additionalProperties": false,
+        "properties": {
+          "documentId": { "type": "string" },
+          "type": { "type": "string" },
+          "version": { "type": "string" },
+          "lastUpdatedAt": { "type": "string" }
+        }
+      }
+    },
+
+    "riskSignals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "text": { "type": "string" },
+          "ref": { "type": "string" }
+        }
+      }
+    },
+
+    "detectedAnomalies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "text", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string" },
+          "text": { "type": "string" },
+          "ref": { "type": "string" }
+        }
+      }
+    },
+
+    "error": {
+      "type": "object",
+      "required": ["code", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string" },
+        "reason": { "type": "string" },
+        "missingCoverage": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "ok" } } },
+      "then": {
+        "required": ["projectSummary", "activeInvariants", "keyDecisions", "documentIndex", "riskSignals", "detectedAnomalies"],
+        "properties": {
+          "informationLoss": { "const": false }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "error" } } },
+      "then": {
+        "required": ["error"],
+        "not": {
+          "anyOf": [
+            { "required": ["projectSummary"] },
+            { "required": ["activeInvariants"] },
+            { "required": ["keyDecisions"] },
+            { "required": ["documentIndex"] },
+            { "required": ["riskSignals"] },
+            { "required": ["detectedAnomalies"] }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+### 6.3 Exemples d’output
+
+#### Exemple d’output valide (status = ok)
+
+```json
+{
+  "status": "ok",
+  "operationId": "op_20251218_001",
+  "projectId": "proj_abc123",
+  "informationLoss": false,
+  
+  "projectSummary": "Application de gestion documentaire multi-tenants avec workflow d'approbation hiérarchique. Références: doc:architecture#overview, doc:strategy#vision",
+  
+  "activeInvariants": [
+    {
+      "text": "Aucune transition workflow sans validation globale en mode correction",
+      "ref": "doc:architecture#invariants.workflowTransitions"
+    }
+  ],
+  
+  "keyDecisions": [
+    {
+      "text": "Migration vers architecture microservices décidée en sprint 3",
+      "ref": "log:op_20251201_045#decision"
+    }
+  ],
+  
+  "documentIndex": [
+    {
+      "documentId": "architecture",
+      "type": "architecture",
+      "version": "2.1.0",
+      "lastUpdatedAt": "2025-12-15T10:30:00Z"
+    }
+  ],
+  
+  "riskSignals": [
+    {
+      "text": "Trois modifications successives de strategy sans validation globale",
+      "ref": "log:op_20251217_089#warningDetected"
+    }
+  ],
+  
+  "detectedAnomalies": [
+    {
+      "kind": "structural",
+      "text": "Document UX manquant dans documents[] alors que projectMeta indique status=active",
+      "ref": "doc:ux#missing"
+    }
+  ]
+}
+```
+
+#### Exemple d’output erreur (status = error)
+
+```json
+{
+  "status": "error",
+  "operationId": "op_20251218_002",
+  "projectId": "proj_xyz789",
+  "informationLoss": false,
+  
+  "error": {
+    "code": "CannotSatisfyConstraintsWithoutInformationLoss",
+    "reason": "Cannot satisfy constraints without information loss",
+    "missingCoverage": ["activeInvariants", "keyDecisions"]
+  }
+}
+```
+
+-----
+
+## 7) Traçabilité
+
+Exigence normative centrale:
+• Chaque élément informatif produit par ContextAgent doit être traçable via une référence formelle.
+
+Format de référence imposé:
+• doc:<documentId>#<sectionId|fieldPath>
+• engine:workflowEngine#<field>
+• log:<operationId>#<field>
+
+Exemples de références valides:
+• doc:architecture#section2
+• doc:strategy#structured.sections[0].content.priorityGoals
+• engine:workflowEngine#currentState
+• engine:workflowEngine#states[2].id
+• log:op_20251218_001#action
+• log:op_20251218_001#timestamp
+
+Règle normative:
+• Si <sectionId|fieldPath|field> est absent, la référence pointe vers l’entité complète.
+• Si <sectionId|fieldPath|field> est présent, il doit être résolvable dans le contexte brut fourni par simple navigation JSONPath ou équivalent.
+
+Interdictions:
+• références floues (ex: “le document d’architecture”),
+• références non résolubles mécaniquement (ex: “la section parlant de sécurité”),
+• références sans identifiant stable,
+• références nécessitant une interprétation sémantique.
+
+-----
+
+## 8) Neutralité informationnelle
+
+Interdictions normatives:
+• ContextAgent ne doit jamais supprimer un élément d’information demandé par synthesisRules.
+• ContextAgent ne doit jamais modifier une valeur.
+• ContextAgent ne doit jamais inventer un lien causal.
+• ContextAgent ne doit jamais qualifier une incohérence comme acceptable ou bloquante.
+• ContextAgent ne doit jamais produire un verdict allow, warn, block.
+• ContextAgent ne doit jamais proposer une correction de contenu.
+
+Règle normative additionnelle:
+• informationLoss DOIT être false.
+• Si informationLoss ne peut pas être garanti, ContextAgent DOIT renvoyer une erreur structurée, sans produire de synthèse.
+
+-----
+
+## 9) InformationLoss = false
+
+Définition normative opérable:
+• informationLoss = false signifie:
+
+1. La synthèse n’est pas la seule représentation; le contexte brut est toujours fourni à Overseer.
+1. La synthèse couvre toutes les catégories exigées par synthesisRules.requiredCategories.
+1. Chaque élément de sortie est référencé de manière à permettre la reconstruction du détail à partir du contexte brut.
+
+Condition normative d’erreur structurée:
+• Si le contexte est trop volumineux pour respecter maxSummaryLength tout en couvrant toutes les catégories exigées:
+• status = “error”
+• informationLoss = false
+• error.code = “CannotSatisfyConstraintsWithoutInformationLoss”
+• error.reason = “Cannot satisfy constraints without information loss”
+• error.missingCoverage contient la liste des catégories non couvertes
+• aucune synthèse n’est produite.
+
+Invariant additionnel sur la taille maximale de l’output:
+• La taille totale du JSON de sortie (sérialisé) NE DOIT PAS dépasser constraints.maxOutputBytes.
+• Si dépassement détecté, ContextAgent DOIT renvoyer une erreur structurée:
+
+- status = “error”
+- error.code = “OutputSizeExceeded”
+- error.reason = “Output size exceeds maxOutputBytes constraint”
+- informationLoss = false (l’erreur est structurelle, pas informationnelle)
+
+Règle de vérification obligatoire (Overseer):
+• Si status = “ok” et informationLoss = false, Overseer PEUT effectuer une vérification par sondage:
+
+- Sélectionner aléatoirement 3 références dans l’output
+- Vérifier leur résolvabilité dans le contexte brut
+- Si échec, considérer l’output comme invalide et journaliser une alerte dans logs/{projectId}/contextLoading/
+
+-----
+
+## 10) Journalisation
+
+Toute invocation de ContextAgent DOIT être journalisée dans:
+logs/{projectId}/contextLoading/{operationId}.json
+
+Contenu minimal obligatoire:
+• operationId
+• projectId
+• timestamp
+• purpose
+• contextQualityBefore (string: “ok” | “warning”)
+• contextAgentCalled (boolean: true)
+• statusReturned (“ok” | “error”)
+• errorCode (si status = “error”)
+• inputSizeEstimate (en octets)
+• outputSize (en octets, si status = “ok”)
+• durationMs (durée d’exécution en millisecondes)
+
+Interdictions:
+• Ne JAMAIS journaliser le contenu complet de la synthèse (risque de duplication de source de vérité)
+• Ne JAMAIS journaliser le contexte brut complet
+• Ne JAMAIS journaliser les références individuelles extraites (uniquement les métriques globales)
+
+Exemple de log structuré:
+
+```json
+{
+  "operationId": "op_20251218_001",
+  "projectId": "proj_abc123",
+  "timestamp": "2025-12-18T14:32:01Z",
+  "purpose": "validation",
+  "contextQualityBefore": "warning",
+  "contextAgentCalled": true,
+  "statusReturned": "ok",
+  "inputSizeEstimate": 128000,
+  "outputSize": 4096,
+  "durationMs": 1543
+}
+```
+
+-----
+
+## 11) Invariants
+
+Toujours vrais:
+• ContextAgent ne persiste rien dans Firestore.
+• ContextAgent ne modifie aucune donnée source.
+• ContextAgent ne décide rien.
+• ContextAgent ne valide rien sémantiquement.
+• Overseer reste l’unique autorité métier.
+• La synthèse est éphémère et consommée immédiatement.
+• Toute référence produite doit être résolvable mécaniquement dans le contexte brut.
+• informationLoss doit toujours être false en cas de status = “ok”.
+• L’output ne dépasse jamais constraints.maxOutputBytes.
+• Toute invocation est journalisée sans dupliquer les contenus volumineux.
+
+-----
+
+## Fin du document
+
+Document Metadata & Changelog
+
+Changelog:
+
+- 1.1.0 (2025-12-18): Ajout de précisions sur le format de référence (section 7), unité et méthode de calcul de payloadSizeEstimate (section 5), exemples concrets d’output valide et erreur (section 6.3), invariant sur maxOutputBytes (section 9), comportement par défaut de requiredCategories (section 6.1), règle de vérification par sondage d’Overseer (section 9), section complète de journalisation (section 10).
+- 1.0.0 (2025-12-18): Création de ContextAgent_spec, définition normative du rôle AgentTransformateur, inputs/outputs, interdictions, invariants et traçabilité.
+
+Breaking Changes:
+
+- Aucun depuis 1.0.0​​​​​​​​​​​​​​​​
