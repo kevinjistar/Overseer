@@ -1,4 +1,4 @@
------
+---
 Document: ContextAgent_spec
 Version: 1.1.0
 Date: 2025-12-18
@@ -8,7 +8,7 @@ ValidationPolicy_Global: 1.0.0
 WorkflowPolicy: 1.0.0
 CorrectionMode_Policy: 1.0.0
 System_Agent_Edit_Policy: 1.0.0
-----
+---
 
 # ContextAgent_spec
 
@@ -551,9 +551,9 @@ Toujours vrais:
 • L’output ne dépasse jamais constraints.maxOutputBytes.
 • Toute invocation est journalisée sans dupliquer les contenus volumineux.
 
------
-
-## Fin du document
+---
+Fin du document
+---
 
 Document Metadata & Changelog
 
