@@ -1,7 +1,7 @@
 ---
 Document: Regles_systeme_des_agents
-Version: 2.1.0
-Date: 2025-12-17
+Version: 2.2.0
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -43,6 +43,39 @@ SuperiorValidationAgent n’est pas un agent producteur et n’est pas soumis au
 
 2.3 Interdiction de typologies implicites  
 Aucun autre type d’agent n’est reconnu par le système en dehors des catégories explicitement mentionnées dans les spécifications. Un agent non catégorisé est traité comme non autorisé.
+
+2.4 AgentsTransformateurs
+
+Définition:
+Un AgentTransformateur est un agent non-producteur, non-validateur, dont la sortie n’est pas destinée à Firestore.
+Un AgentTransformateur:
+• ne produit pas de document candidat,  
+• ne produit pas de “candidateDocument” destiné à Firestore,  
+• produit un output éphémère, non versionné, non persisté.
+
+Absence d’accès Firestore:
+• un AgentTransformateur ne lit pas Firestore,  
+• un AgentTransformateur ne modifie jamais Firestore.
+
+Interdictions (résumé sans contradiction avec ContextAgent_spec):
+Un AgentTransformateur ne doit jamais:
+• supprimer de l’information,  
+• modifier une valeur,  
+• inventer du contenu,  
+• valider le métier (allow, warn, block) ou produire un verdict,  
+• déclencher ou décider une transition de workflow,  
+• appeler un autre agent,  
+• corriger ou stabiliser un projet,  
+• produire une recommandation prescriptive (“on devrait”, “donc”) comme lien causal non factuel.
+
+Règle de non-transverse:
+• un AgentTransformateur opère sur un seul contexte, pour une seule opération, et produit au maximum un artefact de synthèse pour cette opération.
+
+Appartenance:
+• ContextAgent appartient à la catégorie AgentsTransformateurs.
+
+Incompatibilité de rôle:
+• Un AgentTransformateur ne peut jamais être utilisé comme CorrectiveAgent ni AgentProducteur.
 
 
 3. Principes non négociables
@@ -287,9 +320,10 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 2.2.0 (2025-12-18): Ajout de la catégorie normative AgentsTransformateurs, intégration de ContextAgent, interdictions et invariants associés, clarification des incompatibilités de rôle.
   - 2.1.0 (2025-12-17): Normalisation de la nomenclature (ValidationAgent supprimé), règles explicites pour CorrectiveAgent en mode correction, verrouillage du rôle non producteur de SuperiorValidationAgent, ajout d’une interdiction rendant invalide tout meta.ownerAgent ou logs.actor utilisant "ValidationAgent".
   - 2.0.0 (2025-12-11): Refonte complète pour alignement avec SuperiorValidationAgent, Workflow Engine v2.0.0, Processus standard de mise à jour, CorrectionMode et l’architecture tripartite Overseer/Orchestrateur/Agents.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun depuis 2.0.0.
+  - Aucun depuis 2.1.0
