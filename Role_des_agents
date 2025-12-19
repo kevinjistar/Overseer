@@ -1,7 +1,7 @@
 ---
 Document: Role_des_agents
-Version: 1.1.0
-Date: 2025-12-17
+Version: 1.2.0
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -42,7 +42,7 @@ Toute autonomie implicite est interdite.
 
 3. Classification officielle des agents
 
-Il existe exactement trois familles d’agents.
+Il existe exactement quatre familles d’agents.
 
 3.1 AgentsProducteurs  
 Produisent un document candidat complet au format JSON strict.
@@ -52,6 +52,16 @@ Produisent un document candidat complet au format JSON strict.
 
 3.3 AgentsCorrectifs  
 Produisent un document candidat de correction uniquement lorsque operationMode = "correction".
+
+3.4 AgentTransformateur  
+• AgentTransformateur n’écrit jamais en base.  
+• AgentTransformateur ne produit pas de “candidateDocument” destiné à Firestore.  
+• Output éphémère, non versionné, non persisté.  
+• Interdictions: suppression d’information, modification de valeurs, invention, validation métier, déclenchement de workflow, appel d’autres agents.
+
+Membre initial:
+• ContextAgent est l’unique membre initial de la famille AgentTransformateur.
+• Le contrat complet du ContextAgent est défini dans ContextAgent_spec.
 
 Aucune autre famille n’est autorisée.
 Aucun agent hybride n’est autorisé.
@@ -283,8 +293,9 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 1.2.0 (2025-12-18): Ajout de la famille AgentTransformateur, intégration de ContextAgent comme transformateur non persisté, formalisation des interdictions et invariants associés.
   - 1.1.0 (2025-12-17): Ajout explicite du CorrectiveAgent comme agent correctif distinct, verrouillage du non-rôle modificateur du SuperiorValidationAgent en CorrectionMode, extension de la classification officielle avec la famille AgentsCorrectifs.
   - 1.0.0 (2025-12-15): Version initiale.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0.
+  - Aucun depuis 1.1.0
