@@ -1,7 +1,7 @@
 ---
 Document: Schema_Project
-Version: 2.0.0
-Date: 2025-12-17
+Version: 2.1.0
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -155,7 +155,13 @@ Contraintes:
 • les clés autorisées sont strictement: architecture, ux, strategy, workflow, notes,  
 • chaque entrée est un tableau, y compris si une seule version existe,  
 • chaque item doit référencer un DocumentSchema résoluble et validable,  
+• documents.workflow (ou l’équivalent utilisé pour les Workflow Documents) est optionnel,  
+• documents.workflow peut être une liste vide,  
 • les documents sous documents.workflow ne définissent jamais l’état courant, ils sont non exécutifs.
+
+Règle normative de nommage et stockage des Workflow Documents:
+• stockage sous projects/{projectId}/documents/  
+• format workflowDocument_{descripteur}.json
 
 5.3 workflowEngine  
 Rôle: état exécutable unique du workflow projet.
@@ -300,7 +306,9 @@ Toujours vrais:
 • meta.id et meta.createdAt sont immuables après création.  
 • meta.version existe toujours et suit un format X.Y.Z.  
 • documents contient uniquement les catégories déclarées (architecture, ux, strategy, workflow, notes).  
+• workflowEngine est l’unique porteur de currentState.  
 • workflowEngine est l’unique porteur d’état courant exécutable, snapshotable, restaurable.  
+• Les Workflow Documents ne portent aucun état exécutable.  
 • Les documents sous documents.workflow ne portent jamais l’état courant, ils sont non exécutifs.  
 • Aucun agent ne modifie un Projet en base.  
 • Toute écriture de Projet passe par l’orchestrateur et doit être validée structurellement.  
@@ -314,10 +322,12 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 2.1.0 (2025-12-18): Clarification normative de l’optionalité de documents.workflow (liste vide autorisée), ajout de la règle de nommage workflowDocument_{descripteur}.json, ajout d’invariants explicites sur currentState et le statut non exécutable des Workflow Documents.
   - 2.0.0 (2025-12-17): Alignement normatif sur workflowEngine comme unique état exécutable, suppression de toute représentation d’état parallèle via workflows, clarification du statut non exécutif des Workflow Documents.
   - 1.1.0 (2025-12-09): Mise à jour complète du Schéma Projet, ajout versioning, logs système, états workflows, compatibilité Sync
   - 1.0.0 (2025-12-09): Création du schéma initial
 
 Breaking Changes: 
+  - Aucun depuis 2.0.0
   - Toute lecture de l’état courant via workflows ou via un document workflow est désormais invalide.
   - Suppression de la section workflows conceptuelle en tant que porteur d’état.
