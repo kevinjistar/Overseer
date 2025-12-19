@@ -1,7 +1,7 @@
 ---
 Document: Process_creation_d_un_projet
-Version: 1.1.0
-Date: 2025-12-17
+Version: 1.2.0
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -94,7 +94,7 @@ projects/{projectId}/
     architecture.json
     ux.json
     strategy.json
-    workflowDocument.json
+    workflowDocument_{descripteur}.json
     notes.json
   workflowEngine/
     engine.json
@@ -110,6 +110,28 @@ Règles normatives:
 Aucune autre structure n’est autorisée.
 
 Toutes les écritures sont atomiques et traçables.
+
+---
+
+5.1 Workflow Documents à la création
+
+Règles normatives:
+- Les Workflow Documents sont optionnels.
+- Ils sont stockés sous projects/{projectId}/documents/ avec nommage workflowDocument_{descripteur}.json.
+
+Règle de conformité:
+- L’absence de Workflow Document n’empêche pas la création si workflowEngine existe et est valide.
+
+---
+
+5.2 Template de génération (création uniquement)
+
+Règles normatives:
+- utilisation autorisée une seule fois, pendant création
+- transformation unidirectionnelle Workflow Document → workflowEngine
+- interdiction inverse
+- validation structurelle obligatoire
+- traçabilité par log
 
 ---
 
@@ -129,7 +151,7 @@ Chaque document initial contient obligatoirement:
   - "1.0.0 (date): Initialisation du document".
 
 Règle normative:
-- workflowDocument.json est un descripteur initial, il ne contient pas l’état courant.
+- workflowDocument_{descripteur}.json est un descripteur initial, il ne contient pas l’état courant.
 
 Aucun contenu métier n’est inféré automatiquement.
 
@@ -154,7 +176,7 @@ Transitions autorisées:
 
 Règles normatives:
 - currentState est écrit dans projects/{projectId}/workflowEngine/engine.json.
-- currentState ne peut pas être écrit, recopié, ou déduit depuis workflowDocument.json.
+- currentState ne peut pas être écrit, recopié, ou déduit depuis workflowDocument_{descripteur}.json.
 
 Aucune condition métier n’est définie dans le workflow.
 
@@ -243,7 +265,7 @@ Toujours vrais:
 - Aucun agent ne crée de projet.
 - workflowEngine est créé et initialisé avant toute activation de projet et avant tout appel agentique.
 - Le workflowEngine porte l’état courant (currentState) dès l’initialisation.
-- Le document workflowDocument.json est un descripteur initial, il ne contient pas l’état courant.
+- Le document workflowDocument_{descripteur}.json est un descripteur initial, il ne contient pas l’état courant.
 - Il est interdit d’utiliser un document workflow comme moteur d’état lors de la création.
 - Aucun projet actif sans snapshot initial valide.
 - Toute création est traçable et reproductible.
@@ -256,8 +278,9 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 1.2.0 (2025-12-18): Clarification normative des Workflow Documents comme optionnels, ajout du nommage workflowDocument_{descripteur}, ajout des règles de template de génération du workflowEngine (création uniquement) et de traçabilité.
   - 1.1.0 (2025-12-17): Initialisation obligatoire de workflowEngine comme porteur d’état, clarification des Workflow Documents comme descripteurs non exécutifs.
   - 1.0.0 (2025-12-11): Refonte complète du Processus standard de création d’un projet selon le format canonique Overseer, clarification stricte des responsabilités et des invariants.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0
+  - Aucun depuis 1.1.0
