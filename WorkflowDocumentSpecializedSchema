@@ -1,7 +1,7 @@
 ---
 Document: WorkflowDocumentSpecializedSchema
-Version: 1.2.0
-Date: 2025-12-17
+Version: 1.3.0
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -31,7 +31,22 @@ Règles normatives:
 - L’état courant, snapshotable et restaurable, est porté exclusivement par workflowEngine.
 - Aucune clé du Workflow Document ne déclenche, n’autorise, ni n’implique une transition exécutée.
 
-## 4. Module spécialisé
+## 4. Utilisation comme template de création
+
+Règles normatives:
+
+- Ce document peut être utilisé comme source de génération initiale du workflowEngine uniquement pendant Pipeline_d_entree_des_projets.
+- Ce document ne porte jamais currentState.
+- Ce document ne déclenche jamais de transition.
+
+## 5. Interdictions
+
+Règles normatives:
+
+- Il est interdit de déduire l’état courant d’un projet depuis un Workflow Document.
+- Il est interdit de synchroniser automatiquement workflowEngine vers ce document.
+
+## 6. Module spécialisé
 
 description: "Module spécialisé représentant un workflow métier ou opérationnel. Il étend UniversalDocumentSchema via la clé specialized."
 
@@ -60,7 +75,8 @@ specialized:
       conditions:
         type: array
         items:
-          type: string
+          type:
+            string
       notes: string
     rules:
       - "conditions est un champ descriptif, il ne peut jamais être interprété comme une condition exécutable par workflowEngine ou l’orchestrateur."
@@ -99,19 +115,21 @@ specialized:
       rule: string
       message: string
 
-## 5. Invariants
+## 7. Invariants
 
 Toujours vrais:
 
 - Aucune exécution ne dépend d’un Workflow Document.
 - Aucune décision de transition ne provient d’un Workflow Document.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 1.3.0 (2025-12-18): Ajout des sections normatives “Utilisation comme template de création” et “Interdictions”, clarification explicite du statut template (création uniquement) et des interdictions de déduction d’état et de synchronisation automatique.
   - 1.2.0 (2025-12-17): Déclassement normatif du Workflow Document en artefact descriptif non exécutif, ajout d’invariants interdisant toute interprétation d’état courant ou de conditions exécutables.
   - 1.1.1 (2025-12-16): Correction de cohérence de version affichée et normalisation mineure de présentation sans changement des règles.
   - 1.1.0 (2025-12-10): Mise à jour pour alignement complet avec WorkflowEngineSchema 1.1.0 et UniversalDocumentSchema 1.1.0
