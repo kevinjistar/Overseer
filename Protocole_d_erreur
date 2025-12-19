@@ -1,7 +1,7 @@
 ---
 Document: Protocole_d_erreur
-Version: 3.0.1
-Date: 2025-12-17
+Version: 4.0.0
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -292,19 +292,31 @@ Interdictions:
 
 9. Journalisation des erreurs
 
-9.1 Nomenclature officielle des acteurs (liste exacte)
+9.1 Nomenclature officielle des acteurs (liste exhaustive et fermée)
 
-Les seuls acteurs reconnus pour la journalisation sont:
+Les seuls acteurs reconnus pour la journalisation sont :
 - overseer
 - orchestrator
 - superiorValidationAgent
 - correctiveAgent
+- contextAgent
 - systemInit
 - syncAgent
 
-9.2 Règle d’invalidité d’actor non reconnu
+Règle d'invalidité d'actor non reconnu :
+Tout log contenant un actor hors de cette liste DOIT être rejeté structurellement par l'orchestrateur avec erreur InvalidActor.
 
-Tout actor non reconnu par la nomenclature officielle est invalide et doit être rejeté structurellement par l’orchestrateur.
+Aucun autre actor n'est autorisé.
+Aucune extension implicite n'est permise.
+
+9.2 Compatibilité rétroactive
+
+Règles normatives:
+• Toute occurrence de ValidationAgent est considérée obsolète.
+• La migration officielle est: ValidationAgent → superiorValidationAgent.
+• La migration DOIT créer les champs:
+  • migrated: true
+  • migrationDate: <timestamp>
 
 9.3 Emplacement et schéma minimal
 
@@ -318,7 +330,7 @@ Chaque entrée contient au minimum:
 - projectId,
 - errorType (StructuralError | SemanticWarn | SemanticBlock | BusinessError | Halted),
 - severity (warning | error | halted),
-- actor (overseer | orchestrator | superiorValidationAgent | correctiveAgent | systemInit | syncAgent),
+- actor (overseer | orchestrator | superiorValidationAgent | correctiveAgent | contextAgent | systemInit | syncAgent),
 - details,
 - stateBefore,
 - stateAfter,
@@ -344,10 +356,12 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 4.0.0 (2025-12-18): Fermeture normative et enforcement structurel de actor (enum), ajout de contextAgent, ajout du mapping rétroactif ValidationAgent -> superiorValidationAgent, mise à jour de la nomenclature de journalisation.
   - 3.0.1 (2025-12-17): Normalisation des acteurs (ValidationAgent supprimé), ajout de la règle d’invalidité d’actor non reconnu, liste officielle d’acteurs ajoutée.
   - 3.0.0 (2025-12-15): Mise au format canonique obligatoire (header, marqueur de fin, footer), clarification et verrouillage normatif des responsabilités par acteur, normalisation stricte de la typologie warning/error/halted et des séquences de traitement, intégration explicite de correctionMode et systemRecovery comme protocoles contrôlés.
   - 2.0.0 (2025-12-11): Refonte complète alignée avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2, CorrectionMode_Policy et la séparation structurel/métier.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun depuis 3.0.0.
+  - L’orchestrateur rejette désormais tout log dont actor n’appartient pas à la liste fermée.
+  - Le terme ValidationAgent est obsolète; toute compatibilité passe uniquement par mapping explicite vers superiorValidationAgent.
