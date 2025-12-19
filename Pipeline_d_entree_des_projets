@@ -1,7 +1,7 @@
 ---
 Document: Pipeline_d_entree_des_projets
 Version: 1.1.0
-Date: 2025-12-17
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -230,7 +230,19 @@ Règles normatives:
 Interdiction:
 • aucune condition métier n’est persistée dans le workflowEngine.
 
-7.6 Étape 6, Snapshot initial obligatoire (orchestrateur)
+7.6 Étape X, Génération optionnelle du workflowEngine depuis un Workflow Document template
+
+Règles normatives:
+• Si un Workflow Document template est fourni à la création, Overseer peut ordonner la génération initiale du workflowEngine.  
+• Cette génération est autorisée uniquement pendant ce pipeline.  
+• Le workflowEngine résultant doit être validé structurellement par l’orchestrateur avant persistance.  
+• Un log de création doit enregistrer:
+  • workflowEngineSource = generated_from_template
+  • templateDocument = <nom du fichier workflowDocument_*.json>
+  • generationTimestamp
+  • validationStatus
+
+7.7 Étape 6, Snapshot initial obligatoire (orchestrateur)
 Sur ordre explicite d’Overseer, l’orchestrateur crée les snapshots initiaux requis.
 
 Exigences:
@@ -241,7 +253,7 @@ Exigences:
 Interdiction:
 • aucune entrée de projet n’est considérée clôturée sans snapshot initial.
 
-7.7 Étape 7, Vérification de clôture (Overseer)
+7.8 Étape 7, Vérification de clôture (Overseer)
 Overseer vérifie explicitement:
 • existence de la structure minimale,  
 • conformité structurelle des documents initiaux,  
@@ -252,7 +264,7 @@ Overseer vérifie explicitement:
 Overseer:
 • refuse la clôture si un seul artefact requis manque.
 
-7.8 Étape 8, Activation du projet comme currentProject (Overseer puis orchestrateur)
+7.9 Étape 8, Activation du projet comme currentProject (Overseer puis orchestrateur)
 Si activation demandée:
 • Overseer ordonne l’écriture de userContext/{userId}/currentProject.json,  
 • l’orchestrateur exécute l’écriture.
@@ -261,7 +273,7 @@ Contraintes:
 • si une opération est en cours, elle doit être annulée proprement avant bascule,  
 • si halted = true, l’activation est interdite.
 
-7.9 Étape 9, Journalisation finale (orchestrateur, sur ordre d’Overseer)
+7.10 Étape 9, Journalisation finale (orchestrateur, sur ordre d’Overseer)
 Overseer ordonne une écriture de log structurée de création contenant au minimum:
 • projectId,  
 • date,  
@@ -310,17 +322,17 @@ Toujours vrais:
 • Aucune écriture Firestore n’a lieu sans ordre explicite d’Overseer.  
 • Le pipeline interdit tout travail “hors contexte”, aucun appel agentique sans currentProject exploitable.  
 • L’existence des documents référents initiaux, de workflowEngine/engine.json prêt et initialisé, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.  
-• workflowDocument.json est descriptif et ne porte jamais l’état courant.
+• workflowDocument.json est descriptif et ne porte jamais l’état courant.  
+• Après création, aucune synchronisation automatique workflowEngine ↔ Workflow Documents.
 
----
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-17): Alignement du pipeline sur workflowEngine comme unique état exécutable, interdiction d’un état porté par un document workflow.
+  - 1.1.0 (2025-12-18): Ajout d’une étape normative de génération optionnelle du workflowEngine depuis un Workflow Document template lors de l’entrée projet, ajout des règles de validation et de traçabilité associées.
   - 1.0.0 (2025-12-09): Document initial.
 
 Breaking Changes:
-  - workflowEngine/engine.json doit inclure currentState, toute entrée de projet sans currentState est non conforme.
+  - Aucun depuis 1.0.0
