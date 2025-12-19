@@ -1,8 +1,7 @@
-
 ---
 Document: Structure_Firestore
-Version: 1.0.0
-Date: 2025-12-09
+Version: 1.0.1
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -20,7 +19,7 @@ Ce document définit la structure officielle de stockage Firestore utilisée par
 ## Rôle du document dans le système
 
 Niveau: normatif et structurel.  
-Ce document décrit l’arborescence de stockage, les collections, sous-collections et conventions associées servant de base de persistance pour les projets, documents, workflows, logs, snapshots et contextes utilisateurs.  
+Ce document décrit l’arborescence de stockage, les collections, sous-collections et conventions associées servant de base de persistance pour les projets, documents, workflowEngine, Workflow Documents descriptifs (non exécutifs), logs, snapshots et contextes utilisateurs.  
 Il constitue une référence obligatoire pour l’orchestrateur et les processus système.  
 Il ne décrit aucune logique métier, aucun processus opérationnel et aucune règle de validation sémantique.
 
@@ -134,15 +133,16 @@ projects/{projectId}/snapshots/
 initial/
 project.json
 documents/
-workflowEngine.json
+workflowEngine/engine.json
 versions/
 {snapshotId}/
 project.json
 documents/
-workflowEngine.json
+workflowEngine/engine.json
 timestamp
 reason
-agent
+actor
+initiatedBy
 
 ---
 
@@ -209,6 +209,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
+  - 1.0.1 (2025-12-20): Normalisation terminologique et structurelle (workflowEngine, actor/initiatedBy), sans modification normative.
   - 1.0.0 (2025-12-09): Création du document Structure Firestore, définition de l’arborescence de stockage du système Overseer.
 
 Breaking Changes:
