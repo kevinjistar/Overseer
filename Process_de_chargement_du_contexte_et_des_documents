@@ -1,7 +1,7 @@
 ---
 Document: Process_de_chargement_du_contexte_et_des_documents
 Version: 2.1.0
-Date: 2025-12-17
+Date: 2025-12-18
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -49,12 +49,25 @@ L'orchestrateur n'interprète aucune logique métier pendant ce process.
 
 3.3 ContextAgent
 ContextAgent:
+- est un AgentTransformateur,
 - ne lit pas Firestore,
 - ne modifie jamais Firestore,
 - ne modifie pas le contexte source,
-- produit uniquement une synthèse ou une préparation de contexte sur la base des données explicitement fournies par Overseer ou l'orchestrateur.
+- produit uniquement une synthèse ou une préparation de contexte sur la base des données explicitement fournies par Overseer ou l'orchestrateur,
+- output éphémère, non versionné, non persisté,
+- est appelé uniquement sur ordre explicite d’Overseer.
+
+ContextAgent est défini par ContextAgent_spec. Sans ce document, ContextAgent est considéré inexistant.
 
 ContextAgent n'est jamais un validateur sémantique. Toute validation sémantique est du ressort de SuperiorValidationAgent.
+
+3.4 Critères de déclenchement
+
+ContextAgent peut être appelé uniquement si Overseer l’ordonne explicitement, avec exactement l’un des déclencheurs suivants:
+- contextQuality = warning
+- contexte très volumineux (> 50 documents référents)
+- opération critique (validation globale, mode correction)
+- demande explicite utilisateur via Overseer
 
 4. Préconditions et refus immédiat
 
@@ -191,6 +204,9 @@ Contraintes:
 6.7 Intervention de ContextAgent
 L'intervention de ContextAgent est optionnelle et ne peut être déclenchée que par Overseer.
 
+Jamais déclenché par l’orchestrateur.
+Aucune persistance de la synthèse, seule une journalisation de l’appel est autorisée (métadonnées uniquement).
+
 Si Overseer déclenche ContextAgent:
 - l'entrée de ContextAgent est une extraction contrôlée du contexte,
 - la sortie est une synthèse structurée,
@@ -238,17 +254,16 @@ Toujours vrais:
 - Le contexte n'est jamais exposé tel quel à l'utilisateur.
 - workflowEngine/engine.json est l'unique source de vérité pour l'état courant et les transitions.
 
----
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
+  - 2.1.0 (2025-12-18): Intégration normative de ContextAgent comme AgentTransformateur non persisté, ajout de référence à ContextAgent_spec, ajout des critères de déclenchement et interdictions d’appel/persistance.
   - 2.1.0 (2025-12-17): Workflow Engine chargé comme source de vérité unique, interdiction d’inférer l’état depuis un document workflow, clarification du statut descriptif des Workflow Documents.
   - 2.0.0 (2025-12-15): Refonte complète au format canonique, verrouillage normatif des responsabilités (Overseer, orchestrateur, ContextAgent), suppression des règles de versioning intégrées au corps, et formalisation des entrées/sorties structurelles du chargement de contexte.
   - 1.0.0 (2025-12-09): Création du Process de chargement du contexte et des documents
 
 Breaking Changes:
   - Aucun depuis 2.0.0
-  - Le chargement de contexte est désormais spécifié comme un ordre formel avec entrée/sortie structurées, et toute mention de validation par "ValidationAgent" est remplacée par SuperiorValidationAgent via ValidationPolicy_Global.
