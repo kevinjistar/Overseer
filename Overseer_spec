@@ -1,7 +1,7 @@
 ---
 Document: Overseer_spec
 Version: 1.0.0
-Date: 2025-12-20
+Date: 2025-12-21
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -18,219 +18,303 @@ Ce document définit le rôle, les responsabilités, les invariants et les inter
 
 ## Rôle du document dans le système
 
-Niveau: normatif (spécification cœur).  
-Ce document fixe les responsabilités et invariants d’Overseer et ses interactions officielles avec l’orchestrateur, les agents et le SuperiorValidationAgent.  
+Niveau: normatif (spécification cœur).
+Ce document fixe les responsabilités et invariants d’Overseer et ses interactions officielles avec l’orchestrateur, les agents et le SuperiorValidationAgent.
 Il ne décrit pas les implémentations techniques détaillées, ni les schémas, ni les pipelines opérationnels.
 
 ---
 
 1. Objet du document (précision)
 
-Overseer est l’unique moteur de logique métier du système.  
+Overseer est l’unique moteur de logique métier du système.
 Il est responsable de:
-• l’interprétation utilisateur,  
-• la coordination des agents,  
-• la décision finale,  
-• la cohérence globale du projet,  
-• l’application des Policies,  
-• la gestion du correctionMode,  
+• l’interprétation utilisateur,
+• la coordination des agents,
+• la décision finale,
+• la cohérence globale du projet,
+• l’application des Policies,
+• la gestion du correctionMode,
 • la supervision du workflowEngine.
-
 
 2. Nature d’Overseer
 
 Overseer est:
-• un superviseur cognitif,  
-• un moteur décisionnel métier,  
-• une couche de gouvernance,  
-• un arbitre des validations,  
+• un superviseur cognitif,
+• un moteur décisionnel métier,
+• une couche de gouvernance,
+• un arbitre des validations,
 • une interface unique entre l’utilisateur et le système.
 
 Overseer n’est pas:
-• un agent producteur,  
-• un moteur structurel,  
-• un validateur structurel,  
+• un agent producteur,
+• un moteur structurel,
+• un validateur structurel,
 • un écrivain Firestore.
 
-Il ne modifie rien directement.  
+Il ne modifie rien directement.
 Il décide et orchestre exclusivement.
-
 
 3. Responsabilités fondamentales
 
-3.1 Interprétation utilisateur  
+3.1 Interprétation utilisateur
 Overseer reçoit une intention humaine et la transforme en instruction exploitable:
-• identification du document cible,  
-• compréhension du besoin métier,  
-• extraction du contexte pertinent,  
+• identification du document cible,
+• compréhension du besoin métier,
+• extraction du contexte pertinent,
 • sélection du type d’opération.
 
-3.2 Coordination des agents  
+3.2 Coordination des agents
 Overseer:
-• choisit l’agent producteur,  
-• prépare la systemInstruction,  
-• injecte System_Agent_Edit_Policy,  
-• impose contraintes et schémas,  
+• choisit l’agent producteur,
+• prépare la systemInstruction,
+• injecte System_Agent_Edit_Policy,
+• impose contraintes et schémas,
 • impose le type de versioning.
 
-3.3 Décision métier  
+3.3 Décision métier
 Overseer est souverain pour:
-• appliquer une mise à jour,  
-• annuler une opération,  
-• demander une correction,  
-• overrider un verdict (interdit en correctionMode),  
+• appliquer une mise à jour,
+• annuler une opération,
+• demander une correction,
+• overrider un verdict (interdit en correctionMode),
 • interpréter les verdicts sémantiques.
 
-3.4 Validation métier  
+3.4 Validation métier
 Overseer applique ValidationPolicy_Global:
-• validation locale obligatoire,  
-• validation globale selon Policy,  
-• évaluation des verdicts allow, warn, block,  
+• validation locale obligatoire,
+• validation globale selon Policy,
+• évaluation des verdicts allow, warn, block,
 • prise de décision finale.
 
-3.5 Supervision de la cohérence globale  
+3.5 Supervision de la cohérence globale
 Après toute écriture validée:
-• vérification de la stabilité métier du projet,  
-• détection des contradictions inter-documents,  
+• vérification de la stabilité métier du projet,
+• détection des contradictions inter-documents,
 • activation du correctionMode si nécessaire.
 
-3.6 Supervision du workflowEngine  
+3.6 Supervision du workflowEngine
 Overseer:
-• évalue les conditions métier des transitions,  
-• décide si une transition est permise,  
-• envoie un ordre explicite à l’orchestrateur,  
+• évalue les conditions métier des transitions,
+• décide si une transition est permise,
+• envoie un ordre explicite à l’orchestrateur,
 • n’active jamais de transition automatique.
 
 Toute transition d’état s’applique exclusivement à workflowEngine/engine.json.
 
-3.7 Gestion du correctionMode  
+3.7 Gestion du correctionMode
 Overseer:
-• active et désactive le correctionMode,  
-• impose les restrictions strictes de CorrectionMode_Policy,  
-• sélectionne CorrectiveAgent comme unique agent producteur en correction,  
-• bloque toute transition de workflowEngine pendant la correction,  
+• active et désactive le correctionMode,
+• impose les restrictions strictes de CorrectionMode_Policy,
+• sélectionne CorrectiveAgent comme unique agent producteur en correction,
+• bloque toute transition de workflowEngine pendant la correction,
 • exige une validation globale stricte.
 
-3.8 Application des Policies versionnées  
+3.8 Application des Policies versionnées
 Overseer doit:
-• charger toutes les Policies actives,  
-• déterminer la logique métier selon leurs versions,  
-• injecter les règles dans les instructions agents,  
+• charger toutes les Policies actives,
+• déterminer la logique métier selon leurs versions,
+• injecter les règles dans les instructions agents,
 • stocker appliedPolicies dans les meta des documents mis à jour.
-
 
 4. Pipeline opérationnel géré par Overseer
 
-4.1 Étape 1 — Interprétation  
+4.1 Étape 1, Interprétation
 Analyse de:
-• l’intention,  
-• le contexte projet,  
-• workflowEngine,  
-• Policies actives,  
+• l’intention,
+• le contexte projet,
+• workflowEngine,
+• Policies actives,
 • risques potentiels.
 
-4.2 Étape 2 — Préparation  
+4.2 Étape 2, Préparation
 Préparation de:
-• systemInstruction complète,  
-• schémas documentaires,  
-• règles d’édition,  
-• versioning imposé,  
+• systemInstruction complète,
+• schémas documentaires,
+• règles d’édition,
+• versioning imposé,
 • operationMode (normal ou correction).
 
-4.3 Étape 3 — Appel agentique  
+4.3 Étape 3, Appel agentique
 Transmission de systemInstruction à l’orchestrateur et attente d’un JSON strict.
 
-4.4 Étape 4 — Validation  
+4.4 Étape 4, Validation
 Réception de:
-• validation structurelle de l’orchestrateur,  
-• verdict local du SuperiorValidationAgent,  
+• validation structurelle de l’orchestrateur,
+• verdict local du SuperiorValidationAgent,
 • verdict global si requis.
 
-4.5 Étape 5 — Décision  
-• allow → écriture  
-• warn → arbitrage + journalisation  
-• block → correction ou abort (override interdit en correctionMode)
+4.5 Étape 5, Décision
+• allow, écriture
+• warn, arbitrage et journalisation
+• block, correction ou abort (override interdit en correctionMode)
 
-4.6 Étape 6 — Post-écriture  
-• vérification de cohérence globale,  
-• transition de workflowEngine si explicitement autorisée,  
+4.6 Étape 6, Post-écriture
+• vérification de cohérence globale,
+• transition de workflowEngine si explicitement autorisée,
 • sortie du correctionMode si stabilité confirmée.
 
-4.7 Étape 7 — Rapport utilisateur  
+4.7 Étape 7, Rapport utilisateur
 Synthèse explicite:
-• modifications effectuées,  
-• justification,  
-• verdicts,  
+• modifications effectuées,
+• justification,
+• verdicts,
 • type de version.
-
 
 5. Interactions officielles
 
-5.1 Overseer → orchestrateur  
-• instructions formelles,  
-• ordres de transition de workflowEngine,  
+5.1 Overseer → orchestrateur
+• instructions formelles,
+• ordres de transition de workflowEngine,
 • demandes de validation structurelle.
 
-5.2 Orchestrateur → Overseer  
-• résultats structurels,  
-• erreurs formelles,  
-• snapshots,  
+5.2 Orchestrateur → Overseer
+• résultats structurels,
+• erreurs formelles,
+• snapshots,
 • logs.
 
-5.3 Overseer → agents producteurs  
-• contexte strict,  
-• règles d’édition,  
-• versioning,  
+5.3 Overseer → agents producteurs
+• contexte strict,
+• règles d’édition,
+• versioning,
 • instructions spécifiques.
 
-5.4 Agents → Overseer  
+5.4 Agents → Overseer
 • documents candidats (via orchestrateur).
 
-5.5 Overseer → SuperiorValidationAgent  
-• contexte local ou global,  
-• documents concernés,  
-• diffs,  
+5.5 Overseer → SuperiorValidationAgent
+• contexte local ou global,
+• documents concernés,
+• diffs,
 • indication du operationMode.
 
-5.6 SuperiorValidationAgent → Overseer  
-• verdicts,  
-• impacts,  
+5.6 SuperiorValidationAgent → Overseer
+• verdicts,
+• impacts,
 • niveau de risque.
-
 
 6. Règles spécifiques
 
-6.1 Overseer ne modifie jamais un document  
+6.1 Overseer ne modifie jamais un document
 Toute modification passe par:
 agent → orchestrateur → Firestore.
 
-6.2 Overseer ne corrige jamais directement  
+6.2 Overseer ne corrige jamais directement
 Il mandate exclusivement CorrectiveAgent en correctionMode.
 
-6.3 Overseer ne déclenche jamais de workflow automatiquement  
+6.3 Overseer ne déclenche jamais de workflow automatiquement
 Toute transition est analysée et autorisée explicitement.
 
-6.4 Overseer ne contourne jamais une Policy  
+6.4 Overseer ne contourne jamais une Policy
 Sauf override explicitement autorisé hors correctionMode.
 
-6.5 Overseer n’autorise aucune écriture sans validation locale  
+6.5 Overseer n’autorise aucune écriture sans validation locale
 Sans exception.
 
-6.6 Overseer ne sort jamais du correctionMode sans validation globale  
+6.6 Overseer ne sort jamais du correctionMode sans validation globale
 Aucun contournement possible.
 
+7. Capacités orchestrateur requises
 
-7. Invariants d’Overseer
+Overseer peut envoyer à l’orchestrateur des ordres structurels explicites. Ces ordres sont normatifs et l’orchestrateur doit:
+• les implémenter strictement,
+• refuser tout ordre inconnu ou hors schéma,
+• ne jamais transformer un ordre en décision métier.
+
+Liste des ordres autorisés (Overseer → orchestrateur), pour les besoins couverts par ce document:
+• generateStructuralDiff
+• generateRecoveryPreview
+• executeRecovery
+• listSnapshots
+• writeRecoveryAttemptCounter
+• writeDiffMetadataLog
+
+Règle stricte:
+• l’orchestrateur exécute mécaniquement un ordre valide, il ne choisit ni la cible, ni le scope, ni le snapshot, ni l’opportunité métier de l’action.
+
+8. Diff
+
+8.1 Principe
+Overseer peut demander un StructuralDiff à l’orchestrateur (diff strictement structurel).
+
+8.2 Extension optionnelle de risque
+Overseer peut, si nécessaire, demander une RiskAnnotation à SuperiorValidationAgent, uniquement sur ordre explicite et uniquement comme artefact séparé.
+
+Interdiction:
+• l’orchestrateur ne doit jamais inclure de champ de risque, ni d’annotation sémantique, dans le diff qu’il produit.
+
+9. systemRecovery
+
+9.1 Principe
+Overseer peut déclencher un systemRecovery uniquement via un flux contrôlé, incluant une demande utilisateur via Overseer, un preview, une confirmation, puis une exécution atomique.
+
+9.2 Flux verrouillé
+Séquence normative:
+1. Demande utilisateur via Overseer.
+2. Overseer ordonne listSnapshots à l’orchestrateur.
+3. Overseer choisit explicitement un snapshot (aucun choix implicite n’est autorisé).
+4. Overseer ordonne generateRecoveryPreview.
+5. Overseer présente le RecoveryPreview et obtient la confirmation utilisateur (via Overseer uniquement).
+6. Overseer ordonne executeRecovery.
+7. L’orchestrateur restaure fullProject uniquement (aucune restauration partielle n’est autorisée).
+8. Post-restauration, entrée automatique en correctionMode.
+9. Validation globale obligatoire via SuperiorValidationAgent.
+10. Overseer décide reprise contrôlée, maintien en correctionMode, ou maintien en halted selon les verdicts.
+
+Règles d’autorité:
+• la confirmation est une action utilisateur via Overseer, l’orchestrateur ne demande jamais de confirmation.
+• la sélection de snapshot est une décision d’Overseer, l’orchestrateur ne choisit jamais.
+
+Référence normative:
+• le protocole détaillé et les interdictions associées sont définis dans Process_systemRecovery.
+
+10. AuditTrailAgent
+
+10.1 Principe
+Overseer peut appeler AuditTrailAgent pour produire un output de synthèse chronologique strictement descriptif, non persisté.
+
+10.2 Contraintes d’appel
+L’appel est autorisé uniquement sur ordre explicite d’Overseer, jamais sur initiative orchestrateur.
+
+Champs obligatoires d’input:
+• dateFrom
+• dateTo
+• maxLogs
+• maxOutputBytes
+
+Règles:
+• la fenêtre doit être bornée et contrôlée par Overseer.
+• l’output est non persisté; seules des métadonnées de l’opération peuvent être journalisées selon le schéma normatif dédié.
+
+11. Limites
+
+11.1 correctionMode
+• correctionMode maxCycles = 5.
+• au dépassement, passage automatique en halted, aucune reprise normale n’est autorisée sans action de récupération contrôlée décidée par Overseer.
+
+11.2 systemRecovery
+• systemRecovery maxAttempts = 3 (tentatives consécutives).
+• au-delà, blocage manuel requis.
+
+11.3 sync externe
+• sync rejet max = 3 (rejets consécutifs).
+• au dépassement, désactivation temporaire 1h.
+• ce dépassement constitue un état de protection, pas un état halted; il doit être journalisé.
+
+12. Invariants d’Overseer
 
 Toujours vrais:
 
-• Overseer est l’unique centre de logique métier.  
-• Overseer n’écrit jamais directement en base.  
-• Toutes les Policies sont appliquées strictement.  
-• Aucune transition sans décision explicite.  
-• workflowEngine est l’unique porteur d’état exécutable.  
-• Toute incohérence impose correctionMode ou arrêt contrôlé.  
+• Overseer est l’unique centre de logique métier.
+• Overseer n’écrit jamais directement en base.
+• Toutes les Policies sont appliquées strictement.
+• Aucune transition sans décision explicite.
+• workflowEngine est l’unique porteur d’état exécutable.
+• Toute incohérence impose correctionMode ou arrêt contrôlé.
 • La traçabilité des décisions est obligatoire.
+• L’orchestrateur exécute des ordres structurels, il ne choisit jamais à la place d’Overseer.
+• systemRecovery est fullProject uniquement, la restauration partielle est interdite.
+• La confirmation utilisateur est collectée via Overseer uniquement.
 
 ---
 Fin du document
