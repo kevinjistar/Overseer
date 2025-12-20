@@ -1,7 +1,7 @@
 ---
-Document: WorkflowDocumentSpecializedSchema
-Version: 1.3.0
-Date: 2025-12-18
+Document: ValidationPolicy_Global
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -10,117 +10,232 @@ PolicyVersions:
   System_Agent_Edit_Policy: 1.0.0
 ---
 
-# WorkflowDocumentSpecializedSchema
+1. Objet de la policy
 
-## 1. Objet du document
+La ValidationPolicy_Global définit le cadre normatif de validation sémantique appliqué à toute opération susceptible d’affecter la cohérence locale ou globale d’un projet Overseer.
 
-Ce document définit le module spécialisé "Workflow Document" utilisé pour étendre UniversalDocumentSchema via la clé specialized.
+Elle définit strictement:
+- quand une validation sémantique doit être déclenchée,
+- à quel niveau (locale ou globale),
+- comment SuperiorValidationAgent est utilisé,
+- quelles décisions Overseer est autorisé à prendre selon les verdicts,
+- les règles impératives applicables en mode correction.
 
-## 2. Rôle du document dans le système
+Cette policy s’applique à:
+- toute mise à jour de document référent,
+- toute opération structurante,
+- toute transition de workflow décidée par Overseer.
 
-Niveau: normatif et structurel.
+Elle ne définit aucune logique métier spécifique, aucun schéma et n’autorise aucune écriture directe.
 
-Ce document sert de référence de structure pour les documents de type “Workflow Document” (métier ou opérationnel) et leurs composants (states, transitions, rules, integrations, validations).
+---
 
-## 3. Statut non exécutif
+2. Principes généraux de validation
 
-Règles normatives:
+Les principes suivants sont non négociables:
 
-- Un Workflow Document est descriptif et non exécutif.
-- Un Workflow Document ne porte jamais l’état courant.
-- L’état courant, snapshotable et restaurable, est porté exclusivement par workflowEngine.
-- Aucune clé du Workflow Document ne déclenche, n’autorise, ni n’implique une transition exécutée.
+- Toute modification documentaire est soumise à validation.
+- Aucune écriture n’est autorisée sans validation structurelle préalable.
+- La validation sémantique est strictement distincte de la validation structurelle.
+- La validation ne produit jamais d’écriture.
+- La décision finale appartient toujours à Overseer.
 
-## 4. Utilisation comme template de création
+Aucun composant autre qu’Overseer ne peut interpréter ou arbitrer les verdicts.
 
-Règles normatives:
+---
 
-- Ce document peut être utilisé comme source de génération initiale du workflowEngine uniquement pendant Pipeline_d_entree_des_projets.
-- Ce document ne porte jamais currentState.
-- Ce document ne déclenche jamais de transition.
+3. Niveaux de validation sémantique
 
-## 5. Interdictions
+Deux niveaux de validation sémantique sont définis.
 
-Règles normatives:
+3.1 Validation sémantique locale
 
-- Il est interdit de déduire l’état courant d’un projet depuis un Workflow Document.
-- Il est interdit de synchroniser automatiquement workflowEngine vers ce document.
+Assurée exclusivement par SuperiorValidationAgent.
 
-## 6. Module spécialisé
+Analyse:
+- le document candidat,
+- le document original,
+- le diff explicite,
+- l’intention déclarée,
+- un sous-ensemble minimal de contexte projet.
 
-description: "Module spécialisé représentant un workflow métier ou opérationnel. Il étend UniversalDocumentSchema via la clé specialized."
+Objectif:
+- vérifier la cohérence intrinsèque de la modification proposée.
 
-specialized:
+La validation locale est obligatoire pour toute opération de mise à jour, sans exception.
 
-  states:
-    description: "États décrits au niveau du document lui même, distincts du workflowEngine mais compatibles."
-    type: array
-    itemStructure:
-      id: string
-      label: string
-      description: string
-      metadata:
-        type: object
-        description: "Métadonnées optionnelles spécifiques au workflow"
-      flags:
-        type: array
-        items: string
+3.2 Validation sémantique globale
 
-  transitions:
-    description: "Transitions internes propres à ce Workflow Document."
-    type: array
-    itemStructure:
-      from: string
-      to: string
-      conditions:
-        type: array
-        items:
-          type:
-            string
-      notes: string
-    rules:
-      - "conditions est un champ descriptif, il ne peut jamais être interprété comme une condition exécutable par workflowEngine ou l’orchestrateur."
+Assurée par SuperiorValidationAgent sur ordre explicite d’Overseer.
 
-  rules:
-    description: "Règles documentaires à respecter dans le workflow."
-    type: array
-    itemStructure:
-      rule: string
-      enforcement: string
-      severity:
-        type: string
-        enum: ["info", "warning", "critical"]
+Analyse:
+- l’ensemble des documents référents du projet,
+- l’état courant du workflow,
+- les interactions inter-documents,
+- les décisions structurantes déjà actées,
+- l’impact systémique global.
 
-  integrations:
-    description: "Lien facultatif avec workflowEngine (utile pour les agents)."
-    type: object
-    properties:
-      engineWorkflowId: string
-      syncStateMapping:
-        description: "Correspondance descriptive entre les états internes du document et ceux du workflowEngine."
-        type: array
-        items:
-          type: object
-          properties:
-            documentState: string
-            engineState: string
-    rules:
-      - "engineWorkflowId et syncStateMapping servent uniquement à la correspondance descriptive, ils ne définissent jamais currentState."
+Objectif:
+- détecter les contradictions inter-documents,
+- préserver la cohérence globale et durable du projet.
 
-  validations:
-    description: "Règles de validation supplémentaires propres au Workflow Document."
-    type: array
-    itemStructure:
-      field: string
-      rule: string
-      message: string
+---
 
-## 7. Invariants
+4. Déclenchement des validations
+
+4.1 Validation locale obligatoire
+
+Une validation sémantique locale est obligatoire dans tous les cas suivants:
+- modification d’un document référent,
+- incrément de version,
+- opération corrective,
+- synchronisation ou import externe,
+- toute opération produisant un document candidat.
+
+Aucune exception n’est autorisée.
+
+4.2 Validation globale obligatoire
+
+Une validation sémantique globale est obligatoire lorsque:
+- la version demandée est Major,
+- une transition de workflow est classée majeure par WorkflowPolicy,
+- le document est un document racine (Architecture, Strategy, System-Level),
+- l’opération est exécutée en mode correction,
+- le verdict local indique workflowImpact = major,
+- le verdict local indique riskLevel = high.
+
+4.3 Validation globale optionnelle
+
+Une validation globale est optionnelle, à la discrétion d’Overseer, lorsque:
+- la version est Minor,
+- le document est important mais non racine,
+- workflowImpact = minor,
+- riskLevel = medium.
+
+Overseer peut forcer une validation globale même lorsqu’elle n’est pas requise par cette policy.
+
+4.4 Validation globale non requise
+
+Une validation globale peut être omise lorsque toutes les conditions suivantes sont réunies:
+- la version est Patch,
+- le document n’est pas racine,
+- workflowImpact = none,
+- riskLevel = low.
+
+---
+
+5. Verdicts de validation
+
+SuperiorValidationAgent retourne exclusivement l’un des verdicts suivants:
+- allow
+- warn
+- block
+
+Chaque verdict est accompagné de:
+- reasons,
+- impactedDocuments,
+- workflowImpact,
+- riskLevel,
+- recommendedFixes.
+
+---
+
+6. Interprétation des verdicts
+
+6.1 Verdict allow
+
+- La modification est jugée cohérente.
+- Overseer peut poursuivre le pipeline normal, sous réserve des autres Policies actives.
+
+6.2 Verdict warn
+
+- La modification est globalement acceptable.
+- Un risque non bloquant est identifié.
+
+Conséquences:
+- Overseer peut appliquer la modification,
+- la décision doit être explicitement journalisée avec le contexte de risque,
+- une validation globale ultérieure est recommandée.
+
+6.3 Verdict block
+
+- Une incohérence significative est détectée.
+
+Conséquences:
+- aucune écriture n’est autorisée,
+- Overseer doit soit demander une correction, soit annuler l’opération.
+
+Règles strictes:
+- en mode normal: override possible mais exceptionnel et explicitement journalisé,
+- en mode correction: override strictement interdit.
+
+---
+
+7. Validation en mode correction
+
+Lorsque operationMode = correction:
+
+- validation locale obligatoire,
+- validation globale obligatoire,
+- toute proposition avec riskLevel = medium ou high est considérée comme risquée,
+- tout verdict block est non contournable,
+- aucune transition workflow ne peut être déclenchée.
+
+Objectif exclusif:
+- restaurer la cohérence sans introduire de nouvelles évolutions structurelles.
+
+---
+
+8. Rôle d’Overseer sous cette policy
+
+Sous ValidationPolicy_Global, Overseer doit:
+
+- déclencher systématiquement la validation locale,
+- déterminer si une validation globale est requise, optionnelle ou non requise,
+- transmettre le contexte approprié à SuperiorValidationAgent,
+- interpréter les verdicts sans en modifier la nature,
+- prendre la décision finale:
+  - apply,
+  - correction,
+  - abort.
+
+Toute décision risquée ou exceptionnelle doit être explicitement traçable.
+
+---
+
+9. Séparation stricte des responsabilités
+
+Cette policy garantit la séparation suivante:
+
+- Orchestrateur:
+  - validation structurelle uniquement,
+  - aucune validation sémantique.
+
+- SuperiorValidationAgent:
+  - validation sémantique locale et globale,
+  - aucun rôle décisionnel,
+  - aucune écriture.
+
+- Overseer:
+  - interprétation des verdicts,
+  - décision métier finale,
+  - orchestration du pipeline.
+
+Aucune entité ne peut empiéter sur le rôle d’une autre.
+
+---
+
+10. Invariants de la ValidationPolicy_Global
 
 Toujours vrais:
 
-- Aucune exécution ne dépend d’un Workflow Document.
-- Aucune décision de transition ne provient d’un Workflow Document.
+- aucune écriture sans validation locale,
+- validation globale obligatoire pour toute opération structurante,
+- comportement strictement renforcé en mode correction,
+- aucune validation sémantique côté orchestrateur,
+- aucun contournement silencieux d’un verdict block,
+- traçabilité explicite des décisions à risque ou exceptionnelles,
+- séparation absolue entre validation, décision et exécution.
 
 ---
 Fin du document
@@ -129,11 +244,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.3.0 (2025-12-18): Ajout des sections normatives “Utilisation comme template de création” et “Interdictions”, clarification explicite du statut template (création uniquement) et des interdictions de déduction d’état et de synchronisation automatique.
-  - 1.2.0 (2025-12-17): Déclassement normatif du Workflow Document en artefact descriptif non exécutif, ajout d’invariants interdisant toute interprétation d’état courant ou de conditions exécutables.
-  - 1.1.1 (2025-12-16): Correction de cohérence de version affichée et normalisation mineure de présentation sans changement des règles.
-  - 1.1.0 (2025-12-10): Mise à jour pour alignement complet avec WorkflowEngineSchema 1.1.0 et UniversalDocumentSchema 1.1.0
-  - 1.0.0 (2025-12-10): Initialisation du module spécialisé Workflow Document
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.1.0.
+  - Aucun (baseline pré-système)
