@@ -1,0 +1,198 @@
+---
+Document: Diff_Specification
+Version: 1.0.0
+Date: 2025-12-20
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit la spécification normative du mécanisme de diff utilisé dans Overseer.
+
+Le diff est un artefact strictement structurel, destiné à:
+• décrire des changements entre deux états (documents ou projets) sous forme de changements atomiques,
+• permettre une validation structurelle et une analyse sémantique optionnelle, sans jamais mélanger risque et modifications,
+• garantir la non-persistance des données sensibles (before/after) dans les logs.
+
+2. Responsabilités strictes
+
+2.1 Orchestrateur
+L’orchestrateur:
+• calcule exclusivement un StructuralDiff.
+• ne produit aucune analyse de risque.
+• ne produit aucune recommandation métier.
+• ne persiste jamais before et after.
+
+Interdictions:
+• aucun champ de risque dans le diff.
+• aucune décision métier.
+• aucun enrichissement sémantique autonome.
+
+2.2 SuperiorValidationAgent
+SuperiorValidationAgent:
+• ne calcule jamais un diff.
+• peut produire uniquement une RiskAnnotation, optionnelle, sur ordre explicite d’Overseer.
+• n’écrit jamais dans Firestore et ne persiste rien lui-même.
+
+Interdictions:
+• aucune modification du diff.
+• aucun champ de diff enrichi par risque.
+• aucun mélange riskLevel/workflowImpact dans StructuralDiff.
+
+2.3 Overseer
+Overseer:
+• décide quand un diff est requis.
+• décide si une RiskAnnotation est demandée.
+• décide de l’usage du diff dans une décision apply, correction, abort ou systemRecovery.
+
+3. Schéma StructuralDiff
+
+Le StructuralDiff est un JSON strict conforme au schéma verrouillé ci-dessous. Aucun champ supplémentaire n’est autorisé.
+
+{
+  "diffId": "string",
+  "diffType": "document | project | snapshot",
+  "projectId": "string",
+  "operationId": "string",
+  "generatedAt": "string",
+  "baseRef": {
+    "refType": "document | project | snapshot",
+    "refId": "string",
+    "version": "string"
+  },
+  "targetRef": {
+    "refType": "document | project | snapshot",
+    "refId": "string",
+    "version": "string"
+  },
+  "summary": {
+    "changeCount": 0,
+    "createdCount": 0,
+    "updatedCount": 0,
+    "deletedCount": 0
+  },
+  "changes": [
+    {
+      "path": "string",
+      "operation": "create | update | delete",
+      "before": null,
+      "after": null
+    }
+  ]
+}
+
+Contraintes normatives:
+• changes[] est obligatoire et contient uniquement des objets conformes au schéma ci-dessus.
+• path est un chemin stable, déterministe, exprimé en notation JSON Pointer simplifiée (ex: /meta/version, /structured/sections/0/title).
+• operation est limité à create, update, delete.
+• before et after sont présents pour le calcul et l’export technique du diff, mais sont interdits de persistance (voir section 5).
+• summary est obligatoire, et doit refléter changes[] de manière cohérente.
+
+4. Schéma RiskAnnotation
+
+RiskAnnotation est strictement séparé du StructuralDiff. Aucun champ de risque ne doit être ajouté au diff.
+
+RiskAnnotation est un JSON strict conforme au schéma verrouillé ci-dessous. Aucun champ supplémentaire n’est autorisé.
+
+{
+  "annotationId": "string",
+  "diffId": "string",
+  "projectId": "string",
+  "operationId": "string",
+  "generatedAt": "string",
+  "scope": "local | global",
+  "verdict": "allow | warn | block",
+  "reasons": ["string"],
+  "riskLevel": "low | medium | high",
+  "workflowImpact": "none | minor | major",
+  "impactedDocuments": ["string"],
+  "recommendedFixes": ["string"]
+}
+
+Contraintes normatives:
+• scope est imposé par Overseer (local ou global).
+• verdict, riskLevel, workflowImpact, reasons, impactedDocuments, recommendedFixes suivent la sémantique définie par SuperiorValidationAgent_spec et ValidationPolicy_Global, sans extension.
+• RiskAnnotation ne contient aucune donnée before/after et aucun extrait de diff.
+
+5. Règles de persistance
+
+5.1 Principe
+La persistance du diff est strictement limitée à des métadonnées non sensibles.
+
+5.2 Emplacement de persistance
+Persister uniquement des métadonnées dans:
+logs/{projectId}/diffs/{diffId}.json
+
+5.3 Interdiction absolue
+Interdiction absolue de persister before et after, sous toute forme:
+• interdiction de persister before et after dans logs,
+• interdiction de persister des extraits de before/after dans summary,
+• interdiction de persister une représentation équivalente (patch brut, copie partielle, payload encodé).
+
+5.4 Payload persisté minimal (métadonnées uniquement)
+Le fichier logs/{projectId}/diffs/{diffId}.json doit contenir uniquement:
+
+{
+  "diffId": "string",
+  "projectId": "string",
+  "operationId": "string",
+  "generatedAt": "string",
+  "diffType": "document | project | snapshot",
+  "baseRef": {
+    "refType": "document | project | snapshot",
+    "refId": "string",
+    "version": "string"
+  },
+  "targetRef": {
+    "refType": "document | project | snapshot",
+    "refId": "string",
+    "version": "string"
+  },
+  "summary": {
+    "changeCount": 0,
+    "createdCount": 0,
+    "updatedCount": 0,
+    "deletedCount": 0
+  }
+}
+
+Aucun autre champ n’est autorisé dans la version persistée.
+
+6. Cas d’usage minimum
+
+6.1 Diff entre état actuel et snapshot (recovery preview)
+• L’orchestrateur calcule un StructuralDiff entre le fullProject courant et le fullProject du snapshot sélectionné.
+• Le RecoveryPreview peut référencer diffId et summary uniquement.
+• Overseer peut demander une RiskAnnotation globale sur diffId si nécessaire.
+
+6.2 Diff entre versions d’un document
+• L’orchestrateur calcule un StructuralDiff entre deux versions d’un même document référent.
+• Le diffType est document, baseRef/targetRef identifient les versions.
+• Overseer peut demander une RiskAnnotation locale ou globale selon ValidationPolicy_Global.
+
+7. Invariants
+
+Toujours vrais:
+
+• Le StructuralDiff est produit exclusivement par l’orchestrateur et reste purement structurel.  
+• RiskAnnotation est un artefact séparé, optionnel, produit uniquement par SuperiorValidationAgent sur ordre d’Overseer.  
+• Aucun champ de risque n’existe dans le StructuralDiff, aucune fusion diff+risk n’est autorisée.  
+• La persistance du diff est limitée à des métadonnées, la persistance de before et after est strictement interdite.  
+• Overseer est la seule autorité de décision sur l’usage du diff (apply, correction, abort, systemRecovery).  
+
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
