@@ -1,8 +1,7 @@
-
 ---
 Document: Policies_Versioning_Spec
-Version: 1.1.0
-Date: 2025-12-12
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -35,7 +34,7 @@ Règle d’accès:
 2.1 Policy  
 Une Policy est un document normatif décrivant des règles gouvernant un pan du comportement global du système, incluant notamment:
 • validation,  
-• workflow,  
+• workflowEngine,  
 • correction,  
 • édition agentique,  
 • versioning.
@@ -282,14 +281,14 @@ Toujours vrais:
 • L’orchestrateur n’interprète aucune Policy et n’exécute aucune logique métier.  
 • Toute incompatibilité majeure déclenche un blocage ou une correction contrôlée.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-12): Ajout des règles normatives Major/Minor/Patch applicables aux documents de spécification, clarification du principe d’indépendance des versions et règle de prudence.
-  - 1.0.0 (2025-12-11): Création du document.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun.
+  - Aucun (baseline pré-système)
