@@ -1,7 +1,7 @@
 ---
 Document: Pipeline_syncExterne
 Version: 1.0.0
-Date: 2025-12-20
+Date: 2025-12-21
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -12,16 +12,16 @@ PolicyVersions:
 
 # Pipeline Complet de Synchronisation Externe
 
-Ce pipeline décrit la totalité du flux opérationnel lorsque Overseer doit intégrer des données provenant d’un agent externe (IDE, assistant de code, moteur d’analyse, autre IA).  
+Ce pipeline décrit la totalité du flux opérationnel lorsque Overseer doit intégrer des données provenant d’un agent externe (IDE, assistant de code, moteur d’analyse, autre IA).
 Il couvre l’activation, la validation, l’analyse, la délégation, les mises à jour internes et le retour utilisateur.
 
 ---
 
 # 1. Activation du Mode Sync
 
-1. L’utilisateur appuie sur le bouton « Synchronisation Externe ».  
-2. Overseer bascule en Mode Sync.  
-3. Overseer annonce explicitement qu’il attend un payload structuré conforme au schéma ExternalSyncPayload.  
+1. L’utilisateur appuie sur le bouton « Synchronisation Externe ».
+2. Overseer bascule en Mode Sync.
+3. Overseer annonce explicitement qu’il attend un payload structuré conforme au schéma ExternalSyncPayload.
 4. Toutes les requêtes normales sont ignorées jusqu’à réception du payload.
 
 ---
@@ -30,17 +30,17 @@ Il couvre l’activation, la validation, l’analyse, la délégation, les mises
 
 Le message reçu doit être un JSON strict et complet, contenant:
 
-- projectId  
-- résumé  
-- liste de changements  
-- impacts  
-- erreurs éventuelles  
-- timestamp  
+- projectId
+- résumé
+- liste de changements
+- impacts
+- erreurs éventuelles
+- timestamp
 
 Si le format ne respecte pas le schéma:
-- Overseer rejette le message  
-- Overseer demande un payload conforme  
-- aucune action interne n’est déclenchée  
+- Overseer rejette le message
+- Overseer demande un payload conforme
+- aucune action interne n’est déclenchée
 
 ---
 
@@ -48,16 +48,16 @@ Si le format ne respecte pas le schéma:
 
 Étapes de validation:
 
-1. Vérification du schéma ExternalSyncPayload  
-2. Vérification que projectId correspond au currentProject  
-3. Vérification que le timestamp est présent et valide  
-4. Vérification que chaque changement possède un type reconnu  
-5. Vérification que les impacts sont renseignés  
+1. Vérification du schéma ExternalSyncPayload
+2. Vérification que projectId correspond au currentProject
+3. Vérification que le timestamp est présent et valide
+4. Vérification que chaque changement possède un type reconnu
+5. Vérification que les impacts sont renseignés
 
 En cas d’échec:
-- errorReport généré (severity = error)  
-- aucune écriture Firestore  
-- Overseer demande un nouveau payload  
+- errorReport généré (severity = error)
+- aucune écriture Firestore
+- Overseer demande un nouveau payload
 
 ---
 
@@ -65,17 +65,17 @@ En cas d’échec:
 
 Une fois le payload validé, Overseer procède à une analyse interne:
 
-1. analyse des changements:  
-   - création, suppression, modification de fichiers  
-   - impacts sur architecture  
-   - impacts sur workflowEngine  
-   - impacts sur documents référents  
+1. analyse des changements:
+   - création, suppression, modification de fichiers
+   - impacts sur architecture
+   - impacts sur workflowEngine
+   - impacts sur documents référents
 
-2. classification des risques  
-3. détection des contradictions potentielles  
-4. détection des incohérences système  
-5. évaluation du besoin de mise à jour documentaire  
-6. évaluation du besoin d’intervention agentique  
+2. classification des risques
+3. détection des contradictions potentielles
+4. détection des incohérences système
+5. évaluation du besoin de mise à jour documentaire
+6. évaluation du besoin d’intervention agentique
 
 ---
 
@@ -83,16 +83,16 @@ Une fois le payload validé, Overseer procède à une analyse interne:
 
 Overseer produit un plan structuré:
 
-- quelles mises à jour doivent être effectuées  
-- quelles sections ou documents doivent être modifiés  
-- quel agent doit intervenir (Architecture, UX, Strategy, workflowEngine, Notes, Validation…)  
-- type de versioning à appliquer (Patch, Minor, Major)  
-- risques à confirmer avec l’utilisateur  
-- questions éventuelles pour l’agent externe  
+- quelles mises à jour doivent être effectuées
+- quelles sections ou documents doivent être modifiés
+- quel agent doit intervenir (Architecture, UX, Strategy, workflowEngine, Notes, Validation…)
+- type de versioning à appliquer (Patch, Minor, Major)
+- risques à confirmer avec l’utilisateur
+- questions éventuelles pour l’agent externe
 
 Si une décision utilisateur est requise:
-- Overseer suspend l’exécution interne  
-- Overseer demande la confirmation avant de passer à l’étape suivante  
+- Overseer suspend l’exécution interne
+- Overseer demande la confirmation avant de passer à l’étape suivante
 
 ---
 
@@ -100,11 +100,11 @@ Si une décision utilisateur est requise:
 
 Lorsque tout est validé:
 
-1. Overseer prépare une tâche formelle pour chaque agent impliqué  
-2. L’orchestrateur exécute chaque tâche séquentiellement  
-3. Chaque agent produit un JSON strict et conforme  
-4. L’orchestrateur valide chaque sortie  
-5. En cas d’anomalie, le protocole d’erreur complet est invoqué  
+1. Overseer prépare une tâche formelle pour chaque agent impliqué
+2. L’orchestrateur exécute chaque tâche séquentiellement
+3. Chaque agent produit un JSON strict et conforme
+4. L’orchestrateur valide chaque sortie
+5. En cas d’anomalie, le protocole d’erreur complet est invoqué
 
 ---
 
@@ -112,11 +112,15 @@ Lorsque tout est validé:
 
 Après chaque tâche validée:
 
-1. l’orchestrateur met à jour le document concerné  
-2. un snapshot automatique est créé  
-3. la version est incrémentée selon les règles  
-4. les logs sont mis à jour  
-5. workflowEngine/engine.json est mis à jour si pertinent  
+1. l’orchestrateur met à jour le document concerné
+2. un snapshot automatique est créé
+3. la version est incrémentée selon les règles
+4. les logs sont mis à jour
+5. workflowEngine/engine.json est mis à jour si pertinent
+
+Interdiction absolue:
+- aucune écriture Firestore ne peut être exécutée directement depuis un payload externe ou un agent externe,
+- seules les écritures exécutées par l’orchestrateur, sur ordre explicite d’Overseer et après validations applicables, sont autorisées.
 
 ---
 
@@ -124,16 +128,16 @@ Après chaque tâche validée:
 
 À l’issue de toutes les mises à jour internes:
 
-1. Overseer consolide les résultats  
-2. Overseer produit un rapport utilisateur lisible contenant:  
-   - résumé de la synchronisation  
-   - modifications internes effectuées  
-   - agents mobilisés  
-   - versions modifiées  
-   - incohérences détectées  
-   - actions futures possibles  
-3. Overseer quitte automatiquement le Mode Sync  
-4. Overseer repasse en Mode Normal  
+1. Overseer consolide les résultats
+2. Overseer produit un rapport utilisateur lisible contenant:
+   - résumé de la synchronisation
+   - modifications internes effectuées
+   - agents mobilisés
+   - versions modifiées
+   - incohérences détectées
+   - actions futures possibles
+3. Overseer quitte automatiquement le Mode Sync
+4. Overseer repasse en Mode Normal
 
 ---
 
@@ -141,41 +145,84 @@ Après chaque tâche validée:
 
 Après le retour au Mode Normal:
 
-- l’utilisateur peut discuter librement du payload  
-- Overseer peut analyser ou commenter hors mode Sync  
-- Overseer peut générer des questions destinées à l’agent externe  
-- l’utilisateur peut effectuer plusieurs allers-retours avec l’externe  
-- une nouvelle synchronisation nécessitera un nouveau clic sur le bouton Sync  
+- l’utilisateur peut discuter librement du payload
+- Overseer peut analyser ou commenter hors mode Sync
+- Overseer peut générer des questions destinées à l’agent externe
+- l’utilisateur peut effectuer plusieurs allers-retours avec l’externe
+- une nouvelle synchronisation nécessitera un nouveau clic sur le bouton Sync
 
 ---
 
 # 10. Règles de Sécurité
 
-1. Un seul payload par activation du Mode Sync  
-2. Overseer ne traite jamais un payload hors Mode Sync  
-3. Overseer quitte toujours le Mode Sync après traitement  
-4. Aucun agent interne n’est appelé sans validation du payload  
-5. Aucune mise à jour Firestore sans versioning imposé  
-6. Les cycles potentiels (payload → sync → payload modifié) sont contrôlés par operationId  
-7. Aucune synchronisation n’est effectuée si projectId ≠ currentProject  
+1. Un seul payload par activation du Mode Sync
+2. Overseer ne traite jamais un payload hors Mode Sync
+3. Overseer quitte toujours le Mode Sync après traitement
+4. Aucun agent interne n’est appelé sans validation du payload
+5. Aucune mise à jour Firestore sans validation et décision explicite
+6. Les cycles potentiels (payload → sync → payload modifié) sont contrôlés par operationId
+7. Aucune synchronisation n’est effectuée si projectId ≠ currentProject
 
 ---
 
-# 11. Journalisation de la Synchronisation
+# 11. Politique de rejet et retry
+
+Définition normative:
+
+- maxRejectionsConsecutive = 3
+- un rejet correspond à un payload refusé avant toute écriture, pour non-conformité structurelle, non-conformité de schéma, incohérence projectId, champ interdit, ou toute violation du contrat d’entrée de Pipeline_syncExterne.
+
+Journalisation obligatoire à chaque rejet:
+
+- chaque rejet DOIT créer un log dédié sous le chemin canonique:
+  logs/{projectId}/sync/rejections/{rejectionId}.json
+
+Le log de rejet DOIT contenir au minimum:
+- rejectionId
+- timestamp
+- operationId (ou syncId si présent)
+- projectId
+- actor = orchestrator
+- initiatedBy = userId ou "system"
+- reasonCode (string)
+- details (string court)
+- consecutiveRejectionsAfter (integer)
+
+Dépassement et désactivation temporaire:
+
+- au dépassement (consecutiveRejections >= 3), la synchronisation externe DOIT être désactivée temporairement pendant 1h.
+- cette désactivation est un état de protection, ce n’est pas un état halted.
+- l’orchestrateur DOIT journaliser un log dédié de protection sous:
+  logs/{projectId}/sync/protection/{protectionEventId}.json
+- l’orchestrateur DOIT notifier Overseer via un retour structuré indiquant:
+  - status = "error"
+  - errorType = "SyncTemporarilyDisabled"
+  - disabledUntil (datetime)
+  - details (string)
+
+Comportement pendant la fenêtre de désactivation:
+
+- tout payload reçu pendant disabledUntil DOIT être rejeté immédiatement,
+- un log de rejet DOIT être créé (même chemin logs/{projectId}/sync/rejections/{rejectionId}.json),
+- aucune action interne, aucun appel agentique, aucune écriture Firestore n’est autorisé.
+
+---
+
+# 12. Journalisation de la Synchronisation
 
 Chaque synchronisation crée une entrée Firestore:
 
-systemLogs/sync/{syncId}.json
+logs/{projectId}/sync/{syncId}.json
 
 Contenant:
-- syncId  
-- timestamp  
-- payload d’origine  
-- actions internes déclenchées  
-- documents modifiés  
-- snapshots créés  
-- agents mobilisés  
-- erreurs éventuelles  
+- syncId
+- timestamp
+- payload d’origine
+- actions internes déclenchées
+- documents modifiés
+- snapshots créés
+- agents mobilisés
+- erreurs éventuelles
 
 ---
 Fin du document
