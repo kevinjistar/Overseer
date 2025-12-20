@@ -1,8 +1,7 @@
-
 ---
 Document: System_Agent_Edit_Policy
-Version: 2.0.0
-Date: 2025-12-15
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -205,10 +204,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-15): Refonte majeure pour normaliser le document au format canonique, remplacer les références implicites par une attribution explicite des responsabilités (Overseer, orchestrateur, agent), fermer strictement les règles structurelles, renforcer les interdictions d’extrapolation et formaliser le mode correction et le format de sortie.
-  - 1.0.0 (2025-12-10): Création de la policy globale encadrant toutes les modifications de documents par les agents.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Le document n’autorise plus aucune lecture directe de la policy par les agents; l’exécution est définie exclusivement via des règles injectées dans l’instruction par Overseer.
-  - Les champs meta.version et meta.updatedAt sont explicitement interdits de modification par défaut côté agent; leur gestion est définie comme une responsabilité d’Overseer (décision) et de l’orchestrateur (application mécanique).
-  - La sortie attendue est définie comme “JSON strict uniquement” sans exception, tout texte hors JSON est explicitement interdit.
+  - Aucun (baseline pré-système)
