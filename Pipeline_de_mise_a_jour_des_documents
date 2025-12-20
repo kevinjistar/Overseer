@@ -1,7 +1,7 @@
 ---
 Document: Pipeline_de_mise_a_jour_des_documents
-Version: 2.1.0
-Date: 2025-12-17
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -292,19 +292,14 @@ Toujours vrais:
 • En correctionMode, CorrectiveAgent est l’unique agent autorisé à produire un document candidat de correction.  
 • En correctionMode, SuperiorValidationAgent est strictement diagnostiqueur et validateur, jamais producteur.  
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.1.0 (2025-12-17): Ajout explicite du chemin CorrectionMode avec CorrectiveAgent (agent producteur unique en correction), normalisation terminologique (ValidationAgent supprimé), clarification des interdictions associées.
-  - 2.0.1 (2025-12-14): Normalisation formelle, ajout d’une frontpage standard, déplacement des métadonnées en footer, contenu opérationnel inchangé.
-  - 2.0.0 (2025-12-11): Refonte complète intégrant SuperiorValidationAgent, ValidationPolicy_Global, CorrectionMode, Workflow Engine v2 et Processus interne d’appel d’agents v2.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Suppression complète de l’ancienne validation unique.
-  - Intégration obligatoire de la double validation (structurelle + sémantique locale/globale).
-  - Ajout du mode correction et de ses règles restrictives.
-  - Abandon de tout déclenchement automatique de workflow.
+  - Aucun (baseline pré-système)
