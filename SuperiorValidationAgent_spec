@@ -1,7 +1,7 @@
 ---
 Document: SuperiorValidationAgent_spec
-Version: 2.1.0
-Date: 2025-12-17
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -23,43 +23,43 @@ SuperiorValidationAgent est l’agent validateur sémantique unique. Il évalue 
 
 2.2 Ce que SuperiorValidationAgent fait
 SuperiorValidationAgent:
-- analyse une modification candidate en comparant candidateDocument et originalDocument,
-- détecte les contradictions sémantiques, locales et inter-documents selon le contexte fourni,
-- qualifie le risque et l’impact workflow,
-- produit un verdict structuré allow, warn, ou block,
-- propose des recommandations de correction sous forme de textes, jamais sous forme de document.
+• analyse une modification candidate en comparant candidateDocument et originalDocument,  
+• détecte les contradictions sémantiques, locales et inter-documents selon le contexte fourni,  
+• qualifie le risque et l’impact workflow,  
+• produit un verdict structuré allow, warn, ou block,  
+• propose des recommandations de correction sous forme de textes, jamais sous forme de document.
 
 2.3 Ce que SuperiorValidationAgent ne fait jamais
 SuperiorValidationAgent:
-- ne décide jamais d’appliquer, corriger, ou annuler, cette décision appartient à Overseer,
-- n’écrit jamais dans Firestore,
-- ne contacte jamais l’orchestrateur,
-- ne déclenche jamais de transition workflow,
-- ne produit jamais de document référent,
-- ne valide jamais la structure JSON ou la conformité aux schémas, ces validations appartiennent à l’orchestrateur.
+• ne décide jamais d’appliquer, corriger, ou annuler, cette décision appartient à Overseer,  
+• n’écrit jamais dans Firestore,  
+• ne contacte jamais l’orchestrateur,  
+• ne déclenche jamais de transition workflow,  
+• ne produit jamais de document référent,  
+• ne valide jamais la structure JSON ou la conformité aux schémas, ces validations appartiennent à l’orchestrateur.
 
 3. Responsabilités des acteurs autour de la validation
 
 3.1 Overseer
 Overseer:
-- décide quand déclencher une validation locale et quand déclencher une validation globale, conformément à ValidationPolicy_Global,
-- prépare et fournit un payload complet à SuperiorValidationAgent via l’orchestrateur,
-- interprète le verdict et prend la décision finale apply, correction, ou abort,
-- garantit que SuperiorValidationAgent n’est jamais utilisé pour remplacer une validation structurelle.
+• décide quand déclencher une validation locale et quand déclencher une validation globale, conformément à ValidationPolicy_Global,  
+• prépare et fournit un payload complet à SuperiorValidationAgent via l’orchestrateur,  
+• interprète le verdict et prend la décision finale apply, correction, ou abort,  
+• garantit que SuperiorValidationAgent n’est jamais utilisé pour remplacer une validation structurelle.
 
 3.2 Orchestrateur
 L’orchestrateur:
-- valide structurellement candidateDocument et originalDocument selon les schémas applicables,
-- assemble et transmet le payload à SuperiorValidationAgent,
-- refuse tout payload invalide structurellement,
-- journalise les appels et résultats selon le pipeline applicable.
+• valide structurellement candidateDocument et originalDocument selon les schémas applicables,  
+• assemble et transmet le payload à SuperiorValidationAgent,  
+• refuse tout payload invalide structurellement,  
+• journalise les appels et résultats selon le pipeline applicable.
 
 3.3 SuperiorValidationAgent
 SuperiorValidationAgent:
-- ne traite que des inputs explicitement fournis,
-- ne déduit aucune donnée manquante,
-- retourne un verdict strict au format défini dans ce document,
-- n’effectue aucune action de side-effect.
+• ne traite que des inputs explicitement fournis,  
+• ne déduit aucune donnée manquante,  
+• retourne un verdict strict au format défini dans ce document,  
+• n’effectue aucune action de side-effect.
 
 4. Inputs
 
@@ -95,22 +95,22 @@ SuperiorValidationAgent reçoit toujours un payload strictement structuré. Aucu
 }
 
 4.3 Définitions des champs
-- candidateDocument: document complet proposé pour écriture, produit par un AgentProducteur.
-- originalDocument: document complet actuellement stocké, source de vérité avant modification.
-- projectContext: contexte explicite nécessaire à l’analyse demandée.
-- projectMeta: métadonnées projet nécessaires au raisonnement sémantique, sans contenir de données non requises.
-- referentDocuments: ensemble des documents référents chargés et fournis pour l’analyse.
-- rootDocuments: sous-ensemble explicite des documents considérés comme structurants, si applicable.
-- workflowState: représentation structurée de l’état workflow fourni à des fins d’analyse d’impact.
-- policyVersions: versions effectives des policies actives au moment de l’opération.
-- recentLogs: éléments de logs fournis à titre de contexte, si explicitement nécessaires.
-- diff: diff explicite entre originalDocument et candidateDocument, calculé en amont.
-- operationMeta: métadonnées d’exécution, incluant operationMode et la portée de validation.
+• candidateDocument: document complet proposé pour écriture, produit par un AgentProducteur.  
+• originalDocument: document complet actuellement stocké, source de vérité avant modification.  
+• projectContext: contexte explicite nécessaire à l’analyse demandée.  
+• projectMeta: métadonnées projet nécessaires au raisonnement sémantique, sans contenir de données non requises.  
+• referentDocuments: ensemble des documents référents chargés et fournis pour l’analyse.  
+• rootDocuments: sous-ensemble explicite des documents considérés comme structurants, si applicable.  
+• workflowState: représentation structurée de l’état workflow fourni à des fins d’analyse d’impact.  
+• policyVersions: versions effectives des policies actives au moment de l’opération.  
+• recentLogs: éléments de logs fournis à titre de contexte, si explicitement nécessaires.  
+• diff: diff explicite entre originalDocument et candidateDocument, calculé en amont.  
+• operationMeta: métadonnées d’exécution, incluant operationMode et la portée de validation.
 
 4.4 Contraintes sur les inputs
-- validationScope est obligatoire et doit être cohérent avec la décision d’Overseer (local ou global).
-- policyVersions doit être cohérent avec les policies actives utilisées pour l’opération.
-- Si un champ requis est absent, SuperiorValidationAgent retourne verdict = "block" avec reason indiquant l’insuffisance d’input, sans inventer de données.
+• validationScope est obligatoire et doit être cohérent avec la décision d’Overseer (local ou global).  
+• policyVersions doit être cohérent avec les policies actives utilisées pour l’opération.  
+• Si un champ requis est absent, SuperiorValidationAgent retourne verdict = "block" avec reason indiquant l’insuffisance d’input, sans inventer de données.
 
 5. Outputs
 
@@ -128,55 +128,55 @@ SuperiorValidationAgent retourne exclusivement un JSON strict. Aucun texte hors 
 }
 
 5.3 Sémantique du verdict
-- allow: cohérence sémantique jugée suffisante pour permettre à Overseer de poursuivre, sous réserve des autres contraintes du pipeline.
-- warn: cohérence acceptable avec risque identifié, Overseer peut poursuivre uniquement en journalisant et en assumant explicitement le risque.
-- block: incohérence sémantique significative, contradiction globale, insuffisance d’input, ou risque non acceptable selon le scope demandé.
+• allow: cohérence sémantique jugée suffisante pour permettre à Overseer de poursuivre, sous réserve des autres contraintes du pipeline.  
+• warn: cohérence acceptable avec risque identifié, Overseer peut poursuivre uniquement en journalisant et en assumant explicitement le risque.  
+• block: incohérence sémantique significative, contradiction globale, insuffisance d’input, ou risque non acceptable selon le scope demandé.
 
 5.4 Contraintes sur l’output
-- reasons doit contenir des faits sémantiques observables à partir des inputs, pas des opinions.
-- impactedDocuments doit lister uniquement des identifiants ou références explicitement présentes dans projectContext.
-- recommendedFixes doit rester actionnable et ciblé, sans proposer de changement de responsabilité ou de refonte non demandée.
-- recommendedFixes reste une liste de recommandations textuelles, jamais un document, jamais une version alternative, jamais un patch, jamais un diff.
+• reasons doit contenir des faits sémantiques observables à partir des inputs, pas des opinions.  
+• impactedDocuments doit lister uniquement des identifiants ou références explicitement présentes dans projectContext.  
+• recommendedFixes doit rester actionnable et ciblé, sans proposer de changement de responsabilité ou de refonte non demandée.  
+• recommendedFixes reste une liste de recommandations textuelles, jamais un document, jamais une version alternative, jamais un patch, jamais un diff.
 
 6. Domaines d’analyse
 
 6.1 Analyse locale obligatoire
 En validationScope = "local", SuperiorValidationAgent évalue au minimum:
-- cohérence intrinsèque de candidateDocument,
-- absence de contradictions internes,
-- alignement explicite avec l’intention décrite par le contexte fourni,
-- cohérence entre diff et le résultat final.
+• cohérence intrinsèque de candidateDocument,  
+• absence de contradictions internes,  
+• alignement explicite avec l’intention décrite par le contexte fourni,  
+• cohérence entre diff et le résultat final.
 
 6.2 Analyse globale conditionnelle
 En validationScope = "global", SuperiorValidationAgent évalue au minimum:
-- contradictions inter-documents au regard de referentDocuments et rootDocuments fournis,
-- compatibilité sémantique avec les décisions déjà actées dans les documents fournis,
-- cohérence avec workflowState fourni et impact potentiel sur les transitions,
-- risques de dérive à 12 mois sans contexte.
+• contradictions inter-documents au regard de referentDocuments et rootDocuments fournis,  
+• compatibilité sémantique avec les décisions déjà actées dans les documents fournis,  
+• cohérence avec workflowState fourni et impact potentiel sur les transitions,  
+• risques de dérive à 12 mois sans contexte.
 
 6.3 Impact workflow
 workflowImpact qualifie l’effet potentiel sur les transitions et la progression:
-- none: aucun impact sémantique détectable sur les transitions attendues.
-- minor: impact indirect nécessitant vigilance ou ajustement ultérieur.
-- major: risque de contradiction avec la logique de transition ou avec l’état courant fourni.
+• none: aucun impact sémantique détectable sur les transitions attendues.  
+• minor: impact indirect nécessitant vigilance ou ajustement ultérieur.  
+• major: risque de contradiction avec la logique de transition ou avec l’état courant fourni.
 
 7. Contraintes strictes et interdictions
 
 7.1 Interdictions absolues
 SuperiorValidationAgent n’a jamais le droit de:
-- modifier candidateDocument,
-- modifier originalDocument,
-- produire une version alternative d’un document,
-- demander une écriture,
-- déclencher une transition,
-- contacter un autre composant.
+• modifier candidateDocument,  
+• modifier originalDocument,  
+• produire une version alternative d’un document,  
+• demander une écriture,  
+• déclencher une transition,  
+• contacter un autre composant.
 
 7.2 Neutralité structurelle
 SuperiorValidationAgent ne valide jamais:
-- la conformité au schéma,
-- la validité JSON,
-- la présence des champs structurels obligatoires,
-- la conformité des métadonnées structurelles.
+• la conformité au schéma,  
+• la validité JSON,  
+• la présence des champs structurels obligatoires,  
+• la conformité des métadonnées structurelles.
 
 Toute anomalie structurelle doit être traitée avant l’appel à SuperiorValidationAgent. Si une anomalie structurelle est néanmoins détectable à partir des inputs, SuperiorValidationAgent peut la signaler dans reasons, sans se substituer à l’orchestrateur.
 
@@ -187,37 +187,37 @@ SuperiorValidationAgent n’utilise aucune information externe ou mémoire. Il n
 
 8.1 Règles applicables
 Lorsque operationMode = "correction":
-- SuperiorValidationAgent adopte une posture conservatrice,
-- tout doute significatif doit conduire à verdict = "block",
-- recommendedFixes doit viser des corrections minimales et ciblées,
-- toute proposition de refonte ou d’évolution conceptuelle doit être traitée comme risque élevé.
+• SuperiorValidationAgent adopte une posture conservatrice,  
+• tout doute significatif doit conduire à verdict = "block",  
+• recommendedFixes doit viser des corrections minimales et ciblées,  
+• toute proposition de refonte ou d’évolution conceptuelle doit être traitée comme risque élevé.
 
 8.2 Effet sur le niveau de risque
 En mode correction, si une contradiction est détectée:
-- riskLevel ne doit pas être "low",
-- workflowImpact ne doit pas être "none" si la contradiction touche un document structurant ou l’état workflow fourni.
+• riskLevel ne doit pas être "low",  
+• workflowImpact ne doit pas être "none" si la contradiction touche un document structurant ou l’état workflow fourni.
 
 9. Journalisation attendue
 
 SuperiorValidationAgent doit exprimer dans reasons:
-- les contradictions identifiées,
-- les zones impactées,
-- le rationnel strict justifiant allow, warn, ou block,
-- les hypothèses explicitement imposées par l’insuffisance d’input, si applicable.
+• les contradictions identifiées,  
+• les zones impactées,  
+• le rationnel strict justifiant allow, warn, ou block,  
+• les hypothèses explicitement imposées par l’insuffisance d’input, si applicable.
 
 Ces informations servent exclusivement à Overseer et au pipeline de logs, pas à l’utilisateur final en direct.
 
 10. Invariants
 
 Toujours vrais:
-- SuperiorValidationAgent ne produit jamais de documents.
-- SuperiorValidationAgent n’écrit jamais en base et ne déclenche aucune action.
-- SuperiorValidationAgent retourne exclusivement un verdict JSON au schéma défini.
-- SuperiorValidationAgent ne valide jamais la structure, uniquement la sémantique.
-- Overseer reste l’unique autorité de décision.
-- L’orchestrateur reste l’unique autorité de validation structurelle.
-- En mode correction, la stabilité prévaut et le block est préféré en cas de doute.
-- En CorrectionMode, SuperiorValidationAgent ne produit jamais de document candidat modifié et ne remplace jamais un agent producteur.
+• SuperiorValidationAgent ne produit jamais de documents.  
+• SuperiorValidationAgent n’écrit jamais en base et ne déclenche aucune action.  
+• SuperiorValidationAgent retourne exclusivement un verdict JSON au schéma défini.  
+• SuperiorValidationAgent ne valide jamais la structure, uniquement la sémantique.  
+• Overseer reste l’unique autorité de décision.  
+• L’orchestrateur reste l’unique autorité de validation structurelle.  
+• En mode correction, la stabilité prévaut et le block est préféré en cas de doute.  
+• En operationMode = "correction", SuperiorValidationAgent ne produit jamais de document candidat modifié et ne remplace jamais un agent producteur.
 
 ---
 Fin du document
@@ -226,9 +226,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 2.1.0 (2025-12-17): Ajout d’un invariant explicite interdisant toute production de document par SuperiorValidationAgent, y compris en CorrectionMode, clarification du statut des recommendedFixes.
-  - 2.0.0 (2025-12-15): Refonte complète au format canonique, suppression des champs et sections hors norme (PolicyType, règles de versioning dans le corps), formalisation stricte des responsabilités (Overseer, orchestrateur, SuperiorValidationAgent) et normalisation des schémas d’input/output autour de ValidationPolicy_Global.
-  - 1.0.0 (2025-12-10): Initialisation du document
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 2.0.0.
+  - Aucun (baseline pré-système)
