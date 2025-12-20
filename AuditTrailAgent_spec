@@ -1,0 +1,210 @@
+---
+Document: AuditTrailAgent_spec
+Version: 1.0.0
+Date: 2025-12-20
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le rôle, les responsabilités, les inputs, les outputs, les interdictions et les invariants de AuditTrailAgent dans Overseer.
+
+AuditTrailAgent est un agent de synthèse structurée des traces, destiné à produire un artefact non persisté (output) représentant une timeline factuelle et traçable, construite à partir de sources de logs existantes.
+
+AuditTrailAgent ne produit aucune évaluation sémantique, ne formule aucune conclusion métier, et ne modifie jamais le système.
+
+2. Classification
+
+2.1 Famille
+Famille: AgentTransformateur.
+
+2.2 Nature de la sortie
+Output: non persisté.
+
+Règle normative:
+• l’output complet de AuditTrailAgent ne doit jamais être écrit en base.
+• seule une métadonnée d’appel (voir section 7) peut être persistée.
+
+3. Déclenchement
+
+3.1 Déclenchement autorisé
+AuditTrailAgent est déclenché uniquement sur ordre explicite d’Overseer.
+
+3.2 Déclenchement interdit
+AuditTrailAgent n’est jamais déclenché par l’orchestrateur.
+
+Règle normative:
+• l’orchestrateur peut exécuter l’appel technique uniquement lorsqu’Overseer l’ordonne explicitement.
+• toute tentative d’appel autonome par l’orchestrateur est invalide.
+
+4. Input
+
+4.1 Principe
+AuditTrailAgent reçoit un input strictement structuré. Aucun champ implicite n’est autorisé.
+
+4.2 Champs obligatoires
+Les champs suivants sont obligatoires et doivent être présents dans tous les cas:
+
+{
+  "operationId": "string",
+  "projectId": "string",
+  "dateFrom": "string",
+  "dateTo": "string",
+  "maxLogs": 0,
+  "maxOutputBytes": 0,
+  "justification": "string | null"
+}
+
+4.3 Contraintes normatives
+• dateFrom et dateTo sont des timestamps ISO 8601 (string).
+• dateFrom doit être antérieur ou égal à dateTo.
+• maxLogs est un entier strictement positif.
+• maxOutputBytes est un entier strictement positif.
+• operationId et projectId sont obligatoires et traçables.
+
+4.4 Règle de fenêtre maximale
+Règle stricte:
+• si (dateTo - dateFrom) > 90 jours, le champ justification devient obligatoire et doit être un string non vide.
+• si (dateTo - dateFrom) > 90 jours et justification est absent, null, ou vide, AuditTrailAgent doit refuser l’input et retourner un output de refus conforme (voir section 5.4).
+
+4.5 Source de données
+AuditTrailAgent ne reçoit pas de données implicites. Le sous-ensemble de logs et de références fourni au moment de l’appel est déterminé par le pipeline. AuditTrailAgent n’infère aucun log manquant.
+
+5. Output
+
+5.1 Principe
+AuditTrailAgent retourne exclusivement un JSON strict, non persisté, contenant une timeline structurée et des pointeurs explicites vers les sources de logs.
+
+5.2 Schéma d’output nominal (non persisté)
+Aucun champ supplémentaire n’est autorisé.
+
+{
+  "status": "ok | refused",
+  "operationId": "string",
+  "projectId": "string",
+  "window": {
+    "dateFrom": "string",
+    "dateTo": "string"
+  },
+  "limits": {
+    "maxLogs": 0,
+    "maxOutputBytes": 0,
+    "logsConsidered": 0,
+    "bytesEstimated": 0
+  },
+  "timeline": [
+    {
+      "timestamp": "string",
+      "eventType": "string",
+      "actor": "overseer | orchestrator | superiorValidationAgent | correctiveAgent | contextAgent | auditTrailAgent | systemInit | syncAgent",
+      "initiatedBy": "string",
+      "summary": "string",
+      "sourceRefs": [
+        {
+          "sourcePath": "string",
+          "sourceId": "string"
+        }
+      ]
+    }
+  ],
+  "traceability": {
+    "sourcePaths": ["string"],
+    "notes": ["string"]
+  }
+}
+
+5.3 Règles de contenu
+• timeline est une liste d’événements factuels et datés, ordonnables par timestamp.
+• summary est descriptif et factuel, sans qualification sémantique (interdictions section 6).
+• sourceRefs doit permettre de remonter aux entrées de logs d’origine (traçabilité).
+• actor doit respecter l’enum fermée canonique.
+• initiatedBy est un string (userId ou "system").
+
+5.4 Output de refus (non persisté)
+En cas de refus (notamment fenêtre > 90 jours sans justification), AuditTrailAgent doit retourner:
+
+{
+  "status": "refused",
+  "operationId": "string",
+  "projectId": "string",
+  "refusal": {
+    "reason": "string",
+    "rule": "string"
+  }
+}
+
+6. Interdictions absolues
+
+AuditTrailAgent ne doit jamais:
+• qualifier sémantiquement les événements (ex: “bonne décision”, “erreur”, “risqué”, “cohérent”, “incohérent”),
+• inférer des causes ou des intentions non explicitement présentes dans les sources,
+• inventer des événements, des timestamps, des acteurs, des décisions ou des actions,
+• produire un verdict allow, warn, block,
+• recommander apply, correction, abort,
+• produire un diff ou un patch,
+• écrire dans Firestore,
+• demander une confirmation à l’utilisateur,
+• déclencher un workflow ou suggérer une transition.
+
+7. Journalisation métadonnées uniquement
+
+7.1 Principe
+Seules les métadonnées d’appel peuvent être persistées, jamais l’output complet.
+
+7.2 Emplacement
+logs/{projectId}/auditTrail/{operationId}.json
+
+7.3 Schéma verrouillé de persistance (métadonnées uniquement)
+Aucun champ supplémentaire n’est autorisé.
+
+{
+  "operationId": "string",
+  "projectId": "string",
+  "requestedAt": "string",
+  "window": {
+    "dateFrom": "string",
+    "dateTo": "string"
+  },
+  "limits": {
+    "maxLogs": 0,
+    "maxOutputBytes": 0
+  },
+  "status": "ok | refused",
+  "requestedBy": {
+    "actor": "overseer",
+    "initiatedBy": "string"
+  }
+}
+
+Contraintes normatives:
+• requestedBy.actor est toujours "overseer".
+• requestedBy.initiatedBy est un userId ou "system".
+• aucun élément de timeline, aucun résumé, aucun contenu de logs n’est persisté ici.
+
+8. Invariants
+
+Toujours vrais:
+
+• AuditTrailAgent est un AgentTransformateur, son output est non persisté.  
+• AuditTrailAgent est déclenché uniquement sur ordre explicite d’Overseer, jamais par l’orchestrateur.  
+• AuditTrailAgent ne produit aucune qualification sémantique, aucun verdict, aucune décision, aucune recommandation métier.  
+• AuditTrailAgent n’invente rien, n’infère rien hors des sources fournies.  
+• AuditTrailAgent n’écrit jamais dans Firestore, seule une métadonnée d’appel peut être persistée selon le schéma verrouillé.  
+• actor et initiatedBy, lorsqu’ils apparaissent dans l’output, respectent les conventions canonique (actor enum fermée, initiatedBy string).  
+
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
