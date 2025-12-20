@@ -1,7 +1,7 @@
 ---
 Document: Process_creation_d_un_projet
-Version: 1.2.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -249,7 +249,7 @@ Condition normative:
 - workflowEngine/engine.json doit exister et être valide avant toute activation.
 
 Écriture cible:
-userContext/{userId}/currentProject
+userContext/{userId}/currentProject.json
 
 Aucune activation automatique n’est autorisée.
 
@@ -278,9 +278,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.2.0 (2025-12-18): Clarification normative des Workflow Documents comme optionnels, ajout du nommage workflowDocument_{descripteur}, ajout des règles de template de génération du workflowEngine (création uniquement) et de traçabilité.
-  - 1.1.0 (2025-12-17): Initialisation obligatoire de workflowEngine comme porteur d’état, clarification des Workflow Documents comme descripteurs non exécutifs.
-  - 1.0.0 (2025-12-11): Refonte complète du Processus standard de création d’un projet selon le format canonique Overseer, clarification stricte des responsabilités et des invariants.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.1.0
+  - Aucun (baseline pré-système)
