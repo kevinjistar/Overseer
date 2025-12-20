@@ -1,8 +1,7 @@
-
 ---
 Document: Process_interne_d_appel_d_agents
 Version: 1.0.0
-Date: 2025-12-15
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -312,15 +311,14 @@ Toujours vrais:
 • La validation globale suit strictement ValidationPolicy_Global lorsqu’elle est requise.  
 • Toute opération est traçable via operationId, logs et snapshots lorsque requis.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-10): Mise à jour majeure pour intégrer SuperiorValidationAgent, la double validation sémantique, la System_Agent_Edit_Policy et le mode correction.
-  - 1.0.0 (2025-12-10): Version initiale du processus d’appel agentique.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - L'ancien flux d'appel agentique est remplacé par un pipeline en trois validations (structurelle, sémantique locale, sémantique globale).
-  - Introductions du verdict allow/warn/block et du mode correction empêchant les transitions workflow.
+  - Aucun (baseline pré-système)
