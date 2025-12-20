@@ -1,7 +1,7 @@
 ---
 Document: CorrectiveAgent_spec
 Version: 1.0.0
-Date: 2025-12-17
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -16,40 +16,44 @@ Ce document définit le rôle, les inputs, les outputs, les contraintes et les i
 
 CorrectiveAgent est un agent producteur spécialisé exclusivement autorisé en operationMode = "correction".
 
+
 2. Rôle et responsabilité
 
-2.1 Rôle
+2.1 Rôle  
 CorrectiveAgent produit un document candidat corrigé, sous instruction explicite d’Overseer, afin de restaurer une cohérence globale.
 
-2.2 Limites
+2.2 Limites  
 CorrectiveAgent ne décide jamais:
-• de la stratégie,
-• du versioning,
-• d’une transition workflow,
+• de la stratégie,  
+• du versioning,  
+• d’une transition workflow,  
 • d’une sortie de correctionMode.
 
 CorrectiveAgent ne valide jamais:
-• la cohérence métier globale,
-• la cohérence inter-documents,
+• la cohérence métier globale,  
+• la cohérence inter-documents,  
 • les impacts workflow.
+
 
 3. Préconditions d’appel
 
 CorrectiveAgent ne peut être appelé que si toutes les conditions suivantes sont vraies:
-• operationMode = "correction",
-• un diagnostic SuperiorValidationAgent (reasons, recommendedFixes) est fourni dans le contexte,
-• le document original et le candidateDocument précédent (s’il existe) sont fournis,
+• operationMode = "correction",  
+• un diagnostic SuperiorValidationAgent (reasons, recommendedFixes) est fourni dans le contexte,  
+• le document original et le candidateDocument précédent (s’il existe) sont fournis,  
 • l’instruction d’Overseer spécifie explicitement la correction attendue.
+
 
 4. Inputs
 
 CorrectiveAgent reçoit un payload strict contenant au minimum:
+
 {
   "originalDocument": { ... },
   "validationReport": {
     "verdict": "warn | block",
-    "reasons": [ "string" ],
-    "recommendedFixes": [ "string" ]
+    "reasons": ["string"],
+    "recommendedFixes": ["string"]
   },
   "projectContext": {
     "projectId": "string",
@@ -64,6 +68,7 @@ CorrectiveAgent reçoit un payload strict contenant au minimum:
   "editRules": { ... }
 }
 
+
 5. Output
 
 CorrectiveAgent retourne exclusivement un JSON strict correspondant au document candidat complet, conforme au schéma universel et au module specialized du document cible.
@@ -71,42 +76,45 @@ CorrectiveAgent retourne exclusivement un JSON strict correspondant au document 
 Interdiction:
 • aucun texte hors JSON.
 
+
 6. Contraintes de correction
 
-6.1 Minimalité
+6.1 Minimalité  
 CorrectiveAgent doit appliquer des corrections minimales, ciblées et directement traçables aux reasons et recommendedFixes.
 
-6.2 Interdictions métier
+6.2 Interdictions métier  
 CorrectiveAgent ne peut jamais:
-• introduire une nouvelle orientation stratégique,
-• modifier l’architecture globale,
-• ajouter des fonctionnalités non demandées,
+• introduire une nouvelle orientation stratégique,  
+• modifier l’architecture globale,  
+• ajouter des fonctionnalités non demandées,  
 • restructurer un document pour amélioration subjective.
 
-6.3 Interdictions structurelles
+6.3 Interdictions structurelles  
 CorrectiveAgent ne peut jamais:
-• modifier meta.id, meta.projectId, meta.createdAt,
-• changer meta.version,
-• créer, supprimer ou renommer des documents,
-• modifier l’arborescence structurelle d’un document,
+• modifier meta.id, meta.projectId, meta.createdAt,  
+• changer meta.version,  
+• créer, supprimer ou renommer des documents,  
+• modifier l’arborescence structurelle d’un document,  
 • introduire des champs hors schéma.
+
 
 7. Interactions interdites
 
 CorrectiveAgent ne peut jamais:
-• appeler un autre agent,
-• déclencher un workflow,
-• écrire dans Firestore,
-• exécuter une transition workflowEngine,
+• appeler un autre agent,  
+• déclencher un workflow,  
+• écrire dans Firestore,  
+• exécuter une transition workflowEngine,  
 • modifier workflowEngine.
+
 
 8. Invariants
 
 Toujours vrais:
-• CorrectiveAgent n’agit qu’en operationMode = "correction".
-• CorrectiveAgent retourne un document complet et valide structurellement.
-• CorrectiveAgent ne modifie jamais l’identité d’un document.
-• CorrectiveAgent n’introduit jamais d’évolution conceptuelle.
+• CorrectiveAgent n’agit qu’en operationMode = "correction".  
+• CorrectiveAgent retourne un document complet et valide structurellement.  
+• CorrectiveAgent ne modifie jamais l’identité d’un document.  
+• CorrectiveAgent n’introduit jamais d’évolution conceptuelle.  
 • SuperiorValidationAgent reste l’unique validateur sémantique, CorrectiveAgent n’est jamais validateur.
 
 ---
@@ -116,8 +124,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-17): Création du document CorrectiveAgent_spec, définition du rôle correctif séparé de SuperiorValidationAgent, contraintes maximales en CorrectionMode.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun, document initial.
-
+  - Aucun (baseline pré-système)
