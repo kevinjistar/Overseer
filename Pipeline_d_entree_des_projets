@@ -1,7 +1,7 @@
 ---
 Document: Pipeline_d_entree_des_projets
-Version: 1.1.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -147,7 +147,7 @@ Chaque document:
 • possède une meta conforme et initialisée.
 
 Règle normative:
-• workflowDocument.json est un document descriptif, il ne porte jamais l’état courant et ne peut pas être interprété comme moteur d’état.
+• workflowDocument.json est un document descriptif, non exécutable, il ne porte jamais l’état courant et ne peut pas être interprété comme moteur d’état.
 
 6.4 Workflow Engine minimal
 projects/{projectId}/workflowEngine/engine.json conforme au schéma workflow en vigueur, et contenant currentState.
@@ -199,7 +199,7 @@ Exigences:
 • aucune zone manquante requise par le schéma.
 
 Règle normative:
-• workflowDocument.json est strictement descriptif et ne porte jamais l’état courant.
+• workflowDocument.json est strictement descriptif, non exécutable, et ne porte jamais l’état courant.
 
 7.4 Étape 4, Initialisation normative des métadonnées documentaires (orchestrateur)
 Chaque document initial est créé avec:
@@ -322,17 +322,17 @@ Toujours vrais:
 • Aucune écriture Firestore n’a lieu sans ordre explicite d’Overseer.  
 • Le pipeline interdit tout travail “hors contexte”, aucun appel agentique sans currentProject exploitable.  
 • L’existence des documents référents initiaux, de workflowEngine/engine.json prêt et initialisé, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.  
-• workflowDocument.json est descriptif et ne porte jamais l’état courant.  
+• workflowDocument.json est descriptif, non exécutable, et ne porte jamais l’état courant.  
 • Après création, aucune synchronisation automatique workflowEngine ↔ Workflow Documents.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-18): Ajout d’une étape normative de génération optionnelle du workflowEngine depuis un Workflow Document template lors de l’entrée projet, ajout des règles de validation et de traçabilité associées.
-  - 1.0.0 (2025-12-09): Document initial.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0
+  - Aucun (baseline pré-système)
