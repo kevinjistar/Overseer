@@ -1,7 +1,7 @@
 ---
 Document: Process_de_chargement_du_contexte_et_des_documents
-Version: 2.1.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -77,7 +77,7 @@ Le chargement du contexte ne peut démarrer que si les conditions suivantes sont
 - projectId est non vide et correspond à un projet existant,
 - aucune condition de blocage structurel n'est signalée par l'orchestrateur pour ce projet, y compris un état halted si présent dans le runtime système,
 - les documents référents attendus existent en base, au minimum sous forme de placeholders conformes,
-- workflowEngine/engine.json existe et est lisible, sinon arrêt immédiat.
+- projects/{projectId}/workflowEngine/engine.json existe et est lisible, sinon arrêt immédiat.
 
 4.2 Refus immédiat
 Si une précondition échoue:
@@ -252,18 +252,16 @@ Toujours vrais:
 - Toute incohérence structurelle pendant le chargement provoque un arrêt immédiat.
 - Le contexte livré est strictement rattaché à un projectId unique et explicite.
 - Le contexte n'est jamais exposé tel quel à l'utilisateur.
-- workflowEngine/engine.json est l'unique source de vérité pour l'état courant et les transitions.
+- projects/{projectId}/workflowEngine/engine.json est l'unique source de vérité pour l'état courant et les transitions.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.1.0 (2025-12-18): Intégration normative de ContextAgent comme AgentTransformateur non persisté, ajout de référence à ContextAgent_spec, ajout des critères de déclenchement et interdictions d’appel/persistance.
-  - 2.1.0 (2025-12-17): Workflow Engine chargé comme source de vérité unique, interdiction d’inférer l’état depuis un document workflow, clarification du statut descriptif des Workflow Documents.
-  - 2.0.0 (2025-12-15): Refonte complète au format canonique, verrouillage normatif des responsabilités (Overseer, orchestrateur, ContextAgent), suppression des règles de versioning intégrées au corps, et formalisation des entrées/sorties structurelles du chargement de contexte.
-  - 1.0.0 (2025-12-09): Création du Process de chargement du contexte et des documents
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 2.0.0
+  - Aucun (baseline pré-système)
