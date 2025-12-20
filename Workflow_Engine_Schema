@@ -1,7 +1,7 @@
 ---
 Document: Workflow_Engine_Schema
-Version: 2.0.1
-Date: 2025-12-15
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -16,41 +16,51 @@ PolicyVersions:
 
 Ce document définit le schéma normatif du Workflow Engine utilisé par Overseer.
 
-Le Workflow Engine est une structure déclarative d’états et de transitions. Il ne contient aucune logique métier, n’évalue aucune condition métier et ne déclenche aucune transition de sa propre initiative.
+Le Workflow Engine est une structure strictement déclarative d’états et de transitions.  
+Il ne contient aucune logique métier, n’évalue aucune condition métier et ne déclenche aucune transition de sa propre initiative.
+
+L’état courant exécutable est porté exclusivement par workflowEngine/engine.json.
 
 ## 2. Acteurs et responsabilités
 
-2.1 Overseer
-- Décide si une transition doit être exécutée, sur base de logique métier externe au Workflow Engine.
-- N’ordonne une transition à l’orchestrateur que si elle est permise par WorkflowPolicy.
-- Ne modifie jamais directement le Workflow Engine en base.
+### 2.1 Overseer
 
-2.2 Orchestrateur
-- Est le seul composant autorisé à écrire l’état du Workflow Engine en base.
-- Applique mécaniquement une transition uniquement sur ordre explicite d’Overseer.
-- Rejette toute transition inexistante, incohérente avec l’état courant, ou structurellement invalide.
-- N’évalue aucune logique métier.
+Overseer:
+- décide si une transition doit être exécutée, sur base de logique métier externe au Workflow Engine,
+- n’ordonne une transition à l’orchestrateur que si elle est permise par WorkflowPolicy,
+- ne modifie jamais directement le Workflow Engine en base.
 
-2.3 SuperiorValidationAgent
-- N’exécute aucune transition.
-- N’interprète aucune action structurelle.
-- Produit uniquement des verdicts sémantiques, utilisés par Overseer.
+### 2.2 Orchestrateur
+
+L’orchestrateur:
+- est le seul composant autorisé à écrire l’état du Workflow Engine en base,
+- applique mécaniquement une transition uniquement sur ordre explicite d’Overseer,
+- rejette toute transition inexistante, incohérente avec l’état courant ou structurellement invalide,
+- n’évalue aucune logique métier.
+
+### 2.3 SuperiorValidationAgent
+
+SuperiorValidationAgent:
+- n’exécute aucune transition,
+- n’interprète aucune action structurelle,
+- produit uniquement des verdicts sémantiques utilisés par Overseer.
 
 ## 3. Définition normative du schéma
 
-3.1 Contraintes générales
-- Le graphe d’états est déclaré par une liste d’états et une liste de transitions.
-- Toute transition référence des états existants.
+### 3.1 Contraintes générales
+
+- Le graphe est défini par une liste d’états et une liste de transitions.
+- Toute transition référence exclusivement des états existants.
 - Aucune condition métier ne figure dans le schéma.
 - Les actions associées aux transitions sont strictement structurelles.
 
-3.2 Modèle JSON normatif
+### 3.2 Modèle JSON normatif
 
 Le Workflow Engine est un objet JSON conforme à la structure suivante:
 
 {
   "initialState": "string",
-  "currentState": "string (optionnel à la création, obligatoire en exécution)",
+  "currentState": "string",
   "states": [
     {
       "id": "string",
@@ -79,66 +89,82 @@ Le Workflow Engine est un objet JSON conforme à la structure suivante:
   }
 }
 
-3.3 Règles sur initialState et currentState
-- initialState doit correspondre à un state.id existant.
-- currentState, lorsqu’il est présent, doit correspondre à un state.id existant.
-- À l’initialisation d’un projet, si currentState n’est pas présent, l’orchestrateur doit le définir égal à initialState lors de la première écriture de l’engine.
+### 3.3 Règles sur initialState et currentState
 
-3.4 Règles sur states[]
-- states[].id doit être unique.
-- states[].label est obligatoire et purement descriptif.
-- states[].meta, si présent, ne contient aucune règle métier, aucune condition et aucun déclencheur.
+- initialState est obligatoire et doit correspondre à un states[].id existant.
+- currentState est obligatoire en phase d’exécution et doit correspondre à un states[].id existant.
+- Lors de l’initialisation d’un projet, si currentState n’est pas encore défini, l’orchestrateur doit l’initialiser égal à initialState lors de la première écriture.
 
-3.5 Règles sur transitions[]
-- transitions[].id doit être unique.
-- transitions[].from et transitions[].to doivent référencer des state.id existants.
-- Une transition ne contient aucun champ conditions, aucun champ triggers, aucun champ de règle métier.
-- Une transition n’est jamais auto-déclenchée, elle n’est exécutable que si Overseer l’ordonne.
+### 3.4 Règles sur states
 
-3.6 Règles sur actions[]
+- states[].id est unique.
+- states[].label est obligatoire et strictement descriptif.
+- states[].meta, s’il existe, ne contient aucune règle métier, condition ou déclencheur.
+
+### 3.5 Règles sur transitions
+
+- transitions[].id est unique.
+- transitions[].from et transitions[].to référencent des states[].id existants.
+- Aucune transition ne contient de conditions, triggers ou règles métier.
+- Une transition n’est jamais auto-déclenchée.
+
+### 3.6 Règles sur actions
+
 - Une action est strictement structurelle.
-- Les types autorisés sont:
-  - snapshot: déclenche un snapshot via l’orchestrateur.
-  - log: écrit un événement via l’orchestrateur.
-  - callAgent: demande la création d’une tâche d’appel agentique, l’orchestrateur ne contacte jamais directement un LLM.
-  - none: aucune action.
-- params est un objet, optionnel selon le type, il ne contient aucune instruction métier implicite.
+- Types autorisés:
+  - snapshot, création d’un snapshot par l’orchestrateur,
+  - log, écriture d’un événement structuré,
+  - callAgent, création d’une tâche d’appel agentique (sans appel direct LLM),
+  - none, aucune action.
+- params est optionnel et ne contient aucune logique métier implicite.
 
 ## 4. Exécution normative d’une transition
 
-4.1 Précondition d’exécution
-- Overseer doit ordonner explicitement la transition à l’orchestrateur.
-- L’orchestrateur doit vérifier:
-  - existence de transitionId,
-  - cohérence (currentState == transition.from),
-  - validité (transition.to existe),
-  - validité structurelle des actions déclarées.
+### 4.1 Préconditions
 
-4.2 Application par l’orchestrateur
-- Mise à jour de currentState vers transition.to.
-- Exécution des actions, dans l’ordre déclaré.
-- Journalisation de l’opération.
-- Refus d’exécution en cas d’erreur structurelle, sans modification d’état.
+Overseer doit ordonner explicitement la transition.
 
-4.3 Interdictions
-- L’orchestrateur n’évalue aucune condition métier.
-- Le Workflow Engine ne déclenche aucune transition automatiquement.
-- Une transition ne peut pas être déclenchée par un agent.
+L’orchestrateur vérifie:
+- l’existence de la transition,
+- la cohérence entre currentState et transition.from,
+- l’existence de transition.to,
+- la validité structurelle des actions.
+
+### 4.2 Application
+
+Si toutes les conditions structurelles sont valides:
+- mise à jour de currentState vers transition.to,
+- exécution séquentielle des actions déclarées,
+- journalisation complète.
+
+En cas d’erreur structurelle:
+- aucune modification d’état n’est appliquée.
+
+### 4.3 Interdictions
+
+- aucune condition métier n’est évaluée,
+- aucune transition n’est déclenchée par un agent,
+- aucune transition n’est auto-déclenchée par le Workflow Engine.
 
 ## 5. Mode correction
 
-5.1 Règle principale
-Si CorrectionMode_Policy impose correctionMode = true:
-- Overseer n’ordonne aucune transition.
-- L’orchestrateur refuse toute exécution de transition.
+### 5.1 Règle principale
 
-5.2 Restrictions d’actions
-- En mode correction, seules les actions structurelles explicitement autorisées par modeRestrictions.correction.allowedActions sont permises.
-- Par défaut, l’action log est autorisée, toutes les autres sont interdites.
+Lorsque correctionMode = true:
+- Overseer n’ordonne aucune transition,
+- l’orchestrateur refuse toute exécution de transition.
 
-5.3 Interdictions
-- Aucune progression de workflow n’est permise en mode correction.
-- Aucune action callAgent ne doit être déclenchée par une transition workflow en mode correction.
+### 5.2 Restrictions d’actions
+
+En mode correction:
+- seules les actions listées dans modeRestrictions.correction.allowedActions sont autorisées,
+- par défaut, seule l’action log est autorisée.
+
+### 5.3 Interdictions
+
+- aucune progression de workflow,
+- aucune action callAgent déclenchée via une transition,
+- aucune modification d’état.
 
 ## 6. Exemple normatif
 
@@ -152,36 +178,33 @@ Si CorrectionMode_Policy impose correctionMode = true:
   ]
 }
 
-Signification normative:
-- La transition est structurellement permise si elle existe dans transitions[].
-- Overseer décide si elle est permise métierment, hors schéma.
-- L’orchestrateur l’exécute mécaniquement si et seulement si Overseer l’ordonne.
+Signification:
+- la transition est structurellement valide si déclarée,
+- Overseer décide de son exécution,
+- l’orchestrateur l’exécute mécaniquement sur ordre explicite.
 
 ## 7. Invariants
 
 Toujours vrais:
-- Aucune condition métier dans le schéma.
-- Aucune évaluation dynamique par le Workflow Engine.
-- Aucune logique décisionnelle dans le Workflow Engine.
-- Transitions purement déclaratives.
-- Overseer est le moteur métier.
-- L’orchestrateur est le moteur structurel.
-- SuperiorValidationAgent est un vérificateur métier, jamais un exécuteur.
-- Toute transition exécutée est ordonnée explicitement par Overseer.
-- Toute exécution est refusée en mode correction.
-- Toute violation structurelle produit une erreur et aucune modification d’état.
 
+- aucune logique métier dans le Workflow Engine,
+- aucune décision autonome,
+- transitions strictement déclaratives,
+- workflowEngine/engine.json est l’unique porteur d’état courant,
+- Overseer est l’autorité métier,
+- l’orchestrateur est l’autorité structurelle,
+- SuperiorValidationAgent ne déclenche jamais d’exécution,
+- toute transition est explicitement ordonnée par Overseer,
+- aucune transition n’est exécutée en mode correction.
+
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.1 (2025-12-15): Normalisation du document au format canonique, verrouillage explicite des responsabilités (Overseer, orchestrateur, SuperiorValidationAgent), intégration normative des restrictions en mode correction et des règles sur currentState, sans ajout de logique métier.
-  - 2.0.0 (2025-12-11): Refonte majeure du Workflow Engine pour séparer logique métier (Overseer) et exécution structurelle (orchestrateur). Suppression des conditions dynamiques du schéma. Ajout du concept de transitions structurelles contrôlées par Overseer.
-  - 1.0.0 (2025-12-10): Version initiale du Workflow Engine.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Les conditions métier ne sont plus représentées dans le Workflow Engine.
-  - Le moteur ne décide plus d’aucune transition. Il exécute uniquement celles validées par Overseer.
-  - Les actions ne sont plus interprétées comme logique métier, seulement comme triggers structurels.
+  - Aucun (baseline pré-système)
