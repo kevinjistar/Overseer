@@ -1,7 +1,7 @@
 ---
 Document: ContextAgent_spec
-Version: 1.1.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -213,11 +213,9 @@ Compteurs obligatoires:
     }
   }
 }
-```
 
-### 6.2 Schéma JSON, output strict (normatif)
+6.2 Schéma JSON, output strict (normatif)
 
-```json
 {
   "title": "ContextAgentOutput",
   "type": "object",
@@ -339,35 +337,33 @@ Compteurs obligatoires:
     }
   ]
 }
-```
 
-### 6.3 Exemples d’output
+6.3 Exemples d’output
 
-#### Exemple d’output valide (status = ok)
+Exemple d’output valide (status = ok)
 
-```json
 {
   "status": "ok",
   "operationId": "op_20251218_001",
   "projectId": "proj_abc123",
   "informationLoss": false,
-  
+
   "projectSummary": "Application de gestion documentaire multi-tenants avec workflow d'approbation hiérarchique. Références: doc:architecture#overview, doc:strategy#vision",
-  
+
   "activeInvariants": [
     {
       "text": "Aucune transition workflow sans validation globale en mode correction",
       "ref": "doc:architecture#invariants.workflowTransitions"
     }
   ],
-  
+
   "keyDecisions": [
     {
       "text": "Migration vers architecture microservices décidée en sprint 3",
       "ref": "log:op_20251201_045#decision"
     }
   ],
-  
+
   "documentIndex": [
     {
       "documentId": "architecture",
@@ -376,14 +372,14 @@ Compteurs obligatoires:
       "lastUpdatedAt": "2025-12-15T10:30:00Z"
     }
   ],
-  
+
   "riskSignals": [
     {
       "text": "Trois modifications successives de strategy sans validation globale",
       "ref": "log:op_20251217_089#warningDetected"
     }
   ],
-  
+
   "detectedAnomalies": [
     {
       "kind": "structural",
@@ -392,36 +388,34 @@ Compteurs obligatoires:
     }
   ]
 }
-```
 
-#### Exemple d’output erreur (status = error)
+Exemple d’output erreur (status = error)
 
-```json
 {
   "status": "error",
   "operationId": "op_20251218_002",
   "projectId": "proj_xyz789",
   "informationLoss": false,
-  
+
   "error": {
     "code": "CannotSatisfyConstraintsWithoutInformationLoss",
     "reason": "Cannot satisfy constraints without information loss",
     "missingCoverage": ["activeInvariants", "keyDecisions"]
   }
 }
-```
 
------
 
-## 7) Traçabilité
+⸻
+
+7) Traçabilité
 
 Exigence normative centrale:
 • Chaque élément informatif produit par ContextAgent doit être traçable via une référence formelle.
 
 Format de référence imposé:
-• doc:<documentId>#<sectionId|fieldPath>
-• engine:workflowEngine#<field>
-• log:<operationId>#<field>
+• doc:#<sectionId|fieldPath>
+• engine:workflowEngine#
+• log:#
 
 Exemples de références valides:
 • doc:architecture#section2
@@ -441,9 +435,9 @@ Interdictions:
 • références sans identifiant stable,
 • références nécessitant une interprétation sémantique.
 
------
+⸻
 
-## 8) Neutralité informationnelle
+8) Neutralité informationnelle
 
 Interdictions normatives:
 • ContextAgent ne doit jamais supprimer un élément d’information demandé par synthesisRules.
@@ -457,16 +451,15 @@ Règle normative additionnelle:
 • informationLoss DOIT être false.
 • Si informationLoss ne peut pas être garanti, ContextAgent DOIT renvoyer une erreur structurée, sans produire de synthèse.
 
------
+⸻
 
-## 9) InformationLoss = false
+9) InformationLoss = false
 
 Définition normative opérable:
 • informationLoss = false signifie:
-
-1. La synthèse n’est pas la seule représentation; le contexte brut est toujours fourni à Overseer.
-1. La synthèse couvre toutes les catégories exigées par synthesisRules.requiredCategories.
-1. Chaque élément de sortie est référencé de manière à permettre la reconstruction du détail à partir du contexte brut.
+	1.	La synthèse n’est pas la seule représentation; le contexte brut est toujours fourni à Overseer.
+	2.	La synthèse couvre toutes les catégories exigées par synthesisRules.requiredCategories.
+	3.	Chaque élément de sortie est référencé de manière à permettre la reconstruction du détail à partir du contexte brut.
 
 Condition normative d’erreur structurée:
 • Si le contexte est trop volumineux pour respecter maxSummaryLength tout en couvrant toutes les catégories exigées:
@@ -480,22 +473,20 @@ Condition normative d’erreur structurée:
 Invariant additionnel sur la taille maximale de l’output:
 • La taille totale du JSON de sortie (sérialisé) NE DOIT PAS dépasser constraints.maxOutputBytes.
 • Si dépassement détecté, ContextAgent DOIT renvoyer une erreur structurée:
-
-- status = “error”
-- error.code = “OutputSizeExceeded”
-- error.reason = “Output size exceeds maxOutputBytes constraint”
-- informationLoss = false (l’erreur est structurelle, pas informationnelle)
+	•	status = “error”
+	•	error.code = “OutputSizeExceeded”
+	•	error.reason = “Output size exceeds maxOutputBytes constraint”
+	•	informationLoss = false (l’erreur est structurelle, pas informationnelle)
 
 Règle de vérification obligatoire (Overseer):
 • Si status = “ok” et informationLoss = false, Overseer PEUT effectuer une vérification par sondage:
+	•	Sélectionner aléatoirement 3 références dans l’output
+	•	Vérifier leur résolvabilité dans le contexte brut
+	•	Si échec, considérer l’output comme invalide et journaliser une alerte dans logs/{projectId}/contextLoading/
 
-- Sélectionner aléatoirement 3 références dans l’output
-- Vérifier leur résolvabilité dans le contexte brut
-- Si échec, considérer l’output comme invalide et journaliser une alerte dans logs/{projectId}/contextLoading/
+⸻
 
------
-
-## 10) Journalisation
+10) Journalisation
 
 Toute invocation de ContextAgent DOIT être journalisée dans:
 logs/{projectId}/contextLoading/{operationId}.json
@@ -505,6 +496,8 @@ Contenu minimal obligatoire:
 • projectId
 • timestamp
 • purpose
+• actor (enum: contextAgent)
+• initiatedBy (string, userId ou “system”)
 • contextQualityBefore (string: “ok” | “warning”)
 • contextAgentCalled (boolean: true)
 • statusReturned (“ok” | “error”)
@@ -520,12 +513,13 @@ Interdictions:
 
 Exemple de log structuré:
 
-```json
 {
   "operationId": "op_20251218_001",
   "projectId": "proj_abc123",
   "timestamp": "2025-12-18T14:32:01Z",
   "purpose": "validation",
+  "actor": "contextAgent",
+  "initiatedBy": "system",
   "contextQualityBefore": "warning",
   "contextAgentCalled": true,
   "statusReturned": "ok",
@@ -533,11 +527,11 @@ Exemple de log structuré:
   "outputSize": 4096,
   "durationMs": 1543
 }
-```
 
------
 
-## 11) Invariants
+⸻
+
+11) Invariants
 
 Toujours vrais:
 • ContextAgent ne persiste rien dans Firestore.
@@ -558,10 +552,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-
-- 1.1.0 (2025-12-18): Ajout de précisions sur le format de référence (section 7), unité et méthode de calcul de payloadSizeEstimate (section 5), exemples concrets d’output valide et erreur (section 6.3), invariant sur maxOutputBytes (section 9), comportement par défaut de requiredCategories (section 6.1), règle de vérification par sondage d’Overseer (section 9), section complète de journalisation (section 10).
-- 1.0.0 (2025-12-18): Création de ContextAgent_spec, définition normative du rôle AgentTransformateur, inputs/outputs, interdictions, invariants et traçabilité.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-
-- Aucun depuis 1.0.0​​​​​​​​​​​​​​​​
+  - Aucun (baseline pré-système)
