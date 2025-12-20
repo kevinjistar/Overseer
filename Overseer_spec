@@ -1,8 +1,7 @@
-
 ---
 Document: Overseer_spec
-Version: 2.0.0
-Date: 2025-12-11
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -15,7 +14,7 @@ PolicyVersions:
 
 ## Objet du document
 
-Ce document définit le rôle, les responsabilités, les invariants et les interactions d’Overseer dans l’architecture Overseer v2.
+Ce document définit le rôle, les responsabilités, les invariants et les interactions d’Overseer dans l’architecture Overseer.
 
 ## Rôle du document dans le système
 
@@ -25,19 +24,17 @@ Il ne décrit pas les implémentations techniques détaillées, ni les schémas,
 
 ---
 
-1. Objet du document (plus précis)
+1. Objet du document (précision)
 
-Ce document définit le rôle, les responsabilités, les invariants et les interactions d’Overseer dans l’architecture Overseer v2.
-
-Overseer est l’unique moteur de logique métier du système.
+Overseer est l’unique moteur de logique métier du système.  
 Il est responsable de:
 • l’interprétation utilisateur,  
 • la coordination des agents,  
 • la décision finale,  
 • la cohérence globale du projet,  
 • l’application des Policies,  
-• la gestion du mode correction,  
-• la supervision du Workflow Engine v2.
+• la gestion du correctionMode,  
+• la supervision du workflowEngine.
 
 
 2. Nature d’Overseer
@@ -53,10 +50,10 @@ Overseer n’est pas:
 • un agent producteur,  
 • un moteur structurel,  
 • un validateur structurel,  
-• un écriveur Firestore.
+• un écrivain Firestore.
 
 Il ne modifie rien directement.  
-Il ne fait que décider et orchestrer.
+Il décide et orchestre exclusivement.
 
 
 3. Responsabilités fondamentales
@@ -70,10 +67,10 @@ Overseer reçoit une intention humaine et la transforme en instruction exploitab
 
 3.2 Coordination des agents  
 Overseer:
-• choisit l’AgentProducteur,  
+• choisit l’agent producteur,  
 • prépare la systemInstruction,  
 • injecte System_Agent_Edit_Policy,  
-• impose les constraints et schémas,  
+• impose contraintes et schémas,  
 • impose le type de versioning.
 
 3.3 Décision métier  
@@ -81,41 +78,43 @@ Overseer est souverain pour:
 • appliquer une mise à jour,  
 • annuler une opération,  
 • demander une correction,  
-• overrider un verdict (sauf en correctionMode),  
+• overrider un verdict (interdit en correctionMode),  
 • interpréter les verdicts sémantiques.
 
 3.4 Validation métier  
 Overseer applique ValidationPolicy_Global:
 • validation locale obligatoire,  
 • validation globale selon Policy,  
-• évaluation des verdicts (allow/warn/block),  
+• évaluation des verdicts allow, warn, block,  
 • prise de décision finale.
 
-3.5 Supervision cohérence globale  
+3.5 Supervision de la cohérence globale  
 Après toute écriture validée:
-• Overseer vérifie la stabilité métier du projet,  
-• détecte les contradictions inter-documents,  
-• active correctionMode si nécessaire.
+• vérification de la stabilité métier du projet,  
+• détection des contradictions inter-documents,  
+• activation du correctionMode si nécessaire.
 
-3.6 Supervision Workflow Engine v2  
+3.6 Supervision du workflowEngine  
 Overseer:
-• évalue conditions métiers des transitions,  
+• évalue les conditions métier des transitions,  
 • décide si une transition est permise,  
-• envoie un ordre explicite au orchestrateur: runTransition,  
-• n’active jamais une transition automatique.
+• envoie un ordre explicite à l’orchestrateur,  
+• n’active jamais de transition automatique.
 
-3.7 Gestion du mode correction  
+Toute transition d’état s’applique exclusivement à workflowEngine/engine.json.
+
+3.7 Gestion du correctionMode  
 Overseer:
-• active et désactive correctionMode,  
-• impose les restrictions strictes de CorrectionPolicy,  
-• contrôle les agents correctifs,  
-• bloque toute transition workflow pendant la correction,  
+• active et désactive le correctionMode,  
+• impose les restrictions strictes de CorrectionMode_Policy,  
+• sélectionne CorrectiveAgent comme unique agent producteur en correction,  
+• bloque toute transition de workflowEngine pendant la correction,  
 • exige une validation globale stricte.
 
 3.8 Application des Policies versionnées  
 Overseer doit:
 • charger toutes les Policies actives,  
-• déterminer la logique métier selon PolicyVersion,  
+• déterminer la logique métier selon leurs versions,  
 • injecter les règles dans les instructions agents,  
 • stocker appliedPolicies dans les meta des documents mis à jour.
 
@@ -123,56 +122,53 @@ Overseer doit:
 4. Pipeline opérationnel géré par Overseer
 
 4.1 Étape 1 — Interprétation  
-Overseer analyse:
-• intention,  
-• contexte projet,  
-• workflow,  
-• policies,  
+Analyse de:
+• l’intention,  
+• le contexte projet,  
+• workflowEngine,  
+• Policies actives,  
 • risques potentiels.
 
 4.2 Étape 2 — Préparation  
-Overseer prépare:
+Préparation de:
 • systemInstruction complète,  
-• schémas documents,  
-• EditPolicy injectée,  
+• schémas documentaires,  
+• règles d’édition,  
 • versioning imposé,  
 • operationMode (normal ou correction).
 
 4.3 Étape 3 — Appel agentique  
-Overseer:
-• transmet systemInstruction à l’orchestrateur,  
-• attend un JSON strict.
+Transmission de systemInstruction à l’orchestrateur et attente d’un JSON strict.
 
 4.4 Étape 4 — Validation  
-Overseer reçoit:
+Réception de:
 • validation structurelle de l’orchestrateur,  
-• verdict du SuperiorValidationAgent (local),  
-• verdict global éventuel.
+• verdict local du SuperiorValidationAgent,  
+• verdict global si requis.
 
 4.5 Étape 5 — Décision  
 • allow → écriture  
-• warn → arbitrage + log  
-• block → correction ou abort (override interdit en correction)
+• warn → arbitrage + journalisation  
+• block → correction ou abort (override interdit en correctionMode)
 
 4.6 Étape 6 — Post-écriture  
-• validation cohérence globale,  
-• transitions workflow (si permises),  
-• sortie du mode correction si stabilité retrouvée.
+• vérification de cohérence globale,  
+• transition de workflowEngine si explicitement autorisée,  
+• sortie du correctionMode si stabilité confirmée.
 
 4.7 Étape 7 — Rapport utilisateur  
-Overseer synthétise:
-• ce qui a été modifié,  
-• pourquoi,  
-• comment,  
-• quel verdict,  
-• quel type de version.
+Synthèse explicite:
+• modifications effectuées,  
+• justification,  
+• verdicts,  
+• type de version.
 
 
 5. Interactions officielles
 
 5.1 Overseer → orchestrateur  
 • instructions formelles,  
-• ordres de transition,  
+• ordres de transition de workflowEngine,  
 • demandes de validation structurelle.
 
 5.2 Orchestrateur → Overseer  
@@ -182,8 +178,8 @@ Overseer synthétise:
 • logs.
 
 5.3 Overseer → agents producteurs  
-• contextes stricts,  
-• EditPolicy,  
+• contexte strict,  
+• règles d’édition,  
 • versioning,  
 • instructions spécifiques.
 
@@ -194,11 +190,10 @@ Overseer synthétise:
 • contexte local ou global,  
 • documents concernés,  
 • diffs,  
-• mode correction.
+• indication du operationMode.
 
 5.6 SuperiorValidationAgent → Overseer  
-• verdict local,  
-• verdict global (si demandé),  
+• verdicts,  
 • impacts,  
 • niveau de risque.
 
@@ -207,47 +202,44 @@ Overseer synthétise:
 
 6.1 Overseer ne modifie jamais un document  
 Toute modification passe par:
-• agent → orchestrateur → Firestore.
+agent → orchestrateur → Firestore.
 
-6.2 Overseer ne corrige jamais un document lui-même  
-Il utilise un agent correctif.
+6.2 Overseer ne corrige jamais directement  
+Il mandate exclusivement CorrectiveAgent en correctionMode.
 
-6.3 Overseer ne déclenche jamais un workflow automatiquement  
-Il doit analyser et autoriser toute transition.
+6.3 Overseer ne déclenche jamais de workflow automatiquement  
+Toute transition est analysée et autorisée explicitement.
 
 6.4 Overseer ne contourne jamais une Policy  
-Sauf override explicitement permis (hors correction).
+Sauf override explicitement autorisé hors correctionMode.
 
-6.5 Overseer n’autorise pas l’écriture sans validation locale  
-En toute circonstance.
+6.5 Overseer n’autorise aucune écriture sans validation locale  
+Sans exception.
 
-6.6 Overseer ne peut sortir du mode correction sans validation globale  
+6.6 Overseer ne sort jamais du correctionMode sans validation globale  
 Aucun contournement possible.
 
 
 7. Invariants d’Overseer
 
-Overseer doit toujours garantir:
+Toujours vrais:
 
-• cohérence métier totale du projet,  
-• application stricte des Policies,  
-• neutralité structurelle,  
-• absence d’ambiguïté dans les instructions agents,  
-• traçabilité des décisions,  
-• contrôle absolu des workflows,  
-• prévention des dérives,  
-• stabilité du système avant d’autoriser toute écriture.
+• Overseer est l’unique centre de logique métier.  
+• Overseer n’écrit jamais directement en base.  
+• Toutes les Policies sont appliquées strictement.  
+• Aucune transition sans décision explicite.  
+• workflowEngine est l’unique porteur d’état exécutable.  
+• Toute incohérence impose correctionMode ou arrêt contrôlé.  
+• La traçabilité des décisions est obligatoire.
 
 ---
 Fin du document
 ---
+
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-11): Refonte majeure, CorrectionMode, Policies versionnées et pipeline standard.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Overseer ne déclenche plus aucune transition workflow sans validation métier préalable.
-  - Overseer doit maintenant appliquer ValidationPolicy_Global (validation locale + globale).
-  - Overseer doit gérer explicitement correctionMode.
+  - Aucun (baseline pré-système)
