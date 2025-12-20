@@ -1,7 +1,7 @@
 ---
 Document: Cahier_des_charges_syncAgent
 Version: 1.0.0
-Date: 2025-12-12
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -12,7 +12,7 @@ PolicyVersions:
 
 1. Objet du document
 
-Ce document définit de manière normative et contractuelle le **contrat d’entrée unique** pour toute synchronisation externe introduite dans le système Overseer via un agent externe ou un outil tiers.
+Ce document définit de manière normative et contractuelle le contrat d’entrée unique pour toute synchronisation externe introduite dans le système Overseer via un agent externe ou un outil tiers.
 
 Il décrit:
 • le rôle exact de chaque entité impliquée,
@@ -22,7 +22,6 @@ Il décrit:
 • les invariants garantissant l’absence de dérive.
 
 Aucune synchronisation externe n’est autorisée hors de ce cadre.
-
 
 2. Portée et rôle dans le système
 
@@ -39,7 +38,6 @@ Il a pour finalité de:
 • préserver la souveraineté métier d’Overseer.
 
 Tout payload non conforme rend l’opération invalide.
-
 
 3. Répartition stricte des responsabilités
 
@@ -77,7 +75,6 @@ Les agents internes:
 • ne consomment jamais directement un payload externe,
 • n’agissent que sur instruction explicite d’Overseer,
 • respectent System_Agent_Edit_Policy sans exception.
-
 
 4. Structure normative du payload de synchronisation
 
@@ -117,11 +114,9 @@ Chaque entrée décrit une intention, jamais une exécution.
 • justification  
 Champ facultatif destiné à fournir un contexte métier ou fonctionnel.
 
-
 5. Interdictions absolues
 
 Il est strictement interdit pour un payload de synchronisation de:
-
 • contenir des instructions d’exécution,
 • inclure des décisions de versioning,
 • déclencher une transition workflow,
@@ -133,11 +128,9 @@ Il est strictement interdit pour un payload de synchronisation de:
 
 Toute violation entraîne un rejet immédiat.
 
-
 6. Contraintes de sécurité et de validation
 
 Les règles suivantes sont obligatoires:
-
 • validation stricte du schéma,
 • rejet immédiat de tout champ inconnu,
 • aucune écriture directe autorisée,
@@ -147,7 +140,6 @@ Les règles suivantes sont obligatoires:
 
 Aucune réparation automatique n’est autorisée.
 
-
 7. Traitement du payload
 
 Le traitement suit obligatoirement cette séquence:
@@ -156,16 +148,14 @@ Le traitement suit obligatoirement cette séquence:
 2. Transmission du payload valide à Overseer  
 3. Analyse métier et d’impact par Overseer  
 4. Décision explicite: accept, correction ou reject  
-5. Si accept → pipeline interne standard de mise à jour  
+5. Si accept, pipeline interne standard de mise à jour  
 6. Journalisation complète de l’opération  
 
 Aucune étape ne peut être sautée.
 
-
 8. Invariants du cahier des charges
 
 Toujours vrais:
-
 • Aucun système externe ne décide dans Overseer.
 • Aucun payload externe n’écrit en base.
 • Overseer reste l’unique autorité métier.
@@ -181,7 +171,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-12): Création du cahier des charges pour la synchronisation externe, définition normative du contrat d’entrée, des responsabilités, du payload et des invariants.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun, document initial.
+  - Aucun (baseline pré-système)
