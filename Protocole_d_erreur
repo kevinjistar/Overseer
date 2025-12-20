@@ -44,7 +44,7 @@ L’orchestrateur:
 - appelle les agents,
 - valide structurellement les entrées et sorties (JSON strict, schémas, champs, meta attendues),
 - exécute les écritures Firestore lorsque et seulement lorsque Overseer l’ordonne,
-- exécute le Workflow Engine uniquement sur ordre explicite d’Overseer et uniquement hors correctionMode,
+- exécute le workflowEngine uniquement sur ordre explicite d’Overseer et uniquement hors correctionMode,
 - crée snapshots et logs structurels selon les règles applicables.
 
 Interdictions:
@@ -290,9 +290,34 @@ Interdictions:
 - aucune restauration ne doit être silencieuse,
 - aucune restauration ne doit réactiver un workflow automatiquement.
 
-9. Journalisation des erreurs
+8.3 Erreurs en systemRecovery
 
-9.1 Nomenclature officielle des acteurs (liste exhaustive et fermée)
+Règle normative:
+• Toute erreur ou déviation en systemRecovery est traitée conformément à Process_systemRecovery.
+• Le protocole Process_systemRecovery est la référence unique pour le RecoveryPreview, la confirmation utilisateur via Overseer, et la restauration atomique fullProject.
+
+Limite stricte:
+• systemRecovery: 3 tentatives consécutives maximum.
+• au-delà, blocage manuel requis.
+
+9. Sync externe
+
+9.1 Règle de protection sur rejets consécutifs
+
+Règle normative:
+• En cas de 3 rejets consécutifs de synchronisation externe, la synchronisation externe du projet doit être désactivée temporairement pendant 1h.
+• Ce dépassement constitue un état de protection, pas un état halted.
+• L’état global du projet reste active (sauf décision explicite indépendante d’Overseer de passer en halted pour d’autres raisons).
+
+9.2 Journalisation du dépassement
+
+Règle normative:
+• Le dépassement (3 rejets consécutifs) DOIT être journalisé.
+• La journalisation doit expliciter qu’il s’agit d’une désactivation temporaire de 1h et d’un état de protection, pas d’un halted.
+
+10. Journalisation des erreurs
+
+10.1 Nomenclature officielle des acteurs (liste exhaustive et fermée)
 
 Les seuls acteurs reconnus pour la journalisation sont:
 - overseer
@@ -304,13 +329,24 @@ Les seuls acteurs reconnus pour la journalisation sont:
 - systemInit
 - syncAgent
 
-Règle d'invalidité d'actor non reconnu:
+Règle structurelle (enforcement):
 Tout log contenant un actor hors de cette liste DOIT être rejeté structurellement par l'orchestrateur avec erreur InvalidActor.
 
 Aucun autre actor n'est autorisé.
 Aucune extension implicite n'est permise.
 
-9.2 Compatibilité rétroactive (mapping localisé, unique)
+10.2 Champs logs et snapshots, normalisation initiatedBy
+
+Interdictions:
+• Le champ agent est interdit dans tout log et tout snapshot.
+• Tout payload log ou snapshot contenant agent DOIT être rejeté structurellement par l’orchestrateur (erreur: ForbiddenField).
+
+Règles normatives:
+• initiatedBy est obligatoire dans tout log et tout snapshot.
+• initiatedBy est un string, contenant un userId ou la valeur "system".
+• actor respecte strictement l’enum fermée définie en 10.1.
+
+10.3 Compatibilité rétroactive (mapping localisé, unique)
 
 Règles normatives:
 • Toute occurrence de ValidationAgent est considérée obsolète.
@@ -319,7 +355,7 @@ Règles normatives:
   • migrated: true
   • migrationDate: <timestamp>
 
-9.3 Emplacement et schéma minimal
+10.4 Emplacement et schéma minimal
 
 Toute erreur doit être journalisée dans:
 
@@ -338,7 +374,44 @@ Chaque entrée contient au minimum:
 - stateAfter,
 - policiesActives (versions effectives).
 
-10. Invariants du protocole d’erreur
+10.5 Exemple unique (log et snapshot conformes)
+
+Exemple de log conforme (logs/{projectId}/errors/{errorId}.json):
+
+{
+  "timestamp": "2025-12-20T10:15:30Z",
+  "operationId": "op_123",
+  "projectId": "proj_456",
+  "errorType": "StructuralError",
+  "severity": "error",
+  "actor": "orchestrator",
+  "initiatedBy": "system",
+  "details": "InvalidActor: actor=unknownAgent",
+  "stateBefore": { "mode": "normal" },
+  "stateAfter": { "mode": "normal" },
+  "policiesActives": {
+    "ValidationPolicy_Global": "1.0.0",
+    "WorkflowPolicy": "1.0.0",
+    "CorrectionMode_Policy": "1.0.0",
+    "System_Agent_Edit_Policy": "1.0.0"
+  }
+}
+
+Exemple de snapshot conforme (snapshots/{projectId}/{snapshotId}.json):
+
+{
+  "timestamp": "2025-12-20T10:16:05Z",
+  "snapshotId": "snap_001",
+  "operationId": "op_123",
+  "projectId": "proj_456",
+  "actor": "orchestrator",
+  "initiatedBy": "system",
+  "scope": "fullProject",
+  "storageRef": "projects/proj_456/snapshots/snap_001",
+  "reason": "systemRecoveryPreview"
+}
+
+11. Invariants du protocole d’erreur
 
 Toujours vrais:
 
