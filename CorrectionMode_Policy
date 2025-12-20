@@ -1,7 +1,7 @@
 ---
 Document: CorrectionMode_Policy
-Version: 2.0.0
-Date: 2025-12-17
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -115,16 +115,14 @@ Toujours vrais:
 • CorrectiveAgent est le seul agent autorisé à produire une correction.  
 • Overseer ne peut pas overrider un verdict block en correctionMode.  
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-17): Changement de responsabilité en CorrectionMode, SuperiorValidationAgent explicitement non modificateur, CorrectiveAgent unique agent correctif, pipeline normatif correctionMode réécrit.
-  - 1.0.1 (2025-12-11): Normalisation de l’en-tête, alignement terminologique et déplacement des métadonnées en bas du document sans modification des règles.
-  - 1.0.0 (2025-12-11): Création de la policy correctionMode, définissant les règles, contraintes et restrictions du mode correction dans Overseer.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - SuperiorValidationAgent n’est plus un acteur autorisé à produire une correction en CorrectionMode, toute correction doit être produite par CorrectiveAgent.
-  - Le pipeline correctionMode impose désormais l’ordre diagnostic SVA, correction CorrectiveAgent, validation SVA, décision Overseer.
+  - Aucun (baseline pré-système)
