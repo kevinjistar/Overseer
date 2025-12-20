@@ -1,8 +1,7 @@
-
 ---
 Document: Pipeline_syncExterne
 Version: 1.0.0
-Date: 2025-12-09
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -69,7 +68,7 @@ Une fois le payload validé, Overseer procède à une analyse interne:
 1. analyse des changements:  
    - création, suppression, modification de fichiers  
    - impacts sur architecture  
-   - impacts sur workflow  
+   - impacts sur workflowEngine  
    - impacts sur documents référents  
 
 2. classification des risques  
@@ -86,7 +85,7 @@ Overseer produit un plan structuré:
 
 - quelles mises à jour doivent être effectuées  
 - quelles sections ou documents doivent être modifiés  
-- quel agent doit intervenir (Architecture, UX, Strategy, Workflow, Notes, Validation…)  
+- quel agent doit intervenir (Architecture, UX, Strategy, workflowEngine, Notes, Validation…)  
 - type de versioning à appliquer (Patch, Minor, Major)  
 - risques à confirmer avec l’utilisateur  
 - questions éventuelles pour l’agent externe  
@@ -117,7 +116,7 @@ Après chaque tâche validée:
 2. un snapshot automatique est créé  
 3. la version est incrémentée selon les règles  
 4. les logs sont mis à jour  
-5. le Workflow Engine est mis à jour si pertinent  
+5. workflowEngine/engine.json est mis à jour si pertinent  
 
 ---
 
@@ -184,7 +183,8 @@ Fin du document
 
 Document Metadata & Changelog
 
-Changelog:   
-- 1.0.0 (2025-12-09): Création du Pipeline complet de Synchronisation Externe 
-Breaking Changes:  
-- Aucun depuis 1.0.0
+Changelog:
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
