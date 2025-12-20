@@ -1,7 +1,7 @@
 ---
 Document: Role_des_agents
-Version: 1.2.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -25,6 +25,7 @@ Un agent:
 
 Un agent produit exclusivement une sortie JSON stricte, conforme aux schémas et aux contraintes injectées par Overseer.
 
+---
 
 2. Définition d’un agent
 
@@ -39,6 +40,7 @@ Un agent:
 
 Toute autonomie implicite est interdite.
 
+---
 
 3. Classification officielle des agents
 
@@ -66,6 +68,7 @@ Membre initial:
 Aucune autre famille n’est autorisée.
 Aucun agent hybride n’est autorisé.
 
+---
 
 4. AgentsProducteurs
 
@@ -87,7 +90,6 @@ Un AgentProducteur ne:
 Sortie unique attendue:
 • un JSON strict contenant un candidateDocument complet, sans texte libre.
 
-
 4.2 Capacités autorisées
 
 L’AgentProducteur peut uniquement:
@@ -98,7 +100,6 @@ L’AgentProducteur peut uniquement:
 • respecter les contraintes de non création, non suppression et non restructuration.
 
 Toute capacité non explicitement listée ici est interdite.
-
 
 4.3 Contraintes structurelles obligatoires
 
@@ -116,7 +117,6 @@ Toute violation:
 • est rejetée par la validation structurelle de l’orchestrateur,  
 • ne peut pas être “corrigée” automatiquement par l’agent.
 
-
 4.4 Contraintes métier obligatoires
 
 Un AgentProducteur ne peut jamais:
@@ -133,7 +133,6 @@ Un AgentProducteur ne peut jamais:
 L’AgentProducteur suit l’instruction de manière stricte et littérale.
 Toute initiative non demandée est interdite.
 
-
 4.5 Comportement en mode correction
 
 Lorsque operationMode = "correction" est injecté par Overseer:
@@ -144,6 +143,7 @@ Lorsque operationMode = "correction" est injecté par Overseer:
 
 Toute proposition dépassant la correction demandée est interdite.
 
+---
 
 5. AgentsValidateurs
 
@@ -163,7 +163,6 @@ SuperiorValidationAgent:
 
 Il retourne uniquement un verdict structuré.
 
-
 5.2 Mission du SuperiorValidationAgent
 
 SuperiorValidationAgent évalue, selon la ValidationPolicy_Global injectée et les contextes fournis par Overseer:
@@ -176,7 +175,6 @@ SuperiorValidationAgent évalue, selon la ValidationPolicy_Global injectée et l
 
 SuperiorValidationAgent n’est jamais un décideur.
 Il ne choisit jamais d’appliquer, corriger ou annuler.
-
 
 5.3 Sortie attendue
 
@@ -194,6 +192,7 @@ SuperiorValidationAgent retourne strictement un verdict structuré de la forme:
 Aucun autre format n’est autorisé.
 Aucun texte libre hors structure n’est autorisé.
 
+---
 
 6. AgentsCorrectifs
 
@@ -223,6 +222,7 @@ En operationMode = "correction", CorrectiveAgent:
 CorrectiveAgent est appelé uniquement sur instruction explicite d’Overseer.
 La validation sémantique de toute correction est effectuée par SuperiorValidationAgent.
 
+---
 
 7. Rôles interdits à tous les agents
 
@@ -242,6 +242,7 @@ Les agents ne peuvent en aucun cas:
 
 Toute tentative est rejetée, ignorée ou bloquée selon les contrôles structurels et les règles d’édition injectées.
 
+---
 
 8. Supervision des agents
 
@@ -259,7 +260,6 @@ Overseer:
 Overseer est l’unique autorité métier.
 Aucun agent n’est autonome.
 
-
 8.2 Rôle de l’orchestrateur
 
 L’orchestrateur:
@@ -272,6 +272,7 @@ L’orchestrateur:
 
 L’orchestrateur ne décide jamais d’appliquer une modification.
 
+---
 
 9. Invariants du rôle des agents
 
@@ -287,15 +288,14 @@ Toujours vrais:
 • Aucun agent ne peut modifier le système lui-même.  
 • Overseer reste l’unique autorité métier.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.2.0 (2025-12-18): Ajout de la famille AgentTransformateur, intégration de ContextAgent comme transformateur non persisté, formalisation des interdictions et invariants associés.
-  - 1.1.0 (2025-12-17): Ajout explicite du CorrectiveAgent comme agent correctif distinct, verrouillage du non-rôle modificateur du SuperiorValidationAgent en CorrectionMode, extension de la classification officielle avec la famille AgentsCorrectifs.
-  - 1.0.0 (2025-12-15): Version initiale.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.1.0
+  - Aucun (baseline pré-système)
