@@ -1,7 +1,7 @@
 ---
 Document: Regles_systeme_des_agents
-Version: 2.2.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -279,8 +279,12 @@ Seul CorrectiveAgent peut être appelé en operationMode = "correction" pour pro
 11.2 Interdiction de production par SuperiorValidationAgent  
 SuperiorValidationAgent ne peut jamais être appelé comme agent producteur.
 
-11.3 Interdiction de nomenclature obsolète  
-Tout champ meta.ownerAgent ou toute journalisation logs.actor utilisant "ValidationAgent" est invalide.
+11.3 Compatibilité rétroactive (mapping unique et localisé)
+
+Règle normative:
+• Toute occurrence historique de "ValidationAgent" est obsolète et interdite en production.
+• Le mapping rétrocompatible unique et localisé est: ValidationAgent → superiorValidationAgent (valeur de champ actor uniquement).
+• Aucune autre règle de mapping n’est autorisée ailleurs dans le système.
 
 
 12. Conditions de rejet obligatoires
@@ -320,10 +324,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 2.2.0 (2025-12-18): Ajout de la catégorie normative AgentsTransformateurs, intégration de ContextAgent, interdictions et invariants associés, clarification des incompatibilités de rôle.
-  - 2.1.0 (2025-12-17): Normalisation de la nomenclature (ValidationAgent supprimé), règles explicites pour CorrectiveAgent en mode correction, verrouillage du rôle non producteur de SuperiorValidationAgent, ajout d’une interdiction rendant invalide tout meta.ownerAgent ou logs.actor utilisant "ValidationAgent".
-  - 2.0.0 (2025-12-11): Refonte complète pour alignement avec SuperiorValidationAgent, Workflow Engine v2.0.0, Processus standard de mise à jour, CorrectionMode et l’architecture tripartite Overseer/Orchestrateur/Agents.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 2.1.0
+  - Aucun (baseline pré-système)
