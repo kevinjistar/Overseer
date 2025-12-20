@@ -1,7 +1,7 @@
 ---
 Document: Overseer_boutons
-Version: 2.0.0
-Date: 2025-12-11
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -27,21 +27,21 @@ Les actions structurelles sont toujours initiées ensuite via une décision mét
 
 2.1 Un bouton affecte uniquement le mode cognitif d’Overseer.  
 2.2 Aucun bouton n’appelle directement l’orchestrateur.  
-2.3 Aucun bouton ne déclenche une transition workflow.  
+2.3 Aucun bouton ne déclenche une transition de workflowEngine.  
 2.4 Les boutons modifient le contexte d’interprétation et de préparation des instructions.  
 2.5 En correctionMode, certains boutons deviennent inopérants.  
 2.6 La logique bouton → état Overseer → décision est strictement séquentielle.
 
 
-3. Liste officielle des boutons et modes Overseer v2
+3. Liste officielle des boutons et modes Overseer
 
-Les boutons suivants sont les seuls autorisés.
+Les boutons suivants sont les seuls autorisés:
 
 • Mode Normal  
 • Mode Création de Projet  
 • Mode Sync Externe  
 • Mode Correction (correctionMode)  
-• Sélection Projet Actif (CurrentProject Select)
+• Sélection Projet Actif (currentProject)
 
 
 4. Description détaillée des boutons
@@ -51,12 +51,12 @@ Les boutons suivants sont les seuls autorisés.
 Effets sur Overseer:
 • réinitialise operationMode = "normal",  
 • active toutes les capacités métier,  
-• autorise les transitions workflow (sous validation),  
+• autorise les transitions de workflowEngine (sous validation),  
 • autorise la mise à jour documentaire,  
 • désactive Sync et correctionMode.
 
 Interdictions:
-• aucune transition automatique (toujours interdit).  
+• aucune transition automatique,  
 • aucune écriture sans pipeline complet.
 
 
@@ -64,8 +64,8 @@ Interdictions:
 
 Effets sur Overseer:
 • place Overseer dans un mode de préparation pour la création d’un projet,  
-• active l’usage obligatoire de Pipeline_d’entrée_des_projets,  
-• désactive transitions workflow et Sync,  
+• active l’usage obligatoire de Pipeline_d_entree_des_projets,  
+• désactive transitions de workflowEngine et Sync,  
 • impose ValidationPolicy_Global renforcée pour documents initiaux.
 
 Ce bouton n’écrit rien.  
@@ -78,12 +78,12 @@ Effets sur Overseer:
 • active le pipeline de Sync,  
 • Overseer attend un ExternalSyncPayload strict,  
 • SuperiorValidationAgent devient obligatoire pour analyse d’impact,  
-• transitions workflow désactivées tant que le Sync n’est pas terminé,  
+• transitions de workflowEngine désactivées tant que le Sync n’est pas terminé,  
 • operationMode = "sync".
 
 Interdictions:
-• aucune mise à jour documentaire hors pipeline Sync.  
-• aucune transition workflow.
+• aucune mise à jour documentaire hors pipeline Sync,  
+• aucune transition de workflowEngine.
 
 
 4.4 Bouton: Mode Correction (correctionMode)
@@ -94,9 +94,8 @@ Effets sur Overseer:
 • Overseer limite la portée des modifications,  
 • un seul agent correctif est autorisable par cycle,  
 • toute modification doit subir une validation globale,  
-• transitions workflow interdites,  
-• Sync interdit,  
-• agents producteurs deviennent agents correctifs.
+• transitions de workflowEngine interdites,  
+• Sync interdit.
 
 Entrée dans correctionMode:
 • bouton explicite, ou  
@@ -111,12 +110,13 @@ Sortie du correctionMode:
 4.5 Bouton: Sélection Projet Actif
 
 Effets sur Overseer:
-• overwriting complet du currentProject interne,  
+• écrasement complet du currentProject interne,  
 • rechargement des documents référents,  
+• rechargement de workflowEngine depuis workflowEngine/engine.json,  
 • invalidation du contexte précédent,  
 • réinitialisation des caches internes.
 
-Constraints:
+Contraintes:
 • si une opération est en cours → annulée proprement,  
 • si correctionMode est activé → sortie interdite jusqu’à stabilisation,  
 • Overseer ne peut traiter aucune action sans currentProject valide.
@@ -125,7 +125,7 @@ Constraints:
 5. Interaction entre les boutons et les Policies
 
 5.1 ValidationPolicy_Global  
-Détermine si l’activation d’un mode exige une validation globale (cas du Mode Sync et du Mode Correction).
+Détermine si l’activation d’un mode exige une validation globale (Mode Sync, Mode Correction).
 
 5.2 WorkflowPolicy  
 Détermine les transitions possibles en Mode Normal uniquement.
@@ -141,8 +141,8 @@ Détermine le comportement des agents appelés après activation d’un mode.
 
 • Aucun bouton ne déclenche un appel agentique.  
 • Aucun bouton ne déclenche un write Firestore.  
-• Aucun bouton ne déclenche un workflow.  
-• Les boutons modifient uniquement l’état interne cognitif d’Overseer.  
+• Aucun bouton ne déclenche une transition de workflowEngine.  
+• Les boutons modifient uniquement l’état cognitif interne d’Overseer.  
 • Toute action métier ou structurelle découle d’une décision explicite après interprétation.  
 • correctionMode est prioritaire sur tous les autres modes.  
 • Mode Sync et Mode Correction sont mutuellement exclusifs.
@@ -157,13 +157,12 @@ Détermine le comportement des agents appelés après activation d’un mode.
 • correction  
 
 Transitions autorisées:
-
-normal → creation  
-normal → sync  
-normal → correction  
-creation → normal  
-sync → normal (fin de pipeline Sync)  
-correction → normal (après validation globale)
+• normal → creation  
+• normal → sync  
+• normal → correction  
+• creation → normal  
+• sync → normal  
+• correction → normal  
 
 Transitions interdites:
 • creation → sync  
@@ -184,15 +183,14 @@ Toujours vrais:
 • correctionMode implique restrictions maximales.  
 • Mode Normal est l’état par défaut et stable du système.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 2.0.0 (2025-12-11): Ajout du bouton CorrectionMode, alignement complet avec Overseer_spec v2, Workflow Engine v2 et le pipeline de mise à jour. Clarification du fait que les boutons n’exécutent jamais d’action structurelle.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Les boutons ne déclenchent plus aucun effet structurel automatique.
-  - CorrectionMode devient un état système officiellement contrôlé par un bouton dédié.
+  - Aucun (baseline pré-système)
