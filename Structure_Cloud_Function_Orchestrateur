@@ -1,8 +1,7 @@
-
 ---
 Document: Structure_Cloud_Function_Orchestrateur
 Version: 1.0.0
-Date: 2025-12-09
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -35,10 +34,10 @@ L’orchestrateur est implémenté sous forme de Cloud Functions strictement str
 # 1. Principes généraux
 
 Les Cloud Functions de l’orchestrateur:
-- n’interprètent jamais l’intention métier,
-- n’évaluent jamais de règles métier,
-- n’initient jamais d’actions autonomes,
-- exécutent uniquement des ordres explicites validés.
+• n’interprètent jamais l’intention métier,  
+• n’évaluent jamais de règles métier,  
+• n’initient jamais d’actions autonomes,  
+• exécutent uniquement des ordres explicites validés.
 
 Toute logique décisionnelle est strictement interdite.
 
@@ -53,75 +52,76 @@ Les Cloud Functions sont organisées par responsabilité fonctionnelle.
 ## 2.1 Fonctions de validation structurelle
 
 Responsabilités:
-- validation des JSON entrants,
-- validation des schémas,
-- vérification des métadonnées,
-- contrôle de versioning mécanique.
+• validation des JSON entrants,  
+• validation des schémas,  
+• vérification des métadonnées,  
+• contrôle de versioning mécanique.
 
 Exemples:
-- validateDocument
-- validateSystemInstruction
-- validateWorkflowTransition
+• validateDocument  
+• validateSystemInstruction  
+• validateWorkflowTransition  
 
 ---
 
 ## 2.2 Fonctions d’écriture Firestore
 
 Responsabilités:
-- écriture atomique des documents,
-- application mécanique du versioning,
-- gestion des snapshots,
-- journalisation des opérations.
+• écriture atomique des documents,  
+• application mécanique du versioning,  
+• gestion des snapshots,  
+• journalisation des opérations.
 
 Exemples:
-- writeDocument
-- writeSnapshot
-- writeLogs
+• writeDocument  
+• writeSnapshot  
+• writeLogs  
 
 Aucune écriture directe hors de ces fonctions n’est autorisée.
 
 ---
 
-## 2.3 Fonctions d’exécution du Workflow Engine
+## 2.3 Fonctions d’exécution du workflowEngine
 
 Responsabilités:
-- vérification structurelle des transitions,
-- application des transitions ordonnées,
-- exécution des actions structurelles déclarées,
-- gestion des états workflow.
+• vérification structurelle des transitions,  
+• application des transitions ordonnées,  
+• exécution des actions structurelles déclarées,  
+• gestion des états du workflowEngine.
 
 Exemples:
-- runWorkflowTransition
-- validateWorkflowState
+• runWorkflowTransition  
+• validateWorkflowState  
 
 ---
 
 ## 2.4 Fonctions de gestion du contexte
 
 Responsabilités:
-- lecture des données projet,
-- assemblage du contexte,
-- chargement des documents référents,
-- retour d’un contexte prêt à l’usage.
+• lecture des données projet,  
+• assemblage du contexte,  
+• chargement des documents référents,  
+• chargement de l’état courant depuis workflowEngine/engine.json,  
+• retour d’un contexte prêt à l’usage.
 
 Exemples:
-- loadProjectContext
-- loadDocuments
-- loadWorkflowEngine
+• loadProjectContext  
+• loadDocuments  
+• loadWorkflowEngine  
 
 ---
 
 ## 2.5 Fonctions d’appel agentique
 
 Responsabilités:
-- réception des systemInstructions,
-- validation structurelle des instructions,
-- appel des agents producteurs,
-- récupération des sorties JSON.
+• réception des systemInstructions,  
+• validation structurelle des instructions,  
+• appel des agents producteurs,  
+• récupération des sorties JSON.
 
 Exemples:
-- callAgent
-- validateAgentOutput
+• callAgent  
+• validateAgentOutput  
 
 ---
 
@@ -143,10 +143,10 @@ Aucune étape ne peut être sautée.
 Les erreurs détectées par l’orchestrateur sont exclusivement structurelles.
 
 En cas d’erreur:
-- l’opération est stoppée immédiatement,
-- aucune écriture n’est appliquée,
-- un message d’erreur structuré est renvoyé à Overseer,
-- l’état du système reste inchangé.
+• l’opération est stoppée immédiatement,  
+• aucune écriture n’est appliquée,  
+• un message d’erreur structuré est renvoyé à Overseer,  
+• l’état du système reste inchangé.
 
 L’orchestrateur ne tente jamais de corriger.
 
@@ -154,10 +154,10 @@ L’orchestrateur ne tente jamais de corriger.
 
 # 5. Séparation stricte des responsabilités
 
-- Overseer décide.
-- Les agents produisent.
-- L’orchestrateur exécute.
-- Firestore persiste.
+• Overseer décide.  
+• Les agents produisent.  
+• L’orchestrateur exécute.  
+• Firestore persiste.
 
 Aucune Cloud Function ne peut enfreindre cette séparation.
 
@@ -167,22 +167,21 @@ Aucune Cloud Function ne peut enfreindre cette séparation.
 
 Toujours vrais:
 
-- aucune logique métier dans l’orchestrateur,
-- aucune autonomie fonctionnelle,
-- aucune écriture hors fonctions dédiées,
-- aucune validation sémantique,
-- aucune transition implicite,
-- traçabilité complète de chaque opération.
+• aucune logique métier dans l’orchestrateur,  
+• aucune autonomie fonctionnelle,  
+• aucune écriture hors fonctions dédiées,  
+• aucune validation sémantique,  
+• aucune transition implicite,  
+• traçabilité complète de chaque opération.
 
 ---
-
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.0 (2025-12-09): Création du document Structure des Cloud Functions de l’orchestrateur, définition des catégories fonctionnelles et des invariants structurels.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0
+  - Aucun (baseline pré-système)
