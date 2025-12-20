@@ -1,7 +1,7 @@
 ---
 Document: Schema_Project
-Version: 2.1.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -37,7 +37,7 @@ Un Projet est un conteneur structuré regroupant:
 Règles normatives:
 • workflowEngine est l’unique porteur d’état courant exécutable, snapshotable, restaurable.  
 • Les documents de type “Workflow Document” ne portent jamais l’état courant, ils sont des descripteurs uniquement.  
-• Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un document workflow.
+• Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un Workflow Document.
 
 Un Projet n’est pas:
 • un document référent (il les contient),  
@@ -68,7 +68,7 @@ Les agents:
 • ne créent pas, ne modifient pas et ne patchent pas la structure d’un Projet en base,  
 • ne décident jamais la structure d’un Projet,  
 • ne déduisent aucun champ, aucune valeur, aucune compatibilité,  
-• ne lisent pas et ne déduisent pas l’état courant depuis un document workflow.
+• ne lisent pas et ne déduisent pas l’état courant depuis un Workflow Document.
 
 Toute production agentique, si elle existe dans un pipeline, reste un artefact intermédiaire soumis à validation structurelle par l’orchestrateur et décision finale par Overseer.
 
@@ -131,7 +131,7 @@ Projet {
 
 Notes normatives:
 • Document[] référence des documents conformes au Schéma universel du Document Référent (référence externe),  
-• les documents sous documents.workflow ne définissent jamais l’état courant, ils sont non exécutifs,  
+• les documents sous documents.workflow ne définissent jamais l’état courant, ils sont descriptifs, non exécutables,  
 • LogEntry et SyncEntry sont des objets structurés locaux au présent schéma,  
 • workflowEngine est l’unique porteur d’état courant, toute transition se fait depuis workflowEngine/engine.json.
 
@@ -157,7 +157,7 @@ Contraintes:
 • chaque item doit référencer un DocumentSchema résoluble et validable,  
 • documents.workflow (ou l’équivalent utilisé pour les Workflow Documents) est optionnel,  
 • documents.workflow peut être une liste vide,  
-• les documents sous documents.workflow ne définissent jamais l’état courant, ils sont non exécutifs.
+• les documents sous documents.workflow ne définissent jamais l’état courant, ils sont descriptifs, non exécutables.
 
 Règle normative de nommage et stockage des Workflow Documents:
 • stockage sous projects/{projectId}/documents/  
@@ -267,9 +267,23 @@ JSON Schema de référence, destiné à la validation structurelle.
           "type": "array",
           "items": {
             "type": "object",
+            "required": ["timestamp", "actor", "initiatedBy", "action", "details"],
             "properties": {
               "timestamp": { "type": "string" },
-              "agent": { "type": "string" },
+              "actor": {
+                "type": "string",
+                "enum": [
+                  "overseer",
+                  "orchestrator",
+                  "superiorValidationAgent",
+                  "correctiveAgent",
+                  "contextAgent",
+                  "auditTrailAgent",
+                  "systemInit",
+                  "syncAgent"
+                ]
+              },
+              "initiatedBy": { "type": "string" },
               "action": { "type": "string" },
               "details": { "type": "string" }
             }
@@ -309,11 +323,11 @@ Toujours vrais:
 • workflowEngine est l’unique porteur de currentState.  
 • workflowEngine est l’unique porteur d’état courant exécutable, snapshotable, restaurable.  
 • Les Workflow Documents ne portent aucun état exécutable.  
-• Les documents sous documents.workflow ne portent jamais l’état courant, ils sont non exécutifs.  
+• Les documents sous documents.workflow ne portent jamais l’état courant, ils sont descriptifs, non exécutables.  
 • Aucun agent ne modifie un Projet en base.  
 • Toute écriture de Projet passe par l’orchestrateur et doit être validée structurellement.  
 • Le présent schéma ne définit aucune logique métier et ne peut pas être interprété comme tel.  
-• Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un document workflow.
+• Toute lecture de l’état courant et toute exécution de transition s’effectuent depuis workflowEngine/engine.json, jamais depuis un Workflow Document.
 
 ---
 Fin du document
@@ -322,12 +336,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 2.1.0 (2025-12-18): Clarification normative de l’optionalité de documents.workflow (liste vide autorisée), ajout de la règle de nommage workflowDocument_{descripteur}.json, ajout d’invariants explicites sur currentState et le statut non exécutable des Workflow Documents.
-  - 2.0.0 (2025-12-17): Alignement normatif sur workflowEngine comme unique état exécutable, suppression de toute représentation d’état parallèle via workflows, clarification du statut non exécutif des Workflow Documents.
-  - 1.1.0 (2025-12-09): Mise à jour complète du Schéma Projet, ajout versioning, logs système, états workflows, compatibilité Sync
-  - 1.0.0 (2025-12-09): Création du schéma initial
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
-Breaking Changes: 
-  - Aucun depuis 2.0.0
-  - Toute lecture de l’état courant via workflows ou via un document workflow est désormais invalide.
-  - Suppression de la section workflows conceptuelle en tant que porteur d’état.
+Breaking Changes:
+  - Aucun (baseline pré-système)
