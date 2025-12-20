@@ -1,7 +1,7 @@
 ---
 Document: Instructions_globales_de_constitution_du_systeme
-Version: 3.1.0
-Date: 2025-12-17
+Version: 3.1.1
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -225,21 +225,23 @@ Toujours vrais:
 - Un système mal assemblé ne doit jamais fonctionner.
 - Toute incohérence impose blocage, puis correctionMode ou halted selon gravité.
 
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 3.1.0 (2025-12-17): Mise à jour des références documentaires (renommages), ajout de CorrectiveAgent_spec comme spécification comportementale obligatoire, suppression des références résiduelles à ValidationAgent.
+  - 3.1.1 (2025-12-20): Normalisation terminologique et structurelle (workflowEngine, actor/initiatedBy), sans modification normative.
+  - 3.1.0 (2025-12-17): Mise à jour des références documentaires (renommages), ajout de CorrectiveAgent_spec comme spécification comportementale obligatoire, suppression des références résiduelles à l’agent validateur obsolète.
   - 3.0.0 (2025-12-15): Mise au format canonique obligatoire, refonte majeure des couches et dépendances pour suppression des références non canoniques, clarification stricte des responsabilités (Overseer, orchestrateur, SuperiorValidationAgent, agents), durcissement des règles de chargement et de blocage en cas d’assemblage incomplet.
   - 2.0.0 (2025-12-11): Refonte complète pour alignement avec Overseer v2, SuperiorValidationAgent, Processus interne v2, Workflow Engine v2, CorrectionMode_Policy et Policies versionnées.
   - 1.0.0 (2025-12-10): Version initiale.
 
 Breaking Changes:
-  - Aucun depuis 3.0.0
+  - Aucun depuis 3.1.0
   - Les noms et dépendances non canoniques (ex: références à des Policies non gouvernantes dans ce document) sont retirés au profit des quatre Policies gouvernantes du système.
   - L’ordre de constitution devient bloquant et interdit tout démarrage partiel sans schémas, Policies et spécifications comportementales chargés.
   - Intégration des Policies versionnées comme fondation obligatoire.
-  - SuperiorValidationAgent remplace ValidationAgent.
+  - L’agent validateur obsolète est remplacé par SuperiorValidationAgent.
   - Séparation stricte structurel / métier dans l’ordre de constitution du système
