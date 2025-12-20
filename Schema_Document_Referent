@@ -1,7 +1,7 @@
 ---
 Document: Schema_Document_Referent
-Version: 1.1.0
-Date: 2025-12-10
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -62,7 +62,7 @@ Références internes ou externes.
 
 ---
 
-# 2. JSON SCHEMA — UniversalDocumentSchema (Version 1.1.0)
+# 2. JSON SCHEMA, UniversalDocumentSchema
 
 ```json
 {
@@ -133,14 +133,14 @@ Références internes ou externes.
 3. Cohérence du système
 
 Ce schéma:
-	•	est compatible avec ProjectSchema 1.1.0,
-	•	permet une validation stricte par Cloud Functions,
-	•	garantit une forme documentaire stable,
-	•	rend le versioning automatique trivial,
-	•	permet à Overseer de vérifier la conformité documentaire,
-	•	permet aux agents spécialisés de modifier uniquement structured et specialized,
-	•	s’intègre entièrement au Workflow Engine,
-	•	est compatible avec le pipeline de synchronisation externe.
+• est compatible avec ProjectSchema,
+• permet une validation stricte par Cloud Functions,
+• garantit une forme documentaire stable,
+• rend le versioning automatique trivial,
+• permet à Overseer de vérifier la conformité documentaire,
+• permet aux agents spécialisés de modifier uniquement structured et specialized,
+• s’intègre entièrement au Workflow Engine,
+• est compatible avec le pipeline de synchronisation externe.
 
 
 ---
@@ -150,8 +150,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-	•	1.1.0 (2025-12-10): Mise à jour du schéma universel, ajout compatibilité Sync, ProjectSchema 1.1.0, règles strictes pour versioning, cohérence avec Overseer et workflows.
-	•	1.0.0 (2025-12-10): Initialisation du Schéma universel du Document Référent.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-	•	Aucun depuis 1.0.0
+  - Aucun (baseline pré-système)
