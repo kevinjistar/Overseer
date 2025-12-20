@@ -1,7 +1,7 @@
 ---
 Document: Role_des_agents
 Version: 1.0.0
-Date: 2025-12-20
+Date: 2025-12-21
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -56,14 +56,18 @@ Produisent un document candidat complet au format JSON strict.
 Produisent un document candidat de correction uniquement lorsque operationMode = "correction".
 
 3.4 AgentTransformateur  
+Un AgentTransformateur ne produit aucun document référent candidat destiné à écriture Firestore, son output est éphémère.
+
 • AgentTransformateur n’écrit jamais en base.  
 • AgentTransformateur ne produit pas de “candidateDocument” destiné à Firestore.  
 • Output éphémère, non versionné, non persisté.  
 • Interdictions: suppression d’information, modification de valeurs, invention, validation métier, déclenchement de workflow, appel d’autres agents.
 
-Membre initial:
-• ContextAgent est l’unique membre initial de la famille AgentTransformateur.
-• Le contrat complet du ContextAgent est défini dans ContextAgent_spec.
+Membres (liste exhaustive):
+• ContextAgent
+• AuditTrailAgent
+
+Les contrats complets des agents transformateurs sont définis dans leurs specs respectives (ContextAgent_spec, AuditTrailAgent_spec).
 
 Aucune autre famille n’est autorisée.
 Aucun agent hybride n’est autorisé.
@@ -202,6 +206,8 @@ Il n’existe qu’un seul AgentCorrectif officiel:
 • CorrectiveAgent
 
 Tout autre agent correctif est interdit.
+
+CorrectiveAgent est un AgentProducteur spécialisé pour operationMode = "correction". Son contrat détaillé reste défini dans la spec dédiée, sans duplication dans le présent document.
 
 CorrectiveAgent:
 • produit un candidateDocument strictement correctif uniquement lorsque operationMode = "correction",  
