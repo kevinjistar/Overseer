@@ -1,7 +1,7 @@
 ---
 Document: Process_mise_a_jour_avec_SuperiorValidationAgent
-Version: 1.1.0
-Date: 2025-12-17
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -264,15 +264,14 @@ Le processus s’interrompt immédiatement si:
 • incohérence critique détectée,  
 • état halted actif.
 
-
+---
 Fin du document
 ---
 
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-17): Correction du rôle en correctionMode, CorrectiveAgent devient l’unique agent modificateur, SuperiorValidationAgent strictement diagnostiqueur et validateur, séquence normative de traitement d’un block imposée, renommage du document aligné sur Document.
-  - 1.0.0 (2025-12-10): Création du processus standard intégrant SuperiorValidationAgent, double validation sémantique, mode correction, pipeline complet stabilisé.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0.
+  - Aucun (baseline pré-système)
