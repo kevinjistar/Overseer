@@ -1,7 +1,7 @@
 ---
 Document: Architecture
-Version: 1.1.0
-Date: 2025-12-17
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -143,8 +143,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-17): Renforcement des invariants, workflowEngine défini comme unique état exécutable, clarification du statut non exécutif des Workflow Documents.
-  - 1.0.0 (2025-12-12): Création du document d’architecture, définition des couches, responsabilités et invariants fondamentaux.
+  - 1.0.0 (2025-12-20): Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0
+  - Aucun (baseline pré-système)
