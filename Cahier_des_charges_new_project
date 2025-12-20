@@ -1,7 +1,7 @@
 ---
 Document: Cahier_des_charges_new_project
-Version: 1.1.0
-Date: 2025-12-12
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -124,8 +124,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.1.0 (2025-12-12): Renforcement normatif du cahier des charges, ajout de la répartition explicite des responsabilités, définition d’une structure minimale obligatoire, ajout d’invariants stricts et clarification des interdictions.
-  - 1.0.0 (2025-12-12): Création du cahier des charges standard pour l’initialisation d’un projet.
+  - 1.0.0 (2025-12-20): Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0
+  - Aucun (baseline pré-système)
