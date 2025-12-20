@@ -1,0 +1,322 @@
+---
+Document: Process_systemRecovery
+Version: 1.0.0
+Date: 2025-12-20
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le processus normatif systemRecovery permettant de restaurer un projet Overseer vers un état antérieur cohérent à partir de snapshots et de logs.
+
+systemRecovery est un protocole contrôlé:
+• déclenché uniquement sur décision explicite d’Overseer,
+• exécuté mécaniquement par l’orchestrateur,
+• borné et traçable,
+• obligatoirement suivi d’une stabilisation en correctionMode et d’une validation globale.
+
+2. Acteurs et responsabilités
+
+2.1 Utilisateur (via Overseer)
+• exprime une demande de restauration ou confirme une proposition de restauration.
+• ne contacte jamais l’orchestrateur directement.
+• n’interagit jamais avec les snapshots ou les logs en direct.
+
+2.2 Overseer
+• décide d’initier systemRecovery.
+• impose le périmètre (fullProject uniquement en v1.0.0).
+• choisit explicitement le snapshot cible parmi une liste fournie par l’orchestrateur.
+• présente le RecoveryPreview à l’utilisateur et recueille la confirmation utilisateur.
+• ordonne explicitement l’exécution de la restauration.
+• force l’entrée en correctionMode après restauration.
+• déclenche une validation sémantique globale via SuperiorValidationAgent.
+• décide ensuite apply (sortie de correctionMode), maintien en correctionMode, ou passage en halted.
+
+Interdictions:
+• Overseer n’exécute pas la restauration lui-même.
+• Overseer ne lit pas Firestore hors des flux autorisés par l’orchestrateur.
+
+2.3 Orchestrateur
+• liste les snapshots disponibles (sans recommandation, sans tri interprétatif, hors tri strictement technique par date).
+• génère un RecoveryPreview JSON strict à partir des métadonnées de snapshot et des différences structurelles calculables.
+• exécute la restauration atomique fullProject uniquement, sur ordre explicite d’Overseer.
+• journalise toutes les étapes techniques (preview, exécution, résultat).
+• met à jour le compteur de tentatives (attemptCounter) de manière mécanique.
+• applique immédiatement correctionMode = true après restauration (écriture mécanique).
+
+Interdictions:
+• l’orchestrateur ne demande jamais de confirmation.
+• l’orchestrateur ne prend jamais de décision métier.
+• l’orchestrateur ne choisit jamais un snapshot à la place d’Overseer.
+
+2.4 SuperiorValidationAgent
+• exécute exclusivement une validation sémantique globale post-restauration, sur ordre explicite d’Overseer.
+• retourne un verdict structuré allow, warn ou block.
+• ne modifie jamais le projet, ne corrige jamais, n’écrit jamais, ne déclenche aucune restauration.
+
+3. Déclencheurs autorisés
+
+systemRecovery ne peut être déclenché que dans les cas suivants:
+
+3.1 halted
+• le projet est en état halted et une récupération contrôlée est nécessaire pour restaurer un état cohérent.
+
+3.2 Demande utilisateur via Overseer
+• l’utilisateur demande explicitement une restauration, Overseer juge la demande recevable.
+
+3.3 Régression critique détectée post-écriture
+• une régression critique est détectée après une écriture (incohérence globale, corruption documentaire, contradiction systémique), et Overseer décide qu’une restauration est la voie la plus sûre.
+
+Tout autre déclencheur est interdit.
+
+4. Préconditions
+
+Avant tout systemRecovery, les préconditions suivantes doivent être satisfaites:
+
+• snapshots disponibles et accessibles pour le projectId ciblé,
+• projet identifiable (projectId valide),
+• orchestrateur opérationnel (capable de lire snapshots, calculer preview, écrire en base),
+• operationId défini et traçable,
+• aucune exécution implicite, toute action est ordonnée explicitement par Overseer.
+
+Si une précondition échoue, systemRecovery est refusé et journalisé comme erreur structurelle.
+
+5. Sélection du snapshot
+
+5.1 Listing (orchestrateur)
+L’orchestrateur retourne une liste de snapshots disponibles, contenant uniquement des informations techniques minimales:
+• snapshotId
+• createdAt
+• originOperationId (si disponible)
+• snapshotType (doit indiquer fullProject)
+• checksum ou équivalent d’intégrité (si disponible)
+
+Interdictions:
+• l’orchestrateur ne recommande pas un snapshot.
+• l’orchestrateur ne masque pas des snapshots, sauf impossibilité technique (snapshot illisible, checksum invalide).
+
+5.2 Choix (Overseer)
+Overseer choisit explicitement un snapshotId depuis la liste fournie.
+
+Règle normative:
+• aucun choix implicite, aucun fallback automatique.
+• si Overseer ne choisit pas explicitement, la procédure s’arrête.
+
+6. Génération du RecoveryPreview (orchestrateur)
+
+6.1 Principe
+Le RecoveryPreview est un artefact JSON strict, destiné à informer Overseer et l’utilisateur.
+Le RecoveryPreview n’est pas une UI, n’implique aucune action, et ne déclenche aucune restauration.
+
+6.2 Contenu minimal attendu (RecoveryPreview)
+Schéma conceptuel (normatif, JSON strict):
+
+{
+  "type": "RecoveryPreview",
+  "projectId": "string",
+  "operationId": "string",
+  "snapshotId": "string",
+  "snapshotCreatedAt": "string",
+  "snapshotScope": "fullProject",
+  "currentProjectMeta": {
+    "version": "string",
+    "updatedAt": "string"
+  },
+  "previewSummary": {
+    "highLevelDelta": "string",
+    "impactedRootBlocks": ["meta", "documents", "workflowEngine", "settings", "sync", "logs"],
+    "riskNotes": ["string"]
+  },
+  "technicalNotes": {
+    "integrity": "ok | unknown | failed",
+    "limitations": ["string"]
+  }
+}
+
+Règles:
+• snapshotScope doit être fullProject en v1.0.0.
+• impactedRootBlocks est une liste descriptive, sans interprétation métier.
+• riskNotes est une liste d’avertissements factuels, pas des recommandations de décision.
+
+7. Présentation et confirmation
+
+7.1 Présentation (Overseer uniquement)
+Overseer présente le RecoveryPreview à l’utilisateur de manière compréhensible, en explicitant:
+• le snapshot choisi (date, origine si disponible),
+• le fait que la restauration est fullProject,
+• les impacts attendus (retour à un état antérieur),
+• les contraintes post-restauration (correctionMode et validation globale obligatoire).
+
+7.2 Confirmation utilisateur (via Overseer)
+La confirmation utilisateur est obligatoire avant exécution.
+
+Règle normative:
+• seul Overseer collecte la confirmation.
+• aucune confirmation n’est collectée par l’orchestrateur.
+
+Journalisation de la confirmation:
+• actor = overseer
+• initiatedBy = userId
+
+8. Exécution atomique
+
+8.1 Principe
+L’orchestrateur restaure exclusivement fullProject de manière atomique.
+La restauration doit être all-or-nothing, sans état intermédiaire visible.
+
+8.2 Périmètre restauré (fullProject)
+La restauration fullProject couvre l’ensemble des blocs racine du projet (selon ProjectSchema):
+• meta
+• documents
+• workflowEngine
+• settings
+• sync
+• logs (uniquement si le snapshot inclut logs comme partie du fullProject)
+
+Note normative:
+• l’état courant exécutable est porté par workflowEngine, et la référence exécutable attendue reste workflowEngine/engine.json lorsque ce chemin est utilisé par le système.
+
+8.3 Interdictions absolues
+Restauration partielle interdite en v1.0.0, scopes interdits:
+• meta uniquement
+• documents uniquement
+• documents.<category> uniquement
+• workflowEngine uniquement
+• workflowEngine.currentState uniquement
+• settings uniquement
+• sync uniquement
+• logs uniquement
+• restauration par patch ou diff
+
+9. Post-restauration obligatoire
+
+9.1 Entrée automatique en correctionMode
+Immédiatement après une restauration réussie, l’orchestrateur doit:
+• forcer correctionMode = true (écriture mécanique),
+• bloquer toute transition de workflow.
+
+9.2 Validation globale obligatoire (SuperiorValidationAgent)
+Overseer déclenche une validation sémantique globale obligatoire.
+Aucune sortie de correctionMode n’est autorisée sans cette validation globale.
+
+9.3 Règles de décision post-validation (Overseer)
+
+a) Verdict allow
+• Overseer peut décider de sortir de correctionMode.
+• Reprise des opérations normales autorisée.
+
+b) Verdict warn
+• Overseer maintient correctionMode.
+• Overseer peut demander une stabilisation via CorrectiveAgent (pipeline correctif standard).
+• Sortie de correctionMode interdite tant qu’une validation globale allow n’a pas été obtenue.
+
+c) Verdict block
+• Overseer maintient correctionMode et doit initier une correction contrôlée, ou décider abort.
+• Si la stabilisation est impossible ou si les tentatives sont épuisées, Overseer peut décider passage en halted.
+
+Règle stricte:
+• aucune transition workflow n’est exécutée en correctionMode, y compris après restauration.
+
+10. Limites et compteurs
+
+10.1 Limite de tentatives
+systemRecovery est limité à 3 tentatives consécutives maximum pour un même projet.
+
+Définition de tentatives consécutives:
+• le compteur augmente à chaque exécution de restauration (succès ou échec),
+• le compteur est réinitialisé uniquement après une sortie explicite de correctionMode, confirmée par Overseer, suite à une validation globale allow.
+
+10.2 Compteur persisté
+Le compteur est persisté à l’emplacement:
+logs/{projectId}/recovery/attemptCounter.json
+
+Schéma verrouillé (normatif, JSON strict):
+{
+  "projectId": "string",
+  "consecutiveAttempts": 0,
+  "lastAttemptAt": "string",
+  "lastOperationId": "string",
+  "lastSnapshotId": "string",
+  "lastResult": "success | failed",
+  "lockVersion": "1.0.0"
+}
+
+Contraintes:
+• aucun champ additionnel n’est autorisé.
+• consecutiveAttempts est borné à [0..3].
+• lockVersion doit rester "1.0.0" en v1.0.0.
+
+Règle de blocage:
+• si consecutiveAttempts = 3, l’orchestrateur refuse toute exécution supplémentaire de systemRecovery et retourne une erreur structurelle à Overseer.
+
+11. Journalisation obligatoire
+
+11.1 Emplacements
+Les logs de recovery sont écrits sous:
+logs/{projectId}/recovery/
+
+11.2 Événements minimaux à journaliser
+• snapshotListGenerated
+• recoveryPreviewGenerated
+• userConfirmationLogged
+• recoveryExecuted
+• recoveryResult
+• attemptCounterUpdated
+
+11.3 Champs de journalisation
+Toute entrée de log de recovery doit inclure au minimum:
+• timestamp
+• projectId
+• operationId
+• eventType
+• actor (enum fermée)
+• initiatedBy (userId ou "system")
+• details (string ou objet structuré, selon schéma local)
+
+Règles:
+• actor doit appartenir à la liste canonique fermée:
+  • overseer
+  • orchestrator
+  • superiorValidationAgent
+  • correctiveAgent
+  • contextAgent
+  • auditTrailAgent
+  • systemInit
+  • syncAgent
+• initiatedBy doit être un userId ou "system".
+• tout champ agent est interdit dans les logs et snapshots.
+
+11.4 Journalisation de la confirmation utilisateur
+La confirmation utilisateur doit être journalisée explicitement:
+• actor = overseer
+• initiatedBy = userId
+• eventType = userConfirmationLogged
+
+12. Invariants
+
+Toujours vrais (systemRecovery uniquement):
+
+• systemRecovery est déclenché uniquement sur décision explicite d’Overseer, jamais automatiquement.  
+• l’orchestrateur exécute mécaniquement, il ne prend aucune décision métier, et ne demande jamais de confirmation.  
+• la sélection du snapshot appartient à Overseer, aucun choix implicite n’est autorisé.  
+• la restauration est atomique et fullProject uniquement en v1.0.0, toute restauration partielle est interdite.  
+• le RecoveryPreview est un artefact JSON, il n’est pas une UI et ne déclenche aucune action.  
+• après restauration, correctionMode est forcé automatiquement et une validation sémantique globale est obligatoire avant toute reprise normale.  
+• la traçabilité est obligatoire, via logs de recovery, attemptCounter persisté, et journalisation de la confirmation utilisateur (actor, initiatedBy).  
+
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
