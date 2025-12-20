@@ -1,7 +1,7 @@
 ---
 Document: Protocole_d_erreur
-Version: 4.0.0
-Date: 2025-12-18
+Version: 1.0.0
+Date: 2025-12-20
 
 PolicyVersions:
   ValidationPolicy_Global: 1.0.0
@@ -96,7 +96,7 @@ Une erreur structurelle est détectée exclusivement par l’orchestrateur, nota
 - séquence de version invalide (format ou séquence mécanique),
 - document ou projet introuvable,
 - tentative d’écriture lorsque l’état du système est halted,
-- tentative d’exécution d’une transition non existante dans le Workflow Engine (structurel),
+- tentative d’exécution d’une transition non existante dans le workflowEngine (structurel),
 - tentative de transition alors que correctionMode est actif,
 - action de transition structurellement invalide,
 - violation structurelle de System_Agent_Edit_Policy dans la sortie agent.
@@ -294,27 +294,28 @@ Interdictions:
 
 9.1 Nomenclature officielle des acteurs (liste exhaustive et fermée)
 
-Les seuls acteurs reconnus pour la journalisation sont :
+Les seuls acteurs reconnus pour la journalisation sont:
 - overseer
 - orchestrator
 - superiorValidationAgent
 - correctiveAgent
 - contextAgent
+- auditTrailAgent
 - systemInit
 - syncAgent
 
-Règle d'invalidité d'actor non reconnu :
+Règle d'invalidité d'actor non reconnu:
 Tout log contenant un actor hors de cette liste DOIT être rejeté structurellement par l'orchestrateur avec erreur InvalidActor.
 
 Aucun autre actor n'est autorisé.
 Aucune extension implicite n'est permise.
 
-9.2 Compatibilité rétroactive
+9.2 Compatibilité rétroactive (mapping localisé, unique)
 
 Règles normatives:
 • Toute occurrence de ValidationAgent est considérée obsolète.
-• La migration officielle est: ValidationAgent → superiorValidationAgent.
-• La migration DOIT créer les champs:
+• Le mapping officiel et unique est: ValidationAgent → superiorValidationAgent (champ actor uniquement).
+• Toute migration DOIT créer les champs:
   • migrated: true
   • migrationDate: <timestamp>
 
@@ -330,7 +331,8 @@ Chaque entrée contient au minimum:
 - projectId,
 - errorType (StructuralError | SemanticWarn | SemanticBlock | BusinessError | Halted),
 - severity (warning | error | halted),
-- actor (overseer | orchestrator | superiorValidationAgent | correctiveAgent | contextAgent | systemInit | syncAgent),
+- actor (overseer | orchestrator | superiorValidationAgent | correctiveAgent | contextAgent | auditTrailAgent | systemInit | syncAgent),
+- initiatedBy (userId | "system"),
 - details,
 - stateBefore,
 - stateAfter,
@@ -347,21 +349,16 @@ Toujours vrais:
 - Une erreur structurelle arrête immédiatement l’opération en cours.
 - Une erreur sémantique block déclenche correctionMode.
 - halted ne peut être levé que par recovery contrôlée.
-- Aucun workflow ne peut se déclencher en présence d’une erreur métier ou structurelle.
+- Aucune transition workflow ne peut être déclenchée en présence d’une erreur métier ou structurelle.
 - correctionMode est l’unique voie de stabilisation avant halted métier.
 
+---
 Fin du document
 ---
-
 Document Metadata & Changelog
 
 Changelog:
-  - 4.0.0 (2025-12-18): Fermeture normative et enforcement structurel de actor (enum), ajout de contextAgent, ajout du mapping rétroactif ValidationAgent -> superiorValidationAgent, mise à jour de la nomenclature de journalisation.
-  - 3.0.1 (2025-12-17): Normalisation des acteurs (ValidationAgent supprimé), ajout de la règle d’invalidité d’actor non reconnu, liste officielle d’acteurs ajoutée.
-  - 3.0.0 (2025-12-15): Mise au format canonique obligatoire (header, marqueur de fin, footer), clarification et verrouillage normatif des responsabilités par acteur, normalisation stricte de la typologie warning/error/halted et des séquences de traitement, intégration explicite de correctionMode et systemRecovery comme protocoles contrôlés.
-  - 2.0.0 (2025-12-11): Refonte complète alignée avec Overseer v2, SuperiorValidationAgent, Workflow Engine v2, CorrectionMode_Policy et la séparation structurel/métier.
-  - 1.0.0 (2025-12-10): Version initiale.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - L’orchestrateur rejette désormais tout log dont actor n’appartient pas à la liste fermée.
-  - Le terme ValidationAgent est obsolète; toute compatibilité passe uniquement par mapping explicite vers superiorValidationAgent.
+  - Aucun (baseline pré-système)
