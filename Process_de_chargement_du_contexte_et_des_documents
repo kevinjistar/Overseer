@@ -48,6 +48,13 @@ L'orchestrateur:
 L'orchestrateur n'interprète aucune logique métier pendant ce process.
 
 3.3 ContextAgent
+
+Règle normative ContextAgent :
+- ContextAgent est optionnel.
+- ContextAgent est appelé uniquement sur décision explicite d’Overseer.
+- L’orchestrateur ne déclenche jamais ContextAgent de manière autonome.
+- La synthèse produite est éphémère et n’est jamais persistée, seules des métadonnées d’appel peuvent être journalisées.
+
 ContextAgent:
 - est un AgentTransformateur,
 - ne lit pas Firestore,
