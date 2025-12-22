@@ -1,0 +1,110 @@
+---
+Document: CahierDesChargesAgent_spec
+Version: 1.0.0
+Date: YYYY-MM-DD
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le rôle, les entrées, sorties, contraintes et interdictions de CahierDesChargesAgent.
+
+CahierDesChargesAgent est un AgentTransformateur. Il structure un cahier des charges utilisateur sans modifier la source et sans produire de verdict métier.
+
+2. Classification officielle
+
+Famille: AgentTransformateur
+Nature: non-producteur de documents référents, non-validateur
+Output: artefact éphémère, non versionné, non persisté
+
+3. Préconditions d’appel
+
+CahierDesChargesAgent ne peut être appelé que si:
+• Overseer décide explicitement de l’appel,
+• le cahier des charges source est fourni intégralement,
+• un operationId est fourni.
+
+L’orchestrateur n’initie jamais cet appel.
+
+4. Input (normatif)
+
+{
+  "operationId": "string",
+  "projectId": "string | null",
+  "rawProjectBrief": {
+    "objectif_du_projet": "string",
+    "perimetre_fonctionnel": "string",
+    "contraintes_principales": ["string"],
+    "hypotheses_initiales": ["string"],
+    "risques_identifies": ["string"],
+    "criteres_de_succes": ["string"]
+  }
+}
+
+5. Output (normatif)
+
+{
+  "operationId": "string",
+  "projectId": "string | null",
+  "status": "structured | needs_clarification | cannot_structure_without_loss",
+  "refinedBrief": {
+    "objectif_du_projet": "string",
+    "perimetre_fonctionnel": "string",
+    "contraintes_principales": ["string"],
+    "hypotheses_initiales": ["string"],
+    "risques_identifies": ["string"],
+    "criteres_de_succes": ["string"]
+  },
+  "structuringReport": {
+    "detectedAmbiguities": [
+      {
+        "type": "apparent_contradiction | missing_element | unclear_scope | ambiguous_term",
+        "severity": "blocking | clarification_recommended | minor",
+        "description": "string",
+        "sourceRefs": ["string"],
+        "suggestedClarification": "string"
+      }
+    ]
+  }
+}
+
+6. Interdictions absolues
+
+CahierDesChargesAgent ne peut JAMAIS:
+• modifier le cahier des charges source,
+• supprimer une information fournie,
+• inventer une information absente,
+• produire un verdict allow, warn ou block,
+• qualifier une incohérence comme acceptable ou bloquante sur le plan métier,
+• écrire dans Firestore,
+• déclencher une transition workflow,
+• appeler un autre agent.
+
+7. Règles de neutralité
+
+Les ambiguïtés détectées doivent être descriptives et traçables via sourceRefs.
+Aucun conseil métier n’est autorisé. Aucun arbitrage n’est autorisé.
+
+8. Invariants
+
+Toujours vrais:
+• Output éphémère, non persisté.
+• Aucune modification de la source.
+• Aucun verdict métier.
+• Overseer reste l’unique autorité de décision.
+
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (YYYY-MM-DD): Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
