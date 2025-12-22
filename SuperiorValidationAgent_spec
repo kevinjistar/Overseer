@@ -219,6 +219,17 @@ Toujours vrais:
 • En mode correction, la stabilité prévaut et le block est préféré en cas de doute.  
 • En operationMode = "correction", SuperiorValidationAgent ne produit jamais de document candidat modifié et ne remplace jamais un agent producteur.
 
+Validation en création assistée
+
+Lorsque l’opération correspond à une création de projet et qu’aucun originalDocument n’existe en base :
+- L’orchestrateur DOIT fournir un originalDocument baseline blank, non persisté, strictement conforme au schéma cible.
+- Ce baseline blank DOIT utiliser meta.version = 0.0.0 et meta.status = draft.
+- SuperiorValidationAgent valide le candidateDocument par rapport au baseline blank et au contexte de création transmis.
+
+Interdictions :
+- Aucun baseline blank n’est écrit en Firestore.
+- La présence de meta.version = 0.0.0 est réservée au baseline blank de création et n’est jamais utilisée pour un document persisté.
+
 ---
 Fin du document
 ---
