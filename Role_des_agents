@@ -46,31 +46,51 @@ Toute autonomie implicite est interdite.
 
 Il existe exactement quatre familles d’agents.
 
-3.1 AgentsProducteurs  
-Produisent un document candidat complet au format JSON strict.
+3.1 AgentsProducteurs
+Définition:
+Produisent un document candidat complet, strictement conforme au schéma attendu, et destiné à une validation puis une écriture potentielle dans Firestore.
 
-3.2 AgentsValidateurs  
-Émettent un verdict sémantique structuré (allow, warn, block) sans produire de document.
+Interdictions:
+Un AgentProducteur ne décide jamais, ne valide jamais et n’écrit jamais dans Firestore.
 
-3.3 AgentsCorrectifs  
-Produisent un document candidat de correction uniquement lorsque operationMode = "correction".
+3.2 AgentsValidateurs
+Définition:
+Produisent un verdict sémantique structuré allow, warn ou block, sans produire de document candidat destiné à Firestore.
 
-3.4 AgentTransformateur  
-Un AgentTransformateur ne produit aucun document référent candidat destiné à écriture Firestore, son output est éphémère.
+Membres (liste exhaustive):
+• SuperiorValidationAgent
 
-• AgentTransformateur n’écrit jamais en base.  
-• AgentTransformateur ne produit pas de “candidateDocument” destiné à Firestore.  
-• Output éphémère, non versionné, non persisté.  
-• Interdictions: suppression d’information, modification de valeurs, invention, validation métier, déclenchement de workflow, appel d’autres agents.
+Interdictions:
+Un AgentValidateur ne modifie jamais Firestore, ne produit jamais de document candidat et ne déclenche jamais de workflow.
+
+3.3 AgentsCorrectifs
+Définition:
+Produisent un document candidat de correction uniquement lorsque operationMode = "correction" (CorrectionMode_Policy).
+
+Membres (liste exhaustive):
+• CorrectiveAgent
+
+Interdictions:
+Un AgentCorrectif n’est jamais appelé hors mode correction, il ne prend aucune initiative, il n’écrit jamais dans Firestore.
+
+3.4 AgentsTransformateurs
+Définition:
+Produisent un output éphémère, non versionné, non persisté en tant que document référent, destiné à une consommation immédiate par Overseer.
 
 Membres (liste exhaustive):
 • ContextAgent
 • AuditTrailAgent
+• CahierDesChargesAgent
 
-Les contrats complets des agents transformateurs sont définis dans leurs specs respectives (ContextAgent_spec, AuditTrailAgent_spec).
+Règles strictes:
+• Un AgentTransformateur ne produit JAMAIS de document candidat destiné à Firestore.
+• Un AgentTransformateur ne produit JAMAIS de verdict allow, warn ou block.
+• Un AgentTransformateur ne modifie jamais Firestore.
+• L’output d’un AgentTransformateur est éphémère; seule une journalisation de métadonnées d’appel est autorisée.
 
-Aucune autre famille n’est autorisée.
-Aucun agent hybride n’est autorisé.
+Interdictions:
+• Aucune autre famille n’est autorisée.
+• Aucun agent hybride n’est autorisé.
 
 ---
 
@@ -293,6 +313,7 @@ Toujours vrais:
 • CorrectiveAgent est le seul agent autorisé à produire une correction en operationMode = "correction".  
 • Aucun agent ne peut modifier le système lui-même.  
 • Overseer reste l’unique autorité métier.
+• Tout agent qui ne correspond pas strictement à une des quatre familles définies est invalide.
 
 ---
 Fin du document
