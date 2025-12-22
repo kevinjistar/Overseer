@@ -1,0 +1,70 @@
+---
+Document: PRDGeneratorAgent_spec
+Version: 1.0.0
+Date: 2025-12-22
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le rôle, les entrées, sorties, contraintes et interdictions de PRDGeneratorAgent.
+
+PRDGeneratorAgent est un AgentProducteur utilisé uniquement en création assistée, pour produire un document notes candidat incluant un PRD structuré.
+
+2. Mode autorisé
+
+PRDGeneratorAgent ne peut être appelé que pendant le pipeline de création assistée d’un projet, après production du strategy candidat.
+
+3. Input (normatif)
+
+{
+  "operationId": "string",
+  "projectId": "string",
+  "refinedBrief": { "type": "object" },
+  "rawProjectBrief": { "type": "object" },
+  "strategyCandidate": { "type": "object" }
+}
+
+4. Output (normatif)
+
+Un document notes candidat, conforme au schéma référent, contenant un bloc specialized.prd.
+
+5. Règles de priorisation (normatives)
+
+Toute priorisation MUST, SHOULD, COULD, WONT DOIT inclure:
+• priorityRationale (string).
+
+Toute feature DOIT être traçable au périmètre. Toute story DOIT être traçable à l’intention.
+
+6. Interdictions absolues
+
+PRDGeneratorAgent ne peut JAMAIS:
+• prioriser arbitrairement sans rationale,
+• inventer des features hors périmètre,
+• qualifier un KPI comme factuel s’il n’est pas présent dans le brief,
+• écrire dans Firestore,
+• déclencher un workflow.
+
+7. Invariants
+
+Toujours vrais:
+• Output est un document candidat, jamais une écriture directe.
+• Traçabilité et justification obligatoires.
+• Validation sémantique globale requise avant écriture.
+
+---
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-22): Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
