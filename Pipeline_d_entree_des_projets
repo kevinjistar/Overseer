@@ -15,78 +15,86 @@ PolicyVersions:
 Ce document définit le pipeline normatif et obligatoire d’entrée d’un projet dans Overseer.
 
 Ce pipeline décrit, de manière contractuelle:
-• quelles opérations sont requises pour qu’un projet soit considéré comme introduit,  
-• qui exécute chaque opération (Overseer, orchestrateur),  
-• ce qui est interdit tant que le pipeline n’est pas terminé,  
+• quelles opérations sont requises pour qu’un projet soit considéré comme introduit,
+• qui exécute chaque opération (Overseer, orchestrateur),
+• ce qui est interdit tant que le pipeline n’est pas terminé,
 • les préconditions d’activation du projet comme currentProject.
 
 Ce pipeline est obligatoire pour:
-• la création d’un nouveau projet,  
-• l’import d’un projet existant,  
+• la création d’un nouveau projet,
+• l’import d’un projet existant,
 • la duplication d’un projet modèle.
 
 Un projet qui n’a pas été introduit via ce pipeline est considéré comme inexploitable. Aucun agent ne peut être appelé sur un projet inexploitable.
 
 ---
 
+Règle d’immuabilité du cahier des charges
+
+Le document Cahier_des_charges_new_project est immuable après création. Aucune entité ne le modifie.
+
+Toute structuration, reformattage ou extraction d’information est effectuée via un AgentTransformateur et produit un artefact éphémère non persisté, nommé RefinedBrief.
+
 2. Acteurs et responsabilités
 
-2.1 Utilisateur  
+2.1 Utilisateur
 L’utilisateur:
-• exprime une intention d’entrée (création, import, duplication),  
+• exprime une intention d’entrée (création, import, duplication),
 • fournit les informations initiales requises.
 
 L’utilisateur ne:
-• n’écrit jamais en base,  
-• ne crée jamais un projectId,  
+• n’écrit jamais en base,
+• ne crée jamais un projectId,
 • n’active jamais un projet directement.
 
-2.2 Overseer  
+2.2 Overseer
 Overseer:
-• reçoit l’intention utilisateur,  
-• vérifie la complétude minimale des entrées,  
-• ordonne explicitement à l’orchestrateur l’exécution des opérations structurelles,  
-• bloque toute action agentique tant que le pipeline n’est pas clôturé,  
-• valide que les sorties structurelles requises existent,  
+• reçoit l’intention utilisateur,
+• vérifie la complétude minimale des entrées,
+• ordonne explicitement à l’orchestrateur l’exécution des opérations structurelles,
+• décide explicitement tout appel agentique autorisé par ce pipeline,
+• bloque toute écriture Firestore tant que les conditions normatives de validation ne sont pas satisfaites,
+• valide que les sorties structurelles requises existent,
 • décide l’activation du currentProject.
 
 Overseer ne:
-• ne crée jamais la structure Firestore,  
-• n’écrit jamais directement en base,  
+• ne crée jamais la structure Firestore,
+• n’écrit jamais directement en base,
 • ne génère jamais directement les documents initiaux.
 
-2.3 Orchestrateur  
+2.3 Orchestrateur
 L’orchestrateur:
-• est la seule couche autorisée à écrire dans Firestore,  
-• exécute exclusivement des opérations structurelles ordonnées par Overseer,  
-• crée la structure projet, les documents initiaux, le workflowEngine minimal, les snapshots initiaux et les logs initiaux,  
+• est la seule couche autorisée à écrire dans Firestore,
+• exécute exclusivement des opérations structurelles ordonnées par Overseer,
+• exécute les appels d’agents uniquement sur ordre explicite d’Overseer, et journalise ces appels,
+• crée la structure projet, le workflowEngine minimal, les snapshots initiaux et les logs initiaux,
 • retourne un statut structuré à Overseer.
 
 L’orchestrateur ne:
-• ne décide jamais si un projet doit être créé, importé ou dupliqué,  
-• n’interprète jamais l’intention métier,  
+• ne décide jamais si un projet doit être créé, importé ou dupliqué,
+• n’interprète jamais l’intention métier,
 • n’appelle jamais de LLM.
 
-2.4 Agents  
+2.4 Agents
 Les agents:
-• ne sont jamais impliqués dans l’entrée d’un projet,  
-• ne peuvent pas être appelés tant que le pipeline n’est pas clôturé,  
-• ne peuvent pas créer ou initialiser un projet.
+• peuvent être appelés uniquement dans les conditions explicites définies par la section “Étapes normatives du pipeline”,
+• ne sont jamais appelés par initiative orchestrateur,
+• ne peuvent jamais écrire dans Firestore.
 
 ---
 
 3. Définitions opérationnelles
 
-3.1 Projet exploitable  
+3.1 Projet exploitable
 Un projet est exploitable si, et seulement si:
-• la structure Firestore minimale est créée,  
-• les documents référents initiaux existent et sont structurellement valides,  
-• workflowEngine/engine.json existe, est prêt et initialisé, et porte l’état courant via currentState,  
-• un snapshot initial existe,  
-• un log de création existe,  
+• la structure Firestore minimale est créée,
+• les documents référents initiaux existent et sont structurellement valides,
+• projects/{projectId}/workflowEngine/engine.json existe, est prêt et initialisé, et porte l’état courant via currentState,
+• un snapshot initial existe,
+• un log de création existe,
 • Overseer a explicitement marqué le projet comme currentProject si l’utilisateur l’a demandé.
 
-3.2 Clôture du pipeline  
+3.2 Clôture du pipeline
 Le pipeline est clôturé uniquement lorsque Overseer a confirmé que toutes les sorties requises existent et sont conformes.
 
 ---
@@ -94,8 +102,8 @@ Le pipeline est clôturé uniquement lorsque Overseer a confirmé que toutes les
 4. Préconditions bloquantes
 
 Le pipeline ne peut pas démarrer si:
-• halted = true,  
-• correctionMode = true, sauf si l’entrée du projet est explicitement ordonnée comme action de stabilisation (cas exceptionnel, documenté et journalisé),  
+• halted = true,
+• correctionMode = true, sauf si l’entrée du projet est explicitement ordonnée comme action de stabilisation (cas exceptionnel, documenté et journalisé),
 • l’identifiant utilisateur n’est pas disponible pour l’écriture de userContext, si l’activation currentProject est demandée.
 
 ---
@@ -104,13 +112,13 @@ Le pipeline ne peut pas démarrer si:
 
 5.1 Entrées minimales fournies par l’utilisateur
 Selon le mode d’entrée:
-• création: name, description (au minimum),  
-• import: source déclarée et payload d’import structuré,  
+• création: name, description (au minimum),
+• import: source déclarée et payload d’import structuré,
 • duplication: projectId source ou templateId.
 
 5.2 Entrées générées et gouvernées par le système
-• projectId: généré de façon déterministe côté orchestrateur sur ordre d’Overseer,  
-• createdAt: généré à l’écriture,  
+• projectId: généré de façon déterministe côté orchestrateur sur ordre d’Overseer,
+• createdAt: généré à l’écriture,
 • status initial: défini à la création selon le schéma projet.
 
 Interdiction:
@@ -142,8 +150,8 @@ workflowDocument.json
 notes.json
 
 Chaque document:
-• respecte le Schéma universel du Document Référent et son module spécialisé,  
-• est complet, au format JSON strict,  
+• respecte le Schéma universel du Document Référent et son module spécialisé,
+• est complet, au format JSON strict,
 • possède une meta conforme et initialisée.
 
 Règle normative:
@@ -154,13 +162,13 @@ projects/{projectId}/workflowEngine/engine.json conforme au schéma workflow en 
 
 6.5 Snapshots initiaux
 Au minimum:
-• snapshot du meta projet,  
-• snapshot des documents référents initiaux,  
+• snapshot du meta projet,
+• snapshot des documents référents initiaux,
 • snapshot du workflow engine initial.
 
 6.6 Logs initiaux
 Au minimum:
-• logs/creation ou équivalent déclaré,  
+• logs/creation ou équivalent déclaré,
 • un événement global de création conforme aux conventions de journalisation.
 
 6.7 Activation du currentProject (optionnel)
@@ -171,115 +179,72 @@ userContext/{userId}/currentProject.json est écrit et pointe vers projectId.
 
 7. Étapes normatives du pipeline
 
-7.1 Étape 1, Réception et cadrage de la demande (Overseer)
-Overseer:
-• identifie le mode d’entrée (création, import, duplication),  
-• vérifie la complétude minimale,  
-• interdit tout appel agentique,  
-• génère un operationId et prépare l’ordre structurel pour l’orchestrateur.
+Étape 1: Réception du cahier des charges (utilisateur)
+- Entrée: Cahier_des_charges_new_project (immuable)
 
-Interdiction:
-• Overseer ne déclenche aucune écriture sans ordre explicite, et ne délègue aucune décision au niveau orchestrateur.
+Étape 2: Structuration optionnelle du cahier des charges
+2.1 Décision d’appel
+- Décision explicite d’Overseer
+- L’orchestrateur n’initie jamais cet appel
 
-7.2 Étape 2, Création de la structure Firestore (orchestrateur)
-Sur ordre explicite d’Overseer, l’orchestrateur:
-• crée projects/{projectId}/ et les sous-collections autorisées,  
-• écrit projects/{projectId}/meta/project.json conforme à Schema_Project.
+2.2 Exécution
+- L’orchestrateur exécute l’appel d’agent
+- Log obligatoire:
+  - actor = orchestrator
+  - initiatedBy = userId | system
+  - details.calledAgent = cahier_des_charges_agent
+- Output: RefinedBrief (éphémère, non persisté)
 
-Interdiction:
-• aucune collection racine additionnelle n’est créée.
+2.3 Statuts et comportements
+- Si status = structured: poursuivre le pipeline
+- Si status = needs_clarification: arrêt du pipeline; Overseer retourne à l’utilisateur avec les ambiguïtés détectées
+- Si status = cannot_structure_without_loss: création abandonnée; aucune écriture Firestore
 
-7.3 Étape 3, Création des documents référents initiaux (orchestrateur)
-Sur ordre explicite d’Overseer, l’orchestrateur crée les documents initiaux:
-• architecture.json, ux.json, strategy.json, workflowDocument.json, notes.json.
+Étape 3: Génération assistée optionnelle
+3.1 Condition
+- Décision explicite d’Overseer (et éventuellement demande utilisateur)
 
-Exigences:
-• documents complets, JSON strict, structure conforme,  
-• aucune dépendance à une production agentique,  
-• aucune zone manquante requise par le schéma.
+3.2 Génération (documents candidats)
+- Appel BrandingStrategyAgent, production d’un strategy candidat
+  - Log obligatoire:
+    - actor = orchestrator
+    - initiatedBy = userId | system
+    - details.calledAgent = branding_strategy_agent
+- Appel PRDGeneratorAgent, production d’un notes candidat
+  - Log obligatoire:
+    - actor = orchestrator
+    - initiatedBy = userId | system
+    - details.calledAgent = prd_generator_agent
 
-Règle normative:
-• workflowDocument.json est strictement descriptif, non exécutable, et ne porte jamais l’état courant.
+3.3 Validation structurelle
+- L’orchestrateur valide structurellement chaque document candidat avant toute validation sémantique.
 
-7.4 Étape 4, Initialisation normative des métadonnées documentaires (orchestrateur)
-Chaque document initial est créé avec:
-• version: "1.0.0",  
-• status: "active",  
-• ownerAgent: "SystemInit",  
-• createdAt: date d’écriture,  
-• updatedAt: date d’écriture,  
-• changelog initial conforme aux conventions internes du document.
+Étape 4: Baseline blank non persisté (création assistée uniquement)
+- L’orchestrateur génère un originalDocument blank non persisté pour chaque document candidat afin de permettre diff et validation en création:
+  - meta.version = 0.0.0
+  - meta.status = draft
+  - meta.ownerAgent = system_init
 
-Interdiction:
-• aucun autre composant ne peut définir ownerAgent pour ces écritures initiales.
+Étape 5: Validation sémantique globale (création assistée uniquement)
+- SuperiorValidationAgent valide la cohérence entre:
+  - cahier des charges immuable
+  - RefinedBrief (si présent)
+  - documents candidats (strategy, notes)
+- Si verdict = block: création refusée; aucune écriture Firestore
+- Si verdict = warn: Overseer décide; journalisation obligatoire
+- Si verdict = allow: poursuivre
 
-7.5 Étape 5, Création du Workflow Engine par défaut (orchestrateur)
-Sur ordre explicite d’Overseer, l’orchestrateur écrit dans:
-projects/{projectId}/workflowEngine/engine.json
+Étape 6: Création structure Firestore
+- Création arborescence projet et documents référents
+- Création obligatoire de projects/{projectId}/workflowEngine/engine.json
 
-Le workflowEngine écrit est minimal, conforme, et inclut au minimum:
-• initialState,  
-• currentState,  
-• au moins deux états,  
-• au moins une transition valide.
+Étape 7: Écriture des documents
+- Écriture atomique via orchestrateur
+- Aucun agent n’écrit en base
 
-Règles normatives:
-• currentState est écrit dans workflowEngine/engine.json et porte l’état courant unique.  
-• Il est interdit d’utiliser workflowDocument.json comme porteur d’état courant ou comme moteur d’état.
+Étape 8: Snapshot initial obligatoire
 
-Interdiction:
-• aucune condition métier n’est persistée dans le workflowEngine.
-
-7.6 Étape X, Génération optionnelle du workflowEngine depuis un Workflow Document template
-
-Règles normatives:
-• Si un Workflow Document template est fourni à la création, Overseer peut ordonner la génération initiale du workflowEngine.  
-• Cette génération est autorisée uniquement pendant ce pipeline.  
-• Le workflowEngine résultant doit être validé structurellement par l’orchestrateur avant persistance.  
-• Un log de création doit enregistrer:
-  • workflowEngineSource = generated_from_template
-  • templateDocument = <nom du fichier workflowDocument_*.json>
-  • generationTimestamp
-  • validationStatus
-
-7.7 Étape 6, Snapshot initial obligatoire (orchestrateur)
-Sur ordre explicite d’Overseer, l’orchestrateur crée les snapshots initiaux requis.
-
-Exigences:
-• snapshots complets,  
-• contenus structurés,  
-• traçables (date, operationId, reason).
-
-Interdiction:
-• aucune entrée de projet n’est considérée clôturée sans snapshot initial.
-
-7.8 Étape 7, Vérification de clôture (Overseer)
-Overseer vérifie explicitement:
-• existence de la structure minimale,  
-• conformité structurelle des documents initiaux,  
-• existence de workflowEngine/engine.json, et présence de currentState,  
-• existence des snapshots initiaux,  
-• existence des logs initiaux.
-
-Overseer:
-• refuse la clôture si un seul artefact requis manque.
-
-7.9 Étape 8, Activation du projet comme currentProject (Overseer puis orchestrateur)
-Si activation demandée:
-• Overseer ordonne l’écriture de userContext/{userId}/currentProject.json,  
-• l’orchestrateur exécute l’écriture.
-
-Contraintes:
-• si une opération est en cours, elle doit être annulée proprement avant bascule,  
-• si halted = true, l’activation est interdite.
-
-7.10 Étape 9, Journalisation finale (orchestrateur, sur ordre d’Overseer)
-Overseer ordonne une écriture de log structurée de création contenant au minimum:
-• projectId,  
-• date,  
-• mode d’entrée (création, import, duplication),  
-• version initiale des artefacts,  
-• statut final du pipeline (success ou error).
+Étape 9: Activation projet
 
 ---
 
@@ -287,14 +252,14 @@ Overseer ordonne une écriture de log structurée de création contenant au mini
 
 8.1 Échec structurel détecté par l’orchestrateur
 Si l’orchestrateur détecte une non-conformité structurelle:
-• aucune étape suivante n’est exécutée,  
-• un statut d’erreur structuré est renvoyé à Overseer,  
+• aucune étape suivante n’est exécutée,
+• un statut d’erreur structuré est renvoyé à Overseer,
 • aucune clôture n’est possible.
 
 8.2 Échec de vérification détecté par Overseer
 Si Overseer détecte un artefact manquant ou incohérent:
-• le projet est marqué comme inexploitable,  
-• le projet n’est pas activé comme currentProject,  
+• le projet est marqué comme inexploitable,
+• le projet n’est pas activé comme currentProject,
 • aucune action agentique n’est autorisée sur ce projet.
 
 ---
@@ -303,12 +268,12 @@ Si Overseer détecte un artefact manquant ou incohérent:
 
 Les règles suivantes sont non négociables:
 
-1. Aucun projet n’est exploitable tant que le pipeline n’est pas clôturé par Overseer.  
-2. Aucun agent n’est appelé tant que le snapshot initial n’existe pas.  
-3. Le versioning initial des documents référents est toujours "1.0.0".  
-4. ownerAgent = "SystemInit" pour l’initialisation des documents référents.  
-5. workflowEngine/engine.json existe, est prêt et initialisé, et porte currentState avant toute action d’agent.  
-6. Le currentProject est défini uniquement via une activation explicite, écrite par l’orchestrateur sur ordre d’Overseer.  
+1. Aucun projet n’est exploitable tant que le pipeline n’est pas clôturé par Overseer.
+2. Aucun agent n’est appelé sur un projet persistant tant que le snapshot initial n’existe pas.
+3. Le versioning initial des documents référents persistés est toujours "1.0.0".
+4. ownerAgent = "system_init" pour l’initialisation des documents référents persistés.
+5. projects/{projectId}/workflowEngine/engine.json existe, est prêt et initialisé, et porte currentState avant toute action d’agent sur un projet persistant.
+6. Le currentProject est défini uniquement via une activation explicite, écrite par l’orchestrateur sur ordre d’Overseer.
 7. Aucun composant autre que l’orchestrateur n’écrit dans Firestore.
 
 ---
@@ -317,13 +282,26 @@ Les règles suivantes sont non négociables:
 
 Toujours vrais:
 
-• L’entrée d’un projet ne dépend d’aucune production agentique.  
-• Overseer décide, l’orchestrateur exécute, les agents sont inactifs durant ce pipeline.  
-• Aucune écriture Firestore n’a lieu sans ordre explicite d’Overseer.  
-• Le pipeline interdit tout travail “hors contexte”, aucun appel agentique sans currentProject exploitable.  
-• L’existence des documents référents initiaux, de workflowEngine/engine.json prêt et initialisé, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.  
-• workflowDocument.json est descriptif, non exécutable, et ne porte jamais l’état courant.  
-• Après création, aucune synchronisation automatique workflowEngine ↔ Workflow Documents.
+• Aucune écriture Firestore n’a lieu sans ordre explicite d’Overseer.
+• Toute création assistée, si activée, respecte strictement l’immuabilité du cahier des charges et la non persistance des artefacts transformateurs.
+• L’existence des documents référents initiaux, de projects/{projectId}/workflowEngine/engine.json prêt et initialisé, des snapshots initiaux et des logs initiaux est une condition obligatoire d’exploitabilité.
+• workflowDocument.json est descriptif, non exécutable, et ne porte jamais l’état courant.
+• Après création, aucune synchronisation automatique projects/{projectId}/workflowEngine/engine.json ↔ Workflow Documents.
+
+---
+
+Politique hypothèses (création assistée)
+
+Tout contenu généré qui n’est pas explicitement traçable au cahier des charges doit être placé dans un champ “assumptions” et inclure:
+• rationale (obligatoire)
+• requiresValidation: true (obligatoire)
+
+Tout contenu “factual” doit inclure:
+• sourceRef (obligatoire)
+
+SuperiorValidationAgent vérifie:
+• factual sans sourceRef: block
+• assumptions sans rationale: block
 
 ---
 Fin du document
