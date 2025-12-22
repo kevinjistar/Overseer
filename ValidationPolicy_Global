@@ -169,6 +169,48 @@ Règles strictes:
 - en mode normal: override possible mais exceptionnel et explicitement journalisé,
 - en mode correction: override strictement interdit.
 
+6.4 Journalisation normative des verdicts et des overrides
+
+Interdiction absolue :
+Le champ agent est strictement interdit. Toute journalisation utilise actor (enum fermée) et initiatedBy (userId ou system).
+
+Règles normatives:
+- Toute journalisation liée à une validation ou à un override est exécutée techniquement par l’orchestrateur (écriture Firestore), sur ordre explicite d’Overseer.
+- Le champ actor désigne exclusivement l’exécuteur technique de l’action journalisée, il DOIT respecter l’enum fermée et utiliser uniquement des valeurs en lowercase_snake_case.
+- Le champ initiatedBy est obligatoire et vaut un userId (string) ou system.
+- Si l’exemple représente un appel d’agent, l’agent appelé est porté uniquement par details.calledAgent (enum fermée), et jamais par actor.
+- Si l’exemple ne représente pas un appel d’agent, details.calledAgent est absent.
+
+Exemple normatif, journalisation d’un verdict (appel agent)
+{
+  "operationId": "string",
+  "timestamp": "string (ISO-8601)",
+  "actor": "orchestrator",
+  "initiatedBy": "system",
+  "action": "semantic_validation_verdict_recorded",
+  "details": {
+    "calledAgent": "superior_validation_agent",
+    "validationLevel": "local",
+    "verdict": "warn",
+    "riskLevel": "medium",
+    "workflowImpact": "minor"
+  }
+}
+
+Exemple normatif, journalisation d’un override (décision Overseer, hors correction)
+{
+  "operationId": "string",
+  "timestamp": "string (ISO-8601)",
+  "actor": "orchestrator",
+  "initiatedBy": "string (userId) | system",
+  "action": "semantic_validation_override_applied",
+  "details": {
+    "originalVerdict": "block",
+    "overrideDecision": "apply",
+    "overrideJustification": "string"
+  }
+}
+
 ---
 
 7. Validation en mode correction
