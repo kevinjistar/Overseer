@@ -173,6 +173,8 @@ Synthèse explicite:
 • snapshots,
 • logs.
 
+Le champ agent est strictement interdit, l’agent appelé est tracé via details.calledAgent, actor trace l’exécuteur technique, initiatedBy trace l’initiateur.
+
 5.3 Overseer → agents producteurs
 • contexte strict,
 • règles d’édition,
@@ -284,7 +286,7 @@ Champs obligatoires d’input:
 
 Règles:
 • la fenêtre doit être bornée et contrôlée par Overseer.
-• l’output est non persisté; seules des métadonnées de l’opération peuvent être journalisées selon le schéma normatif dédié.
+• l’output est non persisté, seules des métadonnées de l’opération peuvent être journalisées selon le schéma normatif dédié.
 
 11. Limites
 
@@ -299,7 +301,7 @@ Règles:
 11.3 sync externe
 • sync rejet max = 3 (rejets consécutifs).
 • au dépassement, désactivation temporaire 1h.
-• ce dépassement constitue un état de protection, pas un état halted; il doit être journalisé.
+• ce dépassement constitue un état de protection, pas un état halted, il doit être journalisé.
 
 12. Invariants d’Overseer
 
