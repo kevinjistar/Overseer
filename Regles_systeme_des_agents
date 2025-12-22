@@ -303,6 +303,19 @@ Le document candidat doit être traité comme non applicable si:
 • incohérence sémantique identifiée,  
 • risque incompatible avec le mode correction.
 
+Journalisation des appels agentiques
+
+Règles obligatoires :
+- Toute opération qui implique un appel agentique DOIT générer un log.
+- Le champ actor DOIT toujours désigner l’exécuteur technique du log (orchestrator pour les écritures systèmes).
+- Le champ initiatedBy DOIT être présent, valeur autorisée, userId ou system.
+- Le champ details.calledAgent DOIT être présent si, et seulement si, l’action correspond à un appel agentique.
+
+Interdictions absolues :
+- Le champ agent est strictement interdit.
+- Aucune écriture de log n’est autorisée avec un actor non reconnu (voir Protocole_d_erreur, section 9.1).
+- Un AgentTransformateur ne produit jamais de verdict allow, warn, block.
+- Un AgentTransformateur ne produit jamais de document candidat destiné à Firestore.
 
 13. Invariants
 
