@@ -1,6 +1,6 @@
 ---
 Document: Structure_Firestore
-Version: 1.0.1
+Version: 1.0.0
 Date: 2025-12-20
 
 PolicyVersions:
@@ -18,16 +18,16 @@ Ce document définit la structure officielle de stockage Firestore utilisée par
 
 ## Rôle du document dans le système
 
-Niveau: normatif et structurel.  
-Ce document décrit l’arborescence de stockage, les collections, sous-collections et conventions associées servant de base de persistance pour les projets, documents, workflowEngine, Workflow Documents descriptifs (non exécutifs), logs, snapshots et contextes utilisateurs.  
-Il constitue une référence obligatoire pour l’orchestrateur et les processus système.  
+Niveau: normatif et structurel.
+Ce document décrit l’arborescence de stockage, les collections, sous-collections et conventions associées servant de base de persistance pour les projets, documents, workflowEngine, Workflow Documents descriptifs (non exécutifs), logs, snapshots et contextes utilisateurs.
+Il constitue une référence obligatoire pour l’orchestrateur et les processus système.
 Il ne décrit aucune logique métier, aucun processus opérationnel et aucune règle de validation sémantique.
 
 ---
 
 # Structure Firestore
 
-La structure Firestore définie ici constitue la base de stockage du système multi-projets Overseer.  
+La structure Firestore définie ici constitue la base de stockage du système multi-projets Overseer.
 Elle doit être strictement respectée par l’orchestrateur, les agents et les processus internes.
 
 ---
@@ -36,10 +36,10 @@ Elle doit être strictement respectée par l’orchestrateur, les agents et les 
 
 Les collections racines du système sont:
 
-- projects/  
-- userContext/  
-- systemLogs/  
-- systemSettings/  
+- projects/
+- userContext/
+- systemLogs/
+- systemSettings/
 
 Aucune autre collection racine n’est autorisée.
 
@@ -70,12 +70,12 @@ Chemin:
 projects/{projectId}/meta/project.json
 
 Champs typiques:
-- projectId  
-- name  
-- createdAt  
-- createdBy  
-- status  
-- description  
+- projectId
+- name
+- createdAt
+- createdBy
+- status
+- description
 
 ---
 
@@ -117,11 +117,149 @@ Aucune logique métier n’y est stockée.
 
 Contient l’historique des opérations projet.
 
+Chemins:
 projects/{projectId}/logs/
 creation.json
 updates/{logId}.json
+errors/{logId}.json
+drift_events/{logId}.json
+context_loading/{logId}.json
+recovery/{logId}.json
+audit_trail/{logId}.json
+diffs/{logId}.json
 
 Les logs assurent la traçabilité complète.
+
+Règle structurelle:
+Le champ agent est strictement interdit dans tous les logs. Le traçage d’un agent appelé s’effectue uniquement via details.calledAgent.
+
+### 3.4.1 Champs normatifs communs (tous logs projet)
+
+Règles:
+- actor désigne exclusivement le composant exécutant techniquement l’action journalisée.
+- initiatedBy est obligatoire et vaut un userId (string) ou system.
+- actor doit être une valeur de la liste fermée suivante:
+  - overseer
+  - orchestrator
+  - superior_validation_agent
+  - corrective_agent
+  - context_agent
+  - audit_trail_agent
+  - system_init
+  - sync_agent
+- details.calledAgent est optionnel; s’il est présent, il désigne l’agent appelé (enum fermée), et ne modifie jamais actor.
+
+Schéma minimal commun:
+
+{
+  "logId": "string",
+  "operationId": "string",
+  "projectId": "string",
+  "timestamp": "string (ISO-8601)",
+  "actor": "enum (liste fermée)",
+  "initiatedBy": "string (userId) | system",
+  "action": "string",
+  "details": {
+    "calledAgent": "enum | absent"
+  }
+}
+
+### 3.4.2 logs de mise à jour (updates)
+
+Chemin:
+projects/{projectId}/logs/updates/{logId}.json
+
+Champs additionnels typiques:
+- targetRef (chemin logique du document impacté)
+- changeSummary
+- versionBefore
+- versionAfter
+
+Note:
+- details.calledAgent est présent uniquement si la mise à jour est le résultat direct d’un appel d’agent exécuté par l’orchestrateur.
+
+### 3.4.3 logs d’erreurs (errors)
+
+Chemin:
+projects/{projectId}/logs/errors/{logId}.json
+
+Champs additionnels minimaux:
+- errorType (StructuralError | SemanticWarn | SemanticBlock | BusinessError | Halted)
+- severity (warning | error | halted)
+- message
+
+Règles:
+- actor = composant ayant émis techniquement l’erreur journalisée.
+- si l’erreur survient lors d’un appel d’agent, details.calledAgent doit être renseigné et ne doit pas être porté par actor.
+
+### 3.4.4 logs de dérive (drift_events)
+
+Chemin:
+projects/{projectId}/logs/drift_events/{logId}.json
+
+Champs additionnels minimaux:
+- driftType
+- impactedRefs (array)
+- detectionSummary
+
+Règles:
+- ces logs décrivent un événement de dérive détecté; ils ne déclenchent aucune action implicite.
+
+### 3.4.5 logs de chargement de contexte (context_loading)
+
+Chemin:
+projects/{projectId}/logs/context_loading/{logId}.json
+
+Champs additionnels typiques:
+- requestedRefs (array)
+- returnedRefs (array)
+- bytesReturned
+
+Règles:
+- si un AgentTransformateur est appelé pour produire un contexte ou un artefact de contexte, details.calledAgent doit être renseigné.
+
+### 3.4.6 logs de recovery (recovery)
+
+Chemin:
+projects/{projectId}/logs/recovery/{logId}.json
+
+Champs additionnels minimaux:
+- recoveryPhase (list_snapshots | preview_generated | user_confirmed | executed | blocked)
+- snapshotId (string | absent)
+- scope (full_project uniquement)
+- attemptNumber
+
+Règles:
+- la confirmation utilisateur est journalisée avec actor = overseer et initiatedBy = userId.
+- l’exécution technique (preview, restauration) est journalisée avec actor = orchestrator et initiatedBy = userId | system.
+
+### 3.4.7 logs audit trail (audit_trail)
+
+Chemin:
+projects/{projectId}/logs/audit_trail/{logId}.json
+
+Champs additionnels minimaux:
+- auditOperationId
+- dateFrom
+- dateTo
+- maxLogs
+- maxOutputBytes
+
+Règles:
+- le résultat (timeline) n’est pas persisté.
+- l’appel est journalisé avec actor = orchestrator, et details.calledAgent = audit_trail_agent.
+
+### 3.4.8 logs de diffs (diffs)
+
+Chemin:
+projects/{projectId}/logs/diffs/{logId}.json
+
+Règles de persistance:
+- persister uniquement des métadonnées de diff (diffId, operationId, projectId, timestamp, actor, initiatedBy, summary, references).
+- interdiction absolue de persister before et after dans un log ou une trace Firestore.
+
+Note:
+- un diff structural peut être généré sans appel d’agent; dans ce cas details.calledAgent est absent.
 
 ---
 
@@ -144,6 +282,11 @@ reason
 actor
 initiatedBy
 
+Règles:
+- actor respecte la liste fermée définie en 3.4.1.
+- initiatedBy est obligatoire et vaut un userId (string) ou system.
+- le champ agent est interdit.
+
 ---
 
 ## 3.6 settings/
@@ -160,10 +303,10 @@ userContext/{userId}/
 currentProject.json
 
 Champs typiques:
-- projectId  
-- selectedAt  
-- selectedBy  
-- status  
+- projectId
+- selectedAt
+- selectedBy
+- status
 
 ---
 
@@ -175,6 +318,27 @@ systemLogs/
 currentProjectSwitch/{logId}.json
 agentActivity/{logId}.json
 errors/{logId}.json
+sync/{syncId}.json
+
+Règles normatives:
+- les champs actor et initiatedBy suivent les mêmes conventions que les logs projet.
+- le champ agent est interdit; si un agent est appelé, il est tracé via details.calledAgent.
+
+Schéma minimal commun (systemLogs):
+
+{
+  "logId": "string",
+  "timestamp": "string (ISO-8601)",
+  "actor": "enum (liste fermée, voir 3.4.1)",
+  "initiatedBy": "string (userId) | system",
+  "action": "string",
+  "details": {
+    "calledAgent": "enum | absent"
+  }
+}
+
+Note:
+- systemLogs/sync/{syncId}.json trace les opérations de synchronisation externe au niveau système, sans persister de contenus interdits; la persistance de payloads doit respecter les règles de sécurité et de minimisation applicables.
 
 ---
 
@@ -209,8 +373,7 @@ Fin du document
 Document Metadata & Changelog
 
 Changelog:
-  - 1.0.1 (2025-12-20): Normalisation terminologique et structurelle (workflowEngine, actor/initiatedBy), sans modification normative.
-  - 1.0.0 (2025-12-09): Création du document Structure Firestore, définition de l’arborescence de stockage du système Overseer.
+  - 1.0.0 (2025-12-20) : Initialisation de la version de référence du document.
 
 Breaking Changes:
-  - Aucun depuis 1.0.0
+  - Aucun (baseline pré-système)
