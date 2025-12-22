@@ -317,98 +317,77 @@ Règle normative:
 
 10. Journalisation des erreurs
 
-10.1 Nomenclature officielle des acteurs (liste exhaustive et fermée)
+9.1 Nomenclature officielle des acteurs (liste exhaustive et fermée)
 
-Les seuls acteurs reconnus pour la journalisation sont:
+Le champ `actor` désigne exclusivement le composant exécutant techniquement l’action journalisée.
+
+Les seules valeurs autorisées pour `actor` sont:
 - overseer
 - orchestrator
-- superiorValidationAgent
-- correctiveAgent
-- contextAgent
-- auditTrailAgent
-- systemInit
-- syncAgent
+- superior_validation_agent
+- corrective_agent
+- context_agent
+- audit_trail_agent
+- system_init
+- sync_agent
 
-Règle structurelle (enforcement):
-Tout log contenant un actor hors de cette liste DOIT être rejeté structurellement par l'orchestrateur avec erreur InvalidActor.
+Règle d’invalidité
+Tout log contenant un `actor` hors de cette liste DOIT être rejeté structurellement par l’orchestrateur avec l’erreur `InvalidActor`.
 
-Aucun autre actor n'est autorisé.
-Aucune extension implicite n'est permise.
+Interdiction
+Le champ `agent` est strictement interdit dans tout log, tout snapshot, tout événement.
 
-10.2 Champs logs et snapshots, normalisation initiatedBy
+9.2 Journalisation des appels d’agents
 
-Interdictions:
-• Le champ agent est interdit dans tout log et tout snapshot.
-• Tout payload log ou snapshot contenant agent DOIT être rejeté structurellement par l’orchestrateur (erreur: ForbiddenField).
+Lorsqu’un appel d’agent est exécuté, le champ `actor` reste l’exécuteur technique (généralement `orchestrator`), et l’agent appelé est journalisé dans `details.calledAgent`.
 
-Règles normatives:
-• initiatedBy est obligatoire dans tout log et tout snapshot.
-• initiatedBy est un string, contenant un userId ou la valeur "system".
-• actor respecte strictement l’enum fermée définie en 10.1.
+Le champ `details.calledAgent` est une enum fermée distincte.
 
-10.3 Compatibilité rétroactive (mapping localisé, unique)
+Valeurs autorisées pour `details.calledAgent`:
+- context_agent
+- audit_trail_agent
+- cahier_des_charges_agent
+- branding_strategy_agent
+- prd_generator_agent
+- superior_validation_agent
+- corrective_agent
+
+Règle d’invalidité
+Tout log contenant `details.calledAgent` avec une valeur hors liste DOIT être rejeté structurellement par l’orchestrateur avec l’erreur `InvalidCalledAgent`.
+
+10.2 Compatibilité rétroactive (mapping localisé, unique)
 
 Règles normatives:
 • Toute occurrence de ValidationAgent est considérée obsolète.
-• Le mapping officiel et unique est: ValidationAgent → superiorValidationAgent (champ actor uniquement).
+• Le mapping officiel et unique est: ValidationAgent → superior_validation_agent (champ actor uniquement).
 • Toute migration DOIT créer les champs:
   • migrated: true
   • migrationDate: <timestamp>
 
-10.4 Emplacement et schéma minimal
+10.3 Emplacement et schéma
 
 Toute erreur doit être journalisée dans:
 
 logs/{projectId}/errors
 
-Chaque entrée contient au minimum:
-- timestamp,
-- operationId,
-- projectId,
-- errorType (StructuralError | SemanticWarn | SemanticBlock | BusinessError | Halted),
-- severity (warning | error | halted),
-- actor (overseer | orchestrator | superiorValidationAgent | correctiveAgent | contextAgent | auditTrailAgent | systemInit | syncAgent),
-- initiatedBy (userId | "system"),
-- details,
-- stateBefore,
-- stateAfter,
-- policiesActives (versions effectives).
+Chaque entrée DOIT respecter le Format minimal de log (normatif) ci-dessous, et inclure en plus:
+- errorType (enum: structural_error | semantic_warn | semantic_block | business_error | halted)
+- severity (enum: warning | error | halted)
+- stateBefore
+- stateAfter
+- policiesActives (versions effectives)
 
-10.5 Exemple unique (log et snapshot conformes)
-
-Exemple de log conforme (logs/{projectId}/errors/{errorId}.json):
+10.4 Format minimal de log (normatif)
 
 {
-  "timestamp": "2025-12-20T10:15:30Z",
-  "operationId": "op_123",
-  "projectId": "proj_456",
-  "errorType": "StructuralError",
-  "severity": "error",
-  "actor": "orchestrator",
-  "initiatedBy": "system",
-  "details": "InvalidActor: actor=unknownAgent",
-  "stateBefore": { "mode": "normal" },
-  "stateAfter": { "mode": "normal" },
-  "policiesActives": {
-    "ValidationPolicy_Global": "1.0.0",
-    "WorkflowPolicy": "1.0.0",
-    "CorrectionMode_Policy": "1.0.0",
-    "System_Agent_Edit_Policy": "1.0.0"
+  "operationId": "string",
+  "timestamp": "string (ISO-8601)",
+  "actor": "enum (section 9.1)",
+  "initiatedBy": "string (userId) | system",
+  "action": "string",
+  "details": {
+    "calledAgent": "enum (section 9.2) | absent"
   }
-}
-
-Exemple de snapshot conforme (snapshots/{projectId}/{snapshotId}.json):
-
-{
-  "timestamp": "2025-12-20T10:16:05Z",
-  "snapshotId": "snap_001",
-  "operationId": "op_123",
-  "projectId": "proj_456",
-  "actor": "orchestrator",
-  "initiatedBy": "system",
-  "scope": "fullProject",
-  "storageRef": "projects/proj_456/snapshots/snap_001",
-  "reason": "systemRecoveryPreview"
 }
 
 11. Invariants du protocole d’erreur
