@@ -1,0 +1,74 @@
+---
+Document: BrandingStrategyAgent_spec
+Version: 1.0.0
+Date: 2025-12-22
+
+PolicyVersions:
+  ValidationPolicy_Global: 1.0.0
+  WorkflowPolicy: 1.0.0
+  CorrectionMode_Policy: 1.0.0
+  System_Agent_Edit_Policy: 1.0.0
+---
+
+1. Objet du document
+
+Ce document définit le rôle, les entrées, sorties, contraintes et interdictions de BrandingStrategyAgent.
+
+BrandingStrategyAgent est un AgentProducteur utilisé uniquement en création assistée, pour produire un document strategy candidat.
+
+2. Mode autorisé
+
+BrandingStrategyAgent ne peut être appelé que pendant le pipeline de création assistée d’un projet.
+
+3. Input (normatif)
+
+{
+  "operationId": "string",
+  "projectId": "string",
+  "refinedBrief": { "type": "object" },
+  "rawProjectBrief": { "type": "object" }
+}
+
+4. Output (normatif)
+
+Un document strategy candidat, conforme au schéma référent, contenant un bloc specialized.brandingStrategy avec séparation stricte factual et assumptions.
+
+5. Règles factual et assumptions (normatives)
+
+Tout élément “factual” DOIT inclure:
+• statement (string),
+• sourceRef (string).
+
+Tout élément “assumptions” DOIT inclure:
+• statement (string),
+• rationale (string),
+• requiresValidation: true.
+
+Aucun champ ne peut mélanger factual et assumptions sans séparation explicite.
+
+6. Interdictions absolues
+
+BrandingStrategyAgent ne peut JAMAIS:
+• inventer des données de marché,
+• affirmer un positionnement comme factuel sans sourceRef,
+• produire une conclusion de validation,
+• écrire dans Firestore,
+• déclencher un workflow.
+
+7. Invariants
+
+Toujours vrais:
+• Output est un document candidat, jamais une écriture directe.
+• factual est traçable, assumptions est justifié et marqué requiresValidation.
+• Validation sémantique globale requise avant écriture.
+
+Fin du document
+---
+
+Document Metadata & Changelog
+
+Changelog:
+  - 1.0.0 (2025-12-22): Initialisation de la version de référence du document.
+
+Breaking Changes:
+  - Aucun (baseline pré-système)
